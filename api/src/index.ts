@@ -21,12 +21,16 @@ import teamRouter from './routes/team'
 const app = express()
 const PORT = process.env.PORT || 3005
 
-// CORS — allow the Vite dev server and production web container
+const extraOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : []
+
 app.use(cors({
   origin: [
     'http://localhost:3004',
     'http://localhost:5173',
     'http://localhost:3000',
+    ...extraOrigins,
   ],
   credentials: true,
 }))
