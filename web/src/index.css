@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background-color: #101415;
+    color: #e0e3e5;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Glassmorphism overlay */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(0, 224, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Card with Level 1 elevation */
+  .card {
+    @apply bg-surface-high rounded-lg border border-white/5;
+  }
+
+  /* Orange action button gradient */
+  .btn-primary {
+    background: linear-gradient(135deg, #ff5c00, #ff8c00);
+    box-shadow: 0 4px 16px rgba(255, 92, 0, 0.3);
+    @apply text-white font-display font-bold uppercase tracking-wide rounded-full min-h-[48px] px-6 flex items-center justify-center transition-all active:scale-95;
+  }
+
+  /* Ambient glow on orange */
+  .glow-orange {
+    box-shadow: 0 0 20px rgba(255, 92, 0, 0.4);
+  }
+
+  /* Ambient glow on blue */
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(0, 224, 255, 0.4);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* Prevent text selection during drag */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}

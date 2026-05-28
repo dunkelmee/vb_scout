@@ -1,0 +1,296 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  initials  String?  @map("initials")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users              User[]
+  players            Player[]
+  seasons            Season[]
+  matches            Match[]
+  trainingSessions   TrainingSession[]
+  trainingPriorities TrainingPriority[]
+
+  @@map("teams")
+}
+
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         String   @default("player") // manager | player
+  teamId       String?  @map("team_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  team             Team?             @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  trainingSessions TrainingSession[]
+
+  @@map("users")
+}
+
+model Player {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teamId             String   @map("team_id") @db.Uuid
+  userId             String?  @map("user_id") @db.Uuid
+  firstName          String   @map("first_name")
+  lastName           String   @map("last_name")
+  birthday           DateTime? @db.Date
+  heightM            Decimal?  @map("height_m") @db.Decimal(3, 2)
+  jersey             Int?
+  positions          String[]
+  avatarUrl          String?  @map("avatar_url")
+  isLibero           Boolean  @default(false) @map("is_libero")
+  hasRefereeLicense  Boolean  @default(false) @map("has_referee_license")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  matchPlayers       MatchPlayer[]
+  substitutionsOut   Substitution[]     @relation("SubOut")
+  substitutionsIn    Substitution[]     @relation("SubIn")
+  trainingAttendance TrainingAttendance[]
+  matchRef1          Match[]            @relation("Ref1")
+  matchRef2          Match[]            @relation("Ref2")
+  matchScorer1       Match[]            @relation("Scorer1")
+  matchScorer2       Match[]            @relation("Scorer2")
+
+  @@map("players")
+}
+
+model Season {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teamId    String    @map("team_id") @db.Uuid
+  name      String
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  isActive  Boolean   @default(false) @map("is_active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@map("seasons")
+}
+
+model Match {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teamId          String    @map("team_id") @db.Uuid
+  seasonId        String?   @map("season_id") @db.Uuid
+  matchType       String    @default("playing") @map("match_type") // playing | officiating
+  opponent        String?
+  opponentInitials String?  @map("opponent_initials")
+  homeTeam        String?   @map("home_team")
+  guestTeam       String?   @map("guest_team")
+  date            DateTime
+  location        String?
+  firstServe      String    @default("us") @map("first_serve")
+  setsPlayed      Int       @default(0) @map("sets_played")
+  scoreUs         Int[]     @default([0, 0, 0, 0, 0]) @map("score_us")
+  scoreThem       Int[]     @default([0, 0, 0, 0, 0]) @map("score_them")
+  setsWonUs       Int       @default(0) @map("sets_won_us")
+  setsWonThem     Int       @default(0) @map("sets_won_them")
+  status          String    @default("upcoming") // upcoming | in_progress | completed
+  ref1Id          String?   @map("ref1_id") @db.Uuid
+  ref2Id          String?   @map("ref2_id") @db.Uuid
+  scorer1Id       String?   @map("scorer1_id") @db.Uuid
+  scorer2Id       String?   @map("scorer2_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  team                Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season              Season?            @relation(fields: [seasonId], references: [id], onDelete: SetNull)
+  ref1                Player?            @relation("Ref1", fields: [ref1Id], references: [id], onDelete: SetNull)
+  ref2                Player?            @relation("Ref2", fields: [ref2Id], references: [id], onDelete: SetNull)
+  scorer1             Player?            @relation("Scorer1", fields: [scorer1Id], references: [id], onDelete: SetNull)
+  scorer2             Player?            @relation("Scorer2", fields: [scorer2Id], references: [id], onDelete: SetNull)
+  matchPlayers        MatchPlayer[]
+  sets                Set[]
+  matchAnalysis       MatchAnalysis?
+  trainingPriorities  TrainingPriority[]
+  priorityOutcomes    PriorityOutcome[]  @relation("MeasuredMatch")
+
+  @@map("matches")
+}
+
+model MatchPlayer {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  matchId  String @map("match_id") @db.Uuid
+  playerId String @map("player_id") @db.Uuid
+
+  match  Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@map("match_players")
+}
+
+model Set {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  matchId        String   @map("match_id") @db.Uuid
+  setNumber      Int      @map("set_number")
+  startingLineup Json     @map("starting_lineup")
+  servingFirst   String   @default("us") @map("serving_first")
+  status         String   @default("in_progress") // in_progress | completed
+  scoreUs        Int      @default(0) @map("score_us")
+  scoreThem      Int      @default(0) @map("score_them")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  match         Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  rallies       Rally[]
+  substitutions Substitution[]
+  timeouts      Timeout[]
+
+  @@map("sets")
+}
+
+model Rally {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  setId         String   @map("set_id") @db.Uuid
+  rallyIndex    Int      @map("rally_index")
+  scorer        String   // us | them
+  pointType     String   @map("point_type") // us_positive | us_error | them_positive | them_error
+  scoreUs       Int      @map("score_us")
+  scoreThem     Int      @map("score_them")
+  servingTeam   String   @map("serving_team")
+  rotationAfter Json     @map("rotation_after")
+  rotated       Boolean  @default(false)
+  currentServer String   @map("current_server")
+  loggedAt      DateTime @default(now()) @map("logged_at")
+
+  set Set @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@map("rallies")
+}
+
+model Substitution {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  setId         String   @map("set_id") @db.Uuid
+  rallyIndex    Int      @map("rally_index")
+  playerOutId   String?  @map("player_out_id") @db.Uuid
+  playerInId    String?  @map("player_in_id") @db.Uuid
+  isLiberoSwap  Boolean  @default(false) @map("is_libero_swap")
+  atScoreUs     Int      @map("at_score_us")
+  atScoreThem   Int      @map("at_score_them")
+  loggedAt      DateTime @default(now()) @map("logged_at")
+
+  set       Set     @relation(fields: [setId], references: [id], onDelete: Cascade)
+  playerOut Player? @relation("SubOut", fields: [playerOutId], references: [id], onDelete: SetNull)
+  playerIn  Player? @relation("SubIn", fields: [playerInId], references: [id], onDelete: SetNull)
+
+  @@map("substitutions")
+}
+
+model Timeout {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  setId       String   @map("set_id") @db.Uuid
+  rallyIndex  Int      @map("rally_index")
+  calledBy    String   @map("called_by") // us | them
+  atScoreUs   Int      @map("at_score_us")
+  atScoreThem Int      @map("at_score_them")
+  loggedAt    DateTime @default(now()) @map("logged_at")
+
+  set Set @relation(fields: [setId], references: [id], onDelete: Cascade)
+
+  @@map("timeouts")
+}
+
+model TrainingSession {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teamId      String    @map("team_id") @db.Uuid
+  date        DateTime  @db.Date
+  startTime   String    @map("start_time") // stored as HH:MM string
+  endTime     String?   @map("end_time")
+  title       String
+  notes       String?
+  location    String?
+  focusTags   String[]  @map("focus_tags")
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  creator            User?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+  trainingAttendance TrainingAttendance[]
+
+  @@map("training_sessions")
+}
+
+model TrainingAttendance {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainingSessionId String    @map("training_session_id") @db.Uuid
+  playerId          String    @map("player_id") @db.Uuid
+  status            String    @default("pending") // pending | coming | not_coming
+  note              String?
+  respondedAt       DateTime? @map("responded_at")
+
+  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
+  player          Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingSessionId, playerId])
+  @@map("training_attendance")
+}
+
+model MatchAnalysis {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  matchId      String   @unique @map("match_id") @db.Uuid
+  status       String   @default("pending") // pending | running | ready | insufficient_data | error
+  result       Json?
+  insights     Json?
+  errorMessage String?  @map("error_message")
+  nRallies     Int?     @map("n_rallies")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("match_analysis")
+}
+
+model TrainingPriority {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  teamId         String   @map("team_id") @db.Uuid
+  sourceMatchId  String?  @map("source_match_id") @db.Uuid
+  insightType    String   @map("insight_type") // improve | reinforce
+  priorityClass  String   @map("priority_class")
+  metric         String
+  baselineValue  Decimal  @map("baseline_value")
+  targetValue    Decimal  @map("target_value")
+  direction      String   // up | down
+  label          String
+  note           String?
+  status         String   @default("active") // active | improving | resolved | regressed | dismissed
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  team        Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  sourceMatch Match?            @relation(fields: [sourceMatchId], references: [id], onDelete: SetNull)
+  outcomes    PriorityOutcome[]
+
+  @@map("training_priorities")
+}
+
+model PriorityOutcome {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  priorityId       String   @map("priority_id") @db.Uuid
+  measuredMatchId  String   @map("measured_match_id") @db.Uuid
+  measuredValue    Decimal  @map("measured_value")
+  delta            Decimal
+  verdict          String   // improved | no_change | regressed
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  priority      TrainingPriority @relation(fields: [priorityId], references: [id], onDelete: Cascade)
+  measuredMatch Match            @relation("MeasuredMatch", fields: [measuredMatchId], references: [id], onDelete: Cascade)
+
+  @@map("priority_outcomes")
+}

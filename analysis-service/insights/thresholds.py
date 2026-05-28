@@ -1,0 +1,78 @@
+"""Strength and weakness detection thresholds."""
+
+STRENGTH_THRESHOLDS = [
+    # (metric_key, threshold, direction, label, detail_template)
+    ('own_pos_serve', 0.30, 'above', 'Strong serving pressure',
+     'Your team scores {val:.0%} of serve rallies through positive play, above the 30% benchmark.'),
+    ('own_pos_receive', 0.33, 'above', 'Strong attack conversion on reception',
+     'Your team converts {val:.0%} of reception rallies into points through positive play.'),
+    ('opp_err_serve', 0.20, 'above', 'Serving disrupts opponents effectively',
+     'Opponents commit errors on {val:.0%} of your service rallies.'),
+    ('own_err_serve', 0.28, 'below', 'Disciplined in service rallies',
+     'Your team commits errors on only {val:.0%} of service rallies.'),
+    ('own_err_receive', 0.25, 'below', 'Disciplined in reception rallies',
+     'Your team commits errors on only {val:.0%} of reception rallies.'),
+    ('break_pct', 0.45, 'above', 'Effective break point conversion',
+     'You win {val:.0%} of service rallies — above the 45% target.'),
+    ('sideout_pct', 0.55, 'above', 'Reliable sideout efficiency',
+     'You win {val:.0%} of reception rallies — excellent sideout discipline.'),
+    ('timeout_effectiveness', 0.60, 'above', 'Timeouts are working — call them early',
+     '{val:.0%} of your timeouts produced a positive run shift.'),
+    ('clutch_score', 0.50, 'above', 'Performs well under end-game pressure',
+     'Win rate at 20+ scores: {val:.0%} — your team rises to the occasion.'),
+    ('rbi', 0.70, 'above', 'Consistent across all rotations',
+     'Rotation Balance Index of {val:.2f} — strong performance across all positions.'),
+]
+
+WEAKNESS_THRESHOLDS = [
+    ('own_err_serve', 0.30, 'above', 'Service rally errors too high',
+     'error_in_service',
+     'Your team commits errors on {val:.0%} of service rallies (target: <30%).'),
+    ('own_err_receive', 0.25, 'above', 'Reception rally errors too high',
+     'error_in_reception',
+     'Your team commits errors on {val:.0%} of reception rallies (target: <25%).'),
+    ('own_pos_receive', 0.25, 'below', 'Sideouts rely on opponent errors',
+     'passive_sideout',
+     'Only {val:.0%} of sideout points come from positive play (target: >25%).'),
+    ('own_pos_serve', 0.25, 'below', 'Limited positive play on service',
+     'passive_serve',
+     'Only {val:.0%} of serve rally wins are from positive play (target: >25%).'),
+    ('sideout_pct', 0.45, 'below', 'Sideout efficiency below minimum',
+     'low_sideout',
+     'Sideout efficiency at {val:.0%} — below the 45% minimum target.'),
+    ('break_pct', 0.38, 'below', 'Struggling to break serve',
+     'low_break',
+     'Break point conversion at {val:.0%} — below the 38% baseline.'),
+    ('clutch_score', 0.42, 'below', 'Performance drops under end-game pressure',
+     'clutch_drop',
+     'Win rate at 20+ scores is only {val:.0%} — pressure situations need work.'),
+    ('late_match_drop', 0.5, 'above', 'Performance deteriorates in late sets',
+     'fatigue_drop',
+     'Sets 4-5 win rate is significantly lower than sets 1-3 — potential conditioning issue.'),
+    ('error_clustering', 0.50, 'above', 'Errors come in bursts',
+     'error_clustering',
+     'Error Clustering Index of {val:.2f} — errors tend to cluster rather than spread out.'),
+    ('rbi', 0.50, 'below', 'Large performance gap between rotations',
+     'rotation_imbalance',
+     'Rotation Balance Index of {val:.2f} — significant performance gap between rotations.'),
+    ('pressure_sensitivity', -0.08, 'below', 'Win rate drops significantly when trailing',
+     'pressure_drops',
+     'Win rate drops {delta:.0%} when trailing vs comfortable lead.'),
+]
+
+ROTATION_STRENGTH_THRESHOLD = 0.65
+ROTATION_WEAKNESS_THRESHOLD = 0.35
+
+TRAINING_DRILL_TEMPLATES = {
+    'own_err_serve': 'Focus on serve accuracy drills — target reduced foot-fault and hitting errors. Use pressure sets.',
+    'own_err_receive': 'Reception technique sessions focusing on platform angle and footwork under pressure.',
+    'own_pos_serve': 'Attack pattern drills from serve scenarios — float/jump serve combinations.',
+    'own_pos_receive': 'Transition attack drills from reception — quick sets to outside and opposite hitters.',
+    'sideout_pct': 'Full team sideout repetition sessions — serve-receive + first attack combinations.',
+    'break_pct': 'Serving pressure drills — target zones and run scoring simulations.',
+    'clutch_score': 'High-pressure game situation drills at 20+ scores — tie-break simulations.',
+    'late_match_drop': 'Conditioning work + late-set focus sessions. Review set 4/5 tactical patterns.',
+    'error_clustering': 'Mental resilience training — focus reset routines after error runs.',
+    'rotation_imbalance': 'Targeted weak rotation practice — isolated serving and receiving from weakest zones.',
+    'pressure_sensitivity': 'Comeback drill scenarios — practice trailing situations at -3 to -5.',
+}

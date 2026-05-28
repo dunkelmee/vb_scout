@@ -1,0 +1,673 @@
+import React, { useEffect, useRef, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMatchStore } from '../store/matchStore'
+import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet } from '../lib/api'
+import { Tabs } from '../components/ui/Tabs'
+import { Button } from '../components/ui/Button'
+import { BottomSheet } from '../components/ui/Modal'
+import { CourtView } from '../components/court/CourtView'
+import { LiveStatsTab } from '../components/stats/LiveStatsTab'
+import { TimelineTab } from '../components/timeline/TimelineTab'
+import { RotationToast } from '../components/court/RotationToast'
+import { ProgressBar } from '../components/ui/ProgressBar'
+import { Select } from '../components/ui/Select'
+import { ArrowLeft, RotateCcw, Clock, Flag, RefreshCw, ChevronDown } from 'lucide-react'
+import { cn } from '../components/ui/cn'
+import { Lineup, Zone } from '../lib/rotation'
+import { CourtLineupSetup } from '../components/court/CourtLineupSetup'
+import { TacticsTab } from '../components/court/TacticsTab'
+
+const LOG_TABS = [
+  { id: 'log', label: 'Log' },
+  { id: 'stats', label: 'Stats' },
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'tactics', label: 'Tactics' },
+]
+
+/** Returns true when the set has a valid winner by volleyball rules */
+function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
+  const target = setNumber === 5 ? 15 : 25
+  if (scoreUs >= target && scoreUs - scoreThem >= 2) return true
+  if (scoreThem >= target && scoreThem - scoreUs >= 2) return true
+  return false
+}
+
+export function GameLogPage() {
+  const { id: matchId } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const qc = useQueryClient()
+
+  const [activeTab, setActiveTab] = useState('log')
+  const [showSubModal, setShowSubModal] = useState(false)
+  const [showTimeoutModal, setShowTimeoutModal] = useState(false)
+  const [showEndSetModal, setShowEndSetModal] = useState(false)
+  const [showRotationToast, setShowRotationToast] = useState(false)
+
+  // New-set lineup setup (shown after ending a non-final set)
+  const [showNewSetSetup, setShowNewSetSetup] = useState(false)
+  const [newSetLineup, setNewSetLineup] = useState<Partial<Lineup>>({})
+  const [newSetPositions, setNewSetPositions] = useState<Record<Zone, string[]>>({} as Record<Zone, string[]>)
+  const [newSetServingFirst, setNewSetServingFirst] = useState<'us' | 'them'>('us')
+  // Timeout flow: 'pick' → choose who called it; 'timing' → 60 s countdown
+  const [timeoutStep, setTimeoutStep] = useState<'pick' | 'timing'>('pick')
+  const [timeoutSeconds, setTimeoutSeconds] = useState(60)
+  const [timeoutCaller, setTimeoutCaller] = useState<'us' | 'them' | null>(null)
+  const timeoutIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [autoFallbackProgress, setAutoFallbackProgress] = useState(0)
+
+  const store = useMatchStore()
+
+  useEffect(() => {
+    if (matchId) {
+      store.initMatch(matchId)
+    }
+  }, [matchId])
+
+  // Track rotation toast
+  useEffect(() => {
+    if (store.rallies.length > 0) {
+      const last = store.rallies[store.rallies.length - 1]
+      if (last?.rotated) {
+        setShowRotationToast(true)
+        setTimeout(() => setShowRotationToast(false), 2000)
+      }
+    }
+  }, [store.rallies.length])
+
+  // Auto-fallback progress bar
+  useEffect(() => {
+    if (store.scoringStep !== 'awaiting_type') {
+      setAutoFallbackProgress(0)
+      return
+    }
+    const start = Date.now()
+    const duration = 4000
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - start
+      setAutoFallbackProgress(Math.min(1, elapsed / duration))
+      if (elapsed >= duration) clearInterval(interval)
+    }, 50)
+    return () => clearInterval(interval)
+  }, [store.scoringStep, store.pendingScorer])
+
+  const { data: match } = useQuery({
+    queryKey: ['game', matchId],
+    queryFn: () => gamesApi.get(matchId!),
+    enabled: !!matchId,
+  })
+
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ['players'],
+    queryFn: playersApi.list,
+  })
+
+  const { data: setData } = useQuery({
+    queryKey: ['set', store.currentSetId],
+    queryFn: () => setsApi.get(matchId!, store.currentSetId!),
+    enabled: !!matchId && !!store.currentSetId,
+    refetchInterval: 2000,
+  })
+
+  // ── End-set: complete the set then decide what to do next ─────────────────
+  const endSetMutation = useMutation({
+    mutationFn: () => setsApi.update(matchId!, store.currentSetId!, {
+      status: 'completed',
+      scoreUs: store.scoreUs,
+      scoreThem: store.scoreThem,
+    } as unknown as Partial<GameSet>),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['game', matchId] })
+      setShowEndSetModal(false)
+
+      // Compute whether the match is now complete (best of 5, first to 3 sets)
+      const setsWonUs   = (match?.setsWonUs   ?? 0) + (store.scoreUs   > store.scoreThem ? 1 : 0)
+      const setsWonThem = (match?.setsWonThem ?? 0) + (store.scoreThem > store.scoreUs   ? 1 : 0)
+      const matchDone   = setsWonUs === 3 || setsWonThem === 3
+
+      if (matchDone) {
+        // Match is over — go to the stats / analysis page
+        navigate(`/games/${matchId}/stats`)
+      } else {
+        // More sets to play — pre-fill the lineup with the current rotation and
+        // ask the manager to confirm (or adjust) before starting the next set.
+        if (store.lineup) {
+          // Derive zone-level position map from the playerSetRoles we already have
+          const preFilledPositions = Object.fromEntries(
+            Object.entries(store.lineup).map(([zone, pid]) => {
+              const playerId = pid as string
+              return [
+                zone,
+                [playerSetRoles[playerId] ?? players.find((p: Player) => p.id === playerId)?.positions[0] ?? 'Unknown'],
+              ]
+            })
+          ) as Record<Zone, string[]>
+
+          setNewSetLineup(store.lineup as Partial<Lineup>)
+          setNewSetPositions(preFilledPositions)
+        }
+        setNewSetServingFirst('us')
+        setShowNewSetSetup(true)
+      }
+    },
+  })
+
+  // ── Create the next set once the manager confirms the lineup ──────────────
+  const createSetMutation = useMutation({
+    mutationFn: () =>
+      setsApi.create(matchId!, {
+        startingLineup: { ...newSetLineup, setPositions: newSetPositions },
+        servingFirst: newSetServingFirst,
+      }),
+    onSuccess: () => {
+      setShowNewSetSetup(false)
+      store.initMatch(matchId!)
+    },
+  })
+
+  const closeTimeoutModal = () => {
+    setShowTimeoutModal(false)
+    setTimeoutStep('pick')
+    setTimeoutSeconds(60)
+    setTimeoutCaller(null)
+    if (timeoutIntervalRef.current) {
+      clearInterval(timeoutIntervalRef.current)
+      timeoutIntervalRef.current = null
+    }
+  }
+
+  const timeoutMutation = useMutation({
+    mutationFn: (calledBy: 'us' | 'them') => timeoutsApi.add(store.currentSetId!, calledBy),
+    onSuccess: (_data: unknown, calledBy: 'us' | 'them') => {
+      qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
+      setTimeoutCaller(calledBy)
+      setTimeoutStep('timing')
+      setTimeoutSeconds(60)
+      timeoutIntervalRef.current = setInterval(() => {
+        setTimeoutSeconds((prev: number) => {
+          if (prev <= 1) {
+            clearInterval(timeoutIntervalRef.current!)
+            timeoutIntervalRef.current = null
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    },
+  })
+
+  // Parse the static starting-lineup blob (zone→playerID + nested setPositions)
+  const rawStarting = match?.sets?.[0]?.startingLineup as unknown as Record<string, unknown> | undefined
+  const startingSetPositions = rawStarting?.setPositions as Record<string, string[]> | undefined
+  const startingZones = rawStarting
+    ? {
+        zone1: rawStarting.zone1 as string | undefined,
+        zone2: rawStarting.zone2 as string | undefined,
+        zone3: rawStarting.zone3 as string | undefined,
+        zone4: rawStarting.zone4 as string | undefined,
+        zone5: rawStarting.zone5 as string | undefined,
+        zone6: rawStarting.zone6 as string | undefined,
+      }
+    : null
+
+  /**
+   * setterPlayerId — the UUID of the setter for this set.
+   * Derived once from the starting-lineup blob so it stays stable across rotations.
+   * Fallback: scan players[] for anyone whose DB positions include 'Setter'.
+   * Used for (a) the live rotation indicator, and (b) rotation stats attribution.
+   */
+  const setterPlayerId: string | null = (() => {
+    if (startingSetPositions && startingZones) {
+      const setterStartZone = Object.entries(startingSetPositions)
+        .find(([, roles]) => Array.isArray(roles) && roles.includes('Setter'))?.[0]
+      if (setterStartZone) {
+        return startingZones[setterStartZone as keyof typeof startingZones] ?? null
+      }
+    }
+    return players.find((p: Player) => p.positions.includes('Setter'))?.id ?? null
+  })()
+
+  /** Current rotation number — which zone is the setter in right now? */
+  const rotationNumber: number | null = (() => {
+    if (!store.lineup || !setterPlayerId) return null
+    const current = Object.entries(store.lineup).find(([, id]) => id === setterPlayerId)
+    return current ? parseInt(current[0].replace('zone', ''), 10) : null
+  })()
+
+  /**
+   * playerSetRoles: playerId → the role explicitly chosen for this player in this set.
+   * Built once from the static starting-lineup blob so it stays correct across rotations.
+   * A player who plays in multiple positions but was assigned as 'Setter' for this game
+   * will always show 'Setter' colouring, regardless of which zone they rotate into.
+   */
+  const playerSetRoles: Record<string, string> = (() => {
+    const map: Record<string, string> = {}
+    if (startingSetPositions && startingZones) {
+      for (const [zone, roles] of Object.entries(startingSetPositions)) {
+        const playerId = startingZones[zone as keyof typeof startingZones]
+        if (playerId && Array.isArray(roles) && roles[0]) {
+          map[playerId] = roles[0]
+        }
+      }
+    }
+    return map
+  })()
+
+  // Volleyball set-win logic
+  const setWon = isSetComplete(store.scoreUs, store.scoreThem, store.currentSetNumber)
+
+  return (
+    <div className="min-h-dvh bg-background flex flex-col">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 bg-surface-container/95 backdrop-blur-sm border-b border-outline/10">
+        <div className="flex items-center gap-2 px-4 pt-safe-top pt-3 pb-2">
+          <button
+            onClick={() => navigate(`/games/${matchId}/stats`)}
+            className="p-2 -ml-2 rounded-full hover:bg-surface-high transition-colors"
+          >
+            <ArrowLeft size={18} className="text-on-surface" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-on-surface-variant uppercase tracking-wide">
+              vs {store.opponentInitials} · Set {store.currentSetNumber}
+            </p>
+          </div>
+          {/* Score */}
+          <div className="font-display font-black text-xl">
+            <span className="text-orange">{store.scoreUs}</span>
+            <span className="text-on-surface-variant mx-1">–</span>
+            <span className="text-on-surface">{store.scoreThem}</span>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <Tabs tabs={LOG_TABS} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+
+      {/* Rotation toast */}
+      {showRotationToast && <RotationToast />}
+
+      {/* Content — log + tactics use full-height no-scroll layout; stats + timeline scroll */}
+      {activeTab === 'log' ? (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Court — grows to fill all available space */}
+          <div className="flex-1 min-h-0 px-3 pt-3 flex flex-col">
+            <CourtView
+              lineup={store.lineup}
+              players={players}
+              servingTeam={store.servingTeam}
+              scoreUs={store.scoreUs}
+              scoreThem={store.scoreThem}
+              opponentInitials={store.opponentInitials}
+              rotationNumber={rotationNumber}
+              playerSetRoles={playerSetRoles}
+              className="flex-1 min-h-0"
+            />
+          </div>
+
+          {/* Scoring controls
+               The inner slot has a fixed min-height equal to the taller "awaiting_type" state
+               so the court never shifts when the step changes. */}
+          <div className="shrink-0 px-4 pt-3 pb-1 flex flex-col gap-2">
+            {/* Fixed-height slot — both states rendered inside it */}
+            <div className="min-h-[140px] flex flex-col justify-center">
+              {store.scoringStep === 'idle' ? (
+                /* Step 1: Who scored? */
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => store.tapScore('us')}
+                    disabled={store.isCommitting}
+                    className={cn(
+                      'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
+                      'border-orange text-orange hover:bg-orange/10',
+                      store.isCommitting && 'opacity-50'
+                    )}
+                  >
+                    {store.teamInitials} ⊕
+                  </button>
+                  <button
+                    onClick={() => store.tapScore('them')}
+                    disabled={store.isCommitting}
+                    className={cn(
+                      'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
+                      'border-surface-bright text-on-surface hover:bg-surface-high',
+                      store.isCommitting && 'opacity-50'
+                    )}
+                  >
+                    {store.opponentInitials} ⊕
+                  </button>
+                </div>
+              ) : (
+                /* Step 2: How was the point earned? */
+                <div className="space-y-2">
+                  <p className="text-xs text-center text-on-surface-variant font-bold uppercase tracking-wide">
+                    {store.pendingScorer === 'us' ? 'Our point — how?' : 'Their point — how?'}
+                  </p>
+                  <ProgressBar value={autoFallbackProgress} color="orange" height="sm" className="mb-2" />
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => store.tapPointType('positive')}
+                      className={cn(
+                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95',
+                        store.pendingScorer === 'us'
+                          ? 'border-green-500 text-green-400 hover:bg-green-900/20'
+                          : 'border-red-500 text-red-400 hover:bg-red-900/20'
+                      )}
+                    >
+                      {store.pendingScorer === 'us' ? '✓ Own point' : '✓ Their play'}
+                    </button>
+                    <button
+                      onClick={() => store.tapPointType('error')}
+                      className={cn(
+                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95',
+                        'border-surface-bright text-on-surface-variant hover:bg-surface-high'
+                      )}
+                    >
+                      {store.pendingScorer === 'us' ? '✗ Their error' : '✗ Our error'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={store.cancelScoring}
+                    className="w-full text-xs text-on-surface-variant py-1"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Undo */}
+            <button
+              onClick={store.undoLastRally}
+              disabled={store.rallies.length === 0}
+              className="flex items-center justify-center gap-2 text-xs text-on-surface-variant hover:text-on-surface transition-colors py-1 disabled:opacity-30"
+            >
+              <RotateCcw size={12} /> Undo last point
+            </button>
+          </div>
+
+          {/* Bottom action icons — pinned to bottom */}
+          <div className="shrink-0 flex justify-around items-center px-4 py-3 border-t border-outline/10">
+            {[
+              { icon: <RefreshCw size={18} />, label: 'Lineup', disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
+              { icon: <ChevronDown size={18} />, label: 'Sub', disabled: false, action: () => setShowSubModal(true) },
+              { icon: <Clock size={18} />, label: 'Timeout', disabled: false, action: () => setShowTimeoutModal(true) },
+              { icon: <Flag size={18} />, label: 'End Set', disabled: !setWon, action: () => setShowEndSetModal(true) },
+            ].map(({ icon, label, disabled, action }) => (
+              <button
+                key={label}
+                onClick={action}
+                disabled={disabled}
+                className={cn(
+                  'flex flex-col items-center gap-1 p-3 rounded-xl transition-all',
+                  disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-surface-high'
+                )}
+              >
+                <span className={cn('text-on-surface-variant', label === 'End Set' && setWon && 'text-orange')}>{icon}</span>
+                <span className={cn(
+                  'text-[10px] font-bold uppercase',
+                  label === 'End Set' && setWon ? 'text-orange' : 'text-on-surface-variant'
+                )}>{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : activeTab === 'tactics' ? (
+        <TacticsTab
+          lineup={store.lineup}
+          players={players}
+          playerSetRoles={playerSetRoles}
+          servingTeam={store.servingTeam}
+          scoreThem={store.scoreThem}
+          opponentInitials={store.opponentInitials}
+          rotationNumber={rotationNumber}
+        />
+      ) : (
+        <div className="flex-1 overflow-y-auto">
+          {activeTab === 'stats' && (
+            <LiveStatsTab
+              rallies={store.rallies}
+              scoreUs={store.scoreUs}
+              scoreThem={store.scoreThem}
+              setterPlayerId={setterPlayerId}
+              teamName={match?.team?.name}
+              opponentName={match?.opponent ?? undefined}
+            />
+          )}
+          {activeTab === 'timeline' && setData && (
+            <TimelineTab
+              set={setData}
+              matchId={matchId!}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Substitution Modal */}
+      <BottomSheet
+        open={showSubModal}
+        onClose={() => setShowSubModal(false)}
+        title="Substitution"
+      >
+        <SubstitutionForm
+          setId={store.currentSetId || ''}
+          players={players}
+          lineup={store.lineup}
+          onSuccess={() => {
+            setShowSubModal(false)
+            qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
+          }}
+        />
+      </BottomSheet>
+
+      {/* Timeout Modal */}
+      <BottomSheet
+        open={showTimeoutModal}
+        onClose={closeTimeoutModal}
+        title="Timeout"
+      >
+        {timeoutStep === 'pick' ? (
+          /* Step 1 — who called it? */
+          <div className="space-y-3">
+            <Button
+              fullWidth
+              onClick={() => timeoutMutation.mutate('us')}
+              loading={timeoutMutation.isPending}
+            >
+              Called by Us
+            </Button>
+            <Button
+              fullWidth
+              variant="outline"
+              onClick={() => timeoutMutation.mutate('them')}
+              loading={timeoutMutation.isPending}
+            >
+              Called by Them
+            </Button>
+          </div>
+        ) : (
+          /* Step 2 — 60 s countdown */
+          <div className="flex flex-col items-center gap-5 py-4">
+            {/* Who called it */}
+            <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
+              {timeoutCaller === 'us' ? 'Our timeout' : 'Their timeout'}
+            </p>
+
+            {/* Timer or "Back to court" */}
+            {timeoutSeconds > 0 ? (
+              <p className="font-display font-black text-secondary-container"
+                style={{ fontSize: '4.5rem', lineHeight: 1 }}>
+                {Math.floor(timeoutSeconds / 60)}:{String(timeoutSeconds % 60).padStart(2, '0')}
+              </p>
+            ) : (
+              <p className="font-display font-bold text-2xl text-secondary-container tracking-wide">
+                Back to court!
+              </p>
+            )}
+
+            {/* Dismiss / confirm button */}
+            <Button
+              fullWidth
+              variant={timeoutSeconds === 0 ? 'secondary' : 'ghost'}
+              onClick={closeTimeoutModal}
+            >
+              {timeoutSeconds > 0 ? 'Dismiss early' : 'Back to court'}
+            </Button>
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* End Set Modal */}
+      <BottomSheet
+        open={showEndSetModal}
+        onClose={() => setShowEndSetModal(false)}
+        title={`End Set ${store.currentSetNumber}?`}
+      >
+        <div className="space-y-4">
+          <p className="text-center text-on-surface-variant">
+            Current score: <span className="font-bold text-on-surface">{store.scoreUs} – {store.scoreThem}</span>
+          </p>
+          <Button
+            fullWidth
+            onClick={() => endSetMutation.mutate()}
+            loading={endSetMutation.isPending}
+          >
+            Confirm — End Set {store.currentSetNumber}
+          </Button>
+          <Button variant="ghost" fullWidth onClick={() => setShowEndSetModal(false)}>
+            Cancel
+          </Button>
+        </div>
+      </BottomSheet>
+
+      {/* ── New-set lineup overlay ──────────────────────────────────────────
+          Full-screen so CourtLineupSetup has room to work. Shown automatically
+          after a non-final set ends, and also when the Lineup button is tapped
+          (only enabled when 0 rallies have been logged in the current set).  */}
+      {showNewSetSetup && (
+        <div className="fixed inset-0 z-50 bg-background flex flex-col">
+          {/* Header */}
+          <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-2 border-b border-outline/10 shrink-0">
+            <button
+              onClick={() => setShowNewSetSetup(false)}
+              className="p-2 -ml-2 rounded-full hover:bg-surface-high"
+            >
+              <ArrowLeft size={18} className="text-on-surface" />
+            </button>
+            <div className="flex-1">
+              <h1 className="font-display font-bold text-base text-on-surface">
+                Set {store.currentSetNumber + 1} — Starting lineup
+              </h1>
+              <p className="text-xs text-on-surface-variant">Assign all 6 zones, then confirm</p>
+            </div>
+          </div>
+
+          {/* Serving-first toggle */}
+          <div className="shrink-0 px-4 pt-3 pb-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Who serves first?</p>
+            <div className="flex gap-2">
+              {(['us', 'them'] as const).map(side => (
+                <button
+                  key={side}
+                  onClick={() => setNewSetServingFirst(side)}
+                  className={cn(
+                    'flex-1 py-2.5 rounded-xl border text-sm font-bold uppercase tracking-wide transition-all',
+                    newSetServingFirst === side
+                      ? 'border-orange bg-orange/10 text-orange'
+                      : 'border-outline/20 text-on-surface-variant'
+                  )}
+                >
+                  {side === 'us' ? store.teamInitials : store.opponentInitials}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lineup setup */}
+          <div className="flex-1 overflow-y-auto">
+            <CourtLineupSetup
+              players={match?.matchPlayers?.map((mp: { player: Player }) => mp.player) ?? players}
+              lineup={newSetLineup}
+              setPositions={newSetPositions}
+              onLineupChange={(lineup, setPositions) => {
+                setNewSetLineup(lineup)
+                setNewSetPositions(setPositions)
+              }}
+            />
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 px-4 py-4 border-t border-outline/10">
+            <Button
+              fullWidth
+              onClick={() => createSetMutation.mutate()}
+              loading={createSetMutation.isPending}
+              disabled={Object.keys(newSetLineup).length < 6}
+            >
+              Start Set {store.currentSetNumber + 1}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SubstitutionForm({
+  setId, players, lineup, onSuccess,
+}: {
+  setId: string
+  players: Player[]
+  lineup: Lineup | null
+  onSuccess: () => void
+}) {
+  const [playerOutId, setPlayerOutId] = useState('')
+  const [playerInId, setPlayerInId] = useState('')
+  const [isLiberoSwap, setIsLiberoSwap] = useState(false)
+
+  const mutation = useMutation({
+    mutationFn: () => subsApi.add(setId, { playerOutId, playerInId, isLiberoSwap }),
+    onSuccess,
+  })
+
+  const onCourtIds = lineup ? Object.values(lineup) : []
+  const onCourtPlayers = players.filter(p => onCourtIds.includes(p.id))
+  const benchPlayers = players.filter(p => !onCourtIds.includes(p.id))
+
+  const makeOpts = (pList: Player[]) =>
+    pList.map(p => ({ value: p.id, label: `#${p.jersey || '?'} ${p.firstName} ${p.lastName}` }))
+
+  return (
+    <div className="space-y-4">
+      <Select
+        label="Player OUT (on court)"
+        value={playerOutId}
+        onChange={e => setPlayerOutId(e.target.value)}
+        options={[{ value: '', label: 'Select...' }, ...makeOpts(onCourtPlayers)]}
+      />
+      <Select
+        label="Player IN (bench)"
+        value={playerInId}
+        onChange={e => setPlayerInId(e.target.value)}
+        options={[{ value: '', label: 'Select...' }, ...makeOpts(benchPlayers)]}
+      />
+      <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
+        <input
+          type="checkbox"
+          checked={isLiberoSwap}
+          onChange={e => setIsLiberoSwap(e.target.checked)}
+          className="w-4 h-4 accent-orange"
+        />
+        Libero swap (doesn't count against limit)
+      </label>
+      <Button
+        fullWidth
+        onClick={() => mutation.mutate()}
+        loading={mutation.isPending}
+        disabled={!playerOutId || !playerInId}
+      >
+        Confirm substitution
+      </Button>
+    </div>
+  )
+}

@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: vbscout_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vbuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vbscout
+    ports:
+      - "5446:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vbuser -d vbscout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: vbscout_api
+    restart: unless-stopped
+    ports:
+      - "3005:3005"
+    environment:
+      DATABASE_URL: postgresql://vbuser:${POSTGRES_PASSWORD}@db:5432/vbscout
+      JWT_SECRET: ${JWT_SECRET}
+      ANALYSIS_SERVICE_URL: http://analysis:8001
+      PORT: 3005
+    volumes:
+      - player_photos:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  analysis:
+    build:
+      context: ./analysis-service
+      dockerfile: Dockerfile
+    container_name: vbscout_analysis
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql://vbuser:${POSTGRES_PASSWORD}@db:5432/vbscout
+      N_SIMS: 10000
+      N_SENSITIVITY: 5000
+      MIN_RALLIES: 20
+      TUS_WINDOW: 6
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: vbscout_web
+    restart: unless-stopped
+    ports:
+      - "3004:3000"
+    environment:
+      VITE_API_URL: http://localhost:3005
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  player_photos:
