@@ -273,7 +273,7 @@ export function GameLogPage() {
           {/* Dark overlay for text contrast */}
           <div className="absolute inset-0 bg-black/35" />
 
-          <div className="relative z-10 flex items-center gap-2 px-4 pt-safe-top pt-5 pb-7">
+          <div className="relative z-10 flex items-center gap-2 px-4 pt-safe-top pt-7 pb-9">
             <button
               onClick={() => navigate(`/games/${matchId}/stats`)}
               className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
@@ -284,7 +284,7 @@ export function GameLogPage() {
             {/* Teams + score row */}
             <div className="flex-1 flex items-center justify-between gap-2">
               {/* Home team */}
-              <div className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="flex-1 flex flex-col items-center gap-1">
                 <p className="font-display font-semibold text-lg leading-tight text-white text-center break-words px-1">
                   {store.teamName}
                 </p>
@@ -294,7 +294,7 @@ export function GameLogPage() {
               </div>
 
               {/* Score + set */}
-              <div className="flex flex-col items-center gap-1.5 shrink-0">
+              <div className="flex flex-col items-center gap-2 shrink-0">
                 <div className="flex items-center gap-2.5 font-display font-black leading-none">
                   <span className="text-orange" style={{ fontSize: '2.75rem' }}>{store.scoreUs}</span>
                   <span className="text-white/50 text-2xl">–</span>
@@ -306,7 +306,7 @@ export function GameLogPage() {
               </div>
 
               {/* Opponent */}
-              <div className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="flex-1 flex flex-col items-center gap-1">
                 <p className="font-display font-semibold text-lg leading-tight text-white/80 text-center break-words px-1">
                   {match?.opponent ?? store.opponentInitials}
                 </p>
