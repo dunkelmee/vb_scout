@@ -31,10 +31,8 @@ export function DashboardPage() {
       <div className="px-5 pt-safe-top pt-5 pb-2 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange to-orange/70 flex items-center justify-center">
-              <span className="text-white font-display font-black text-xs">VB</span>
-            </div>
-            <span className="font-display font-bold text-lg text-on-surface">VB Scout</span>
+            <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
+            <span className="font-harabara text-2xl tracking-wide text-on-surface">courtside</span>
           </div>
           {data?.activeSeason && (
             <p className="text-xs text-on-surface-variant mt-0.5 ml-10">{data.activeSeason.name}</p>

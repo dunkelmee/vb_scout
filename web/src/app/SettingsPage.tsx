@@ -148,7 +148,7 @@ export function SettingsPage() {
           </Button>
         </div>
 
-        <p className="text-center text-xs text-on-surface-variant">VB Scout v1.0.0</p>
+        <p className="text-center text-xs text-on-surface-variant">courtside v1.0.0</p>
       </div>
     </div>
   )

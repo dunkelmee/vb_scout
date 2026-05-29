@@ -41,6 +41,7 @@ export default {
       fontFamily: {
         display: ['Montserrat', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
+        harabara: ['Harabara', 'sans-serif'],
       },
       fontSize: {
         'display-lg': ['40px', { lineHeight: '48px', letterSpacing: '-0.02em', fontWeight: '800' }],
