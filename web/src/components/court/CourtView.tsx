@@ -8,9 +8,6 @@ interface CourtViewProps {
   lineup: Lineup | null
   players: Player[]
   servingTeam: 'us' | 'them'
-  scoreUs: number
-  scoreThem: number
-  opponentInitials: string
   /** Current rotation number (1–6) derived in the parent from live lineup + starting data */
   rotationNumber?: number | null
   /** playerId → role explicitly chosen for this set (e.g. 'Setter', 'OH'). Follows the player across rotations. */
@@ -33,9 +30,6 @@ export function CourtView({
   lineup,
   players,
   servingTeam,
-  scoreUs,
-  scoreThem,
-  opponentInitials,
   rotationNumber,
   playerSetRoles,
   className,
@@ -50,17 +44,6 @@ export function CourtView({
         className="flex-1 rounded-xl overflow-hidden border border-outline/10 flex flex-col"
         style={{ background: 'linear-gradient(180deg, #1a1f2e 0%, #1d2022 50%, #1a1f2e 100%)' }}
       >
-        {/* ── Opponent side ── */}
-        <div className="shrink-0 px-3 pt-3 pb-1">
-          <div className="flex items-center justify-center gap-3 py-1">
-            <span className="font-display font-black text-3xl text-on-surface/60">{opponentInitials}</span>
-            <span className="font-display font-black text-3xl text-on-surface-variant">{scoreThem}</span>
-          </div>
-          <div className="flex justify-between text-[9px] text-on-surface-variant/30 font-bold uppercase tracking-widest px-1 mt-1">
-            <span>Zone 4</span><span>Zone 3</span><span>Zone 2</span>
-          </div>
-        </div>
-
         {/* ── Net ── */}
         <div className="shrink-0 mx-3 my-1">
           <div className="h-1 rounded-full bg-on-surface-variant/20 relative overflow-hidden">
@@ -92,11 +75,11 @@ export function CourtView({
           </div>
 
           {/* ── Rotation indicator (between rows) ── */}
-          <div className="shrink-0 flex items-center justify-center h-8 pointer-events-none">
+          <div className="shrink-0 flex items-center justify-center h-5 pointer-events-none">
             {rotationNumber != null && (
               <span
                 className="font-display font-black select-none"
-                style={{ fontSize: '1.6rem', lineHeight: 1, color: 'rgba(255,120,30,0.22)' }}
+                style={{ fontSize: '1.1rem', lineHeight: 1, color: 'rgba(255,120,30,0.22)' }}
               >
                 Z{SUB[String(rotationNumber)] ?? rotationNumber}
               </span>

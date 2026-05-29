@@ -41,8 +41,6 @@ interface TacticsTabProps {
   players: Player[]
   playerSetRoles?: Record<string, string>
   servingTeam: 'us' | 'them'
-  scoreThem: number
-  opponentInitials: string
   rotationNumber?: number | null
 }
 
@@ -52,8 +50,6 @@ export function TacticsTab({
   players,
   playerSetRoles,
   servingTeam,
-  scoreThem,
-  opponentInitials,
   rotationNumber,
 }: TacticsTabProps) {
   const [positions, setPositions] = useState<Record<string, Pos>>(
@@ -77,17 +73,6 @@ export function TacticsTab({
         className="flex-1 min-h-0 rounded-xl overflow-hidden border border-outline/10 flex flex-col"
         style={{ background: 'linear-gradient(180deg, #1a1f2e 0%, #1d2022 50%, #1a1f2e 100%)' }}
       >
-        {/* Opponent side */}
-        <div className="shrink-0 px-3 pt-3 pb-1">
-          <div className="flex items-center justify-center gap-3 py-1">
-            <span className="font-display font-black text-3xl text-on-surface/60">{opponentInitials}</span>
-            <span className="font-display font-black text-3xl text-on-surface-variant">{scoreThem}</span>
-          </div>
-          <div className="flex justify-between text-[9px] text-on-surface-variant/30 font-bold uppercase tracking-widest px-1 mt-1">
-            <span>Zone 4</span><span>Zone 3</span><span>Zone 2</span>
-          </div>
-        </div>
-
         {/* Net */}
         <div className="shrink-0 mx-3 my-1">
           <div className="h-1 rounded-full bg-on-surface-variant/20 relative overflow-hidden">

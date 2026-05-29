@@ -259,29 +259,69 @@ export function GameLogPage() {
   return (
     <div className="min-h-dvh bg-background flex flex-col">
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-surface-container/95 backdrop-blur-sm border-b border-outline/10">
-        <div className="flex items-center gap-2 px-4 pt-safe-top pt-3 pb-2">
-          <button
-            onClick={() => navigate(`/games/${matchId}/stats`)}
-            className="p-2 -ml-2 rounded-full hover:bg-surface-high transition-colors"
-          >
-            <ArrowLeft size={18} className="text-on-surface" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-on-surface-variant uppercase tracking-wide">
-              vs {store.opponentInitials} · Set {store.currentSetNumber}
-            </p>
-          </div>
-          {/* Score */}
-          <div className="font-display font-black text-xl">
-            <span className="text-orange">{store.scoreUs}</span>
-            <span className="text-on-surface-variant mx-1">–</span>
-            <span className="text-on-surface">{store.scoreThem}</span>
+      <div className="sticky top-0 z-20">
+        {/* Hero match header */}
+        <div className="relative overflow-hidden">
+          {/* Background image */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: 'url(/live_logging_header.png)', opacity: 1 }}
+          />
+          {/* Dark overlay for text contrast */}
+          <div className="absolute inset-0 bg-black/35" />
+
+          <div className="relative z-10 flex items-center gap-2 px-4 pt-safe-top pt-5 pb-7">
+            <button
+              onClick={() => navigate(`/games/${matchId}/stats`)}
+              className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <ArrowLeft size={18} className="text-white" />
+            </button>
+
+            {/* Teams + score row */}
+            <div className="flex-1 flex items-center justify-between gap-2">
+              {/* Home team */}
+              <div className="flex-1 flex flex-col items-center gap-0.5">
+                <p className="font-display font-semibold text-lg leading-tight text-white text-center break-words px-1">
+                  {store.teamName}
+                </p>
+                {store.servingTeam === 'us' && (
+                  <span className="text-sm leading-none">🏐</span>
+                )}
+              </div>
+
+              {/* Score + set */}
+              <div className="flex flex-col items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2.5 font-display font-black leading-none">
+                  <span className="text-orange" style={{ fontSize: '2.75rem' }}>{store.scoreUs}</span>
+                  <span className="text-white/50 text-2xl">–</span>
+                  <span className="text-white" style={{ fontSize: '2.75rem' }}>{store.scoreThem}</span>
+                </div>
+                <span className="text-[11px] text-white/60 font-bold uppercase tracking-widest">
+                  Set {store.currentSetNumber}
+                </span>
+              </div>
+
+              {/* Opponent */}
+              <div className="flex-1 flex flex-col items-center gap-0.5">
+                <p className="font-display font-semibold text-lg leading-tight text-white/80 text-center break-words px-1">
+                  {match?.opponent ?? store.opponentInitials}
+                </p>
+                {store.servingTeam === 'them' && (
+                  <span className="text-sm leading-none">🏐</span>
+                )}
+              </div>
+            </div>
+
+            {/* Spacer balances the back button */}
+            <div className="shrink-0 w-9" />
           </div>
         </div>
 
-        {/* Tab bar */}
-        <Tabs tabs={LOG_TABS} activeTab={activeTab} onChange={setActiveTab} />
+        {/* Tab bar — solid background prevents court bleed-through on small devices */}
+        <div className="bg-surface-container">
+          <Tabs tabs={LOG_TABS} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
       </div>
 
       {/* Rotation toast */}
@@ -296,9 +336,6 @@ export function GameLogPage() {
               lineup={store.lineup}
               players={players}
               servingTeam={store.servingTeam}
-              scoreUs={store.scoreUs}
-              scoreThem={store.scoreThem}
-              opponentInitials={store.opponentInitials}
               rotationNumber={rotationNumber}
               playerSetRoles={playerSetRoles}
               className="flex-1 min-h-0"
@@ -418,8 +455,6 @@ export function GameLogPage() {
           players={players}
           playerSetRoles={playerSetRoles}
           servingTeam={store.servingTeam}
-          scoreThem={store.scoreThem}
-          opponentInitials={store.opponentInitials}
           rotationNumber={rotationNumber}
         />
       ) : (
