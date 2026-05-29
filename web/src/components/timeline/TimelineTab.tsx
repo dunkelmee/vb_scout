@@ -48,8 +48,8 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
   }
 
   for (const s of set.substitutions || []) {
-    const outName = s.playerOut ? `#${s.playerOut.jersey || '?'} ${s.playerOut.lastName}` : '?'
-    const inName = s.playerIn ? `#${s.playerIn.jersey || '?'} ${s.playerIn.lastName}` : '?'
+    const outName = s.playerOut ? `#${s.playerOut.jersey || '?'} ${s.playerOut.firstName}` : '?'
+    const inName = s.playerIn ? `#${s.playerIn.jersey || '?'} ${s.playerIn.firstName}` : '?'
     entries.push({
       type: 'substitution',
       id: s.id,

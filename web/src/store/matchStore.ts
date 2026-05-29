@@ -38,6 +38,7 @@ interface MatchState {
   undoLastRally: () => Promise<void>
   cancelScoring: () => void
   refreshFromDB: () => Promise<void>
+  applySubstitution: (playerOutId: string, playerInId: string) => void
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -219,5 +220,15 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     const state = get()
     if (!state.matchId) return
     await get().initMatch(state.matchId)
+  },
+
+  applySubstitution: (playerOutId: string, playerInId: string) => {
+    const { lineup } = get()
+    if (!lineup) return
+    const updated: Record<string, string> = {}
+    for (const [zone, id] of Object.entries(lineup)) {
+      updated[zone] = id === playerOutId ? playerInId : id
+    }
+    set({ lineup: updated as Lineup })
   },
 }))

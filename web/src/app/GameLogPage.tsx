@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMatchStore } from '../store/matchStore'
-import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet } from '../lib/api'
+import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet, Substitution } from '../lib/api'
 import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
 import { BottomSheet } from '../components/ui/Modal'
@@ -256,6 +256,9 @@ export function GameLogPage() {
   // Volleyball set-win logic
   const setWon = isSetComplete(store.scoreUs, store.scoreThem, store.currentSetNumber)
 
+  // Non-libero substitutions used this set (max 6)
+  const nonLiberoSubs = (setData?.substitutions ?? []).filter((s: Substitution) => !s.isLiberoSwap).length
+
   return (
     <div className="min-h-dvh bg-background flex flex-col">
       {/* Sticky header */}
@@ -426,11 +429,11 @@ export function GameLogPage() {
           {/* Bottom action icons — pinned to bottom */}
           <div className="shrink-0 flex justify-around items-center px-4 py-3 border-t border-outline/10">
             {[
-              { icon: <RefreshCw size={18} />, label: 'Lineup', disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
-              { icon: <ChevronDown size={18} />, label: 'Sub', disabled: false, action: () => setShowSubModal(true) },
-              { icon: <Clock size={18} />, label: 'Timeout', disabled: false, action: () => setShowTimeoutModal(true) },
-              { icon: <Flag size={18} />, label: 'End Set', disabled: !setWon, action: () => setShowEndSetModal(true) },
-            ].map(({ icon, label, disabled, action }) => (
+              { icon: <RefreshCw size={18} />, label: 'Lineup', badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
+              { icon: <ChevronDown size={18} />, label: 'Sub', badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
+              { icon: <Clock size={18} />, label: 'Timeout', badge: null, disabled: store.rallies.length === 0, action: () => setShowTimeoutModal(true) },
+              { icon: <Flag size={18} />, label: 'End Set', badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
+            ].map(({ icon, label, badge, disabled, action }) => (
               <button
                 key={label}
                 onClick={action}
@@ -445,6 +448,9 @@ export function GameLogPage() {
                   'text-[10px] font-bold uppercase',
                   label === 'End Set' && setWon ? 'text-orange' : 'text-on-surface-variant'
                 )}>{label}</span>
+                {badge !== null && (
+                  <span className="text-[9px] text-on-surface-variant/50 font-bold -mt-0.5">{badge}</span>
+                )}
               </button>
             ))}
           </div>
@@ -482,13 +488,14 @@ export function GameLogPage() {
       <BottomSheet
         open={showSubModal}
         onClose={() => setShowSubModal(false)}
-        title="Substitution"
+        title={`Substitution — ${nonLiberoSubs}/6 used`}
       >
         <SubstitutionForm
           setId={store.currentSetId || ''}
           players={players}
           lineup={store.lineup}
-          onSuccess={() => {
+          onSuccess={(playerOutId, playerInId) => {
+            store.applySubstitution(playerOutId, playerInId)
             setShowSubModal(false)
             qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
           }}
@@ -654,7 +661,7 @@ function SubstitutionForm({
   setId: string
   players: Player[]
   lineup: Lineup | null
-  onSuccess: () => void
+  onSuccess: (playerOutId: string, playerInId: string) => void
 }) {
   const [playerOutId, setPlayerOutId] = useState('')
   const [playerInId, setPlayerInId] = useState('')
@@ -662,7 +669,7 @@ function SubstitutionForm({
 
   const mutation = useMutation({
     mutationFn: () => subsApi.add(setId, { playerOutId, playerInId, isLiberoSwap }),
-    onSuccess,
+    onSuccess: () => onSuccess(playerOutId, playerInId),
   })
 
   const onCourtIds = lineup ? Object.values(lineup) : []
