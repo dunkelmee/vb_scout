@@ -345,67 +345,7 @@ All other variables are set automatically by `docker-compose.yml` and do not nee
 
 ---
 
-### Docker Deployment (Recommended)
-
-**Prerequisites:** Docker Desktop (or Docker Engine + Compose plugin) installed.
-
-```bash
-# 1. Clone the repo
-git clone <repo-url>
-cd volleyball_scout
-
-# 2. Configure secrets
-cp .env.example .env
-# Edit .env — set POSTGRES_PASSWORD and JWT_SECRET
-
-# Generate a strong JWT secret:
-openssl rand -base64 32
-
-# 3. Build and start all services
-docker compose up --build
-
-# Services:
-#   Frontend  →  http://localhost:3004
-#   API       →  http://localhost:3005
-#   Analysis  →  http://localhost:8001/docs
-#   Database  →  localhost:5446 (internal only in production)
-```
-
-**Subsequent starts (no rebuild needed):**
-```bash
-docker compose up
-```
-
-**Stop and remove containers:**
-```bash
-docker compose down
-```
-
-**Stop and wipe all data (destructive):**
-```bash
-docker compose down -v   # removes pgdata and player_photos volumes
-```
-
-**Viewing logs:**
-```bash
-docker compose logs -f          # all services
-docker compose logs -f api      # API only
-docker compose logs -f analysis # analysis service only
-```
-
-**Rebuilding a single service:**
-```bash
-docker compose up --build api
-```
-
-**Service startup order:**
-`db` → (healthy) → `api` + `analysis` → `web`
-
-The `api` service runs `prisma db push` on startup, so the database schema is applied automatically on first run and on schema changes.
-
----
-
-### Local Development (Without Docker)
+### Local Development
 
 Run each service in a separate terminal. You need PostgreSQL 15 running locally first.
 
