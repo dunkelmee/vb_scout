@@ -1,7 +1,7 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { dashboardApi, DashboardData } from '../lib/api'
+import { dashboardApi, DashboardData, BASE } from '../lib/api'
 import { useRole } from '../hooks/useRole'
 import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
@@ -230,9 +230,12 @@ function PlayerAvatar({ player }: { player: OfficialPlayer }) {
   const color = palette[(player.firstName.charCodeAt(0) + player.lastName.charCodeAt(0)) % palette.length]
   const title = `${player.firstName} ${player.lastName}`
   if (player.avatarUrl) {
+    const src = player.avatarUrl.startsWith('http')
+      ? player.avatarUrl
+      : `${BASE}${player.avatarUrl}`
     return (
       <img
-        src={player.avatarUrl}
+        src={src}
         alt={title}
         title={title}
         className="w-6 h-6 rounded-full object-cover ring-1 ring-surface"

@@ -1,6 +1,6 @@
 // Typed fetch wrappers for the VB Scout API
 
-const BASE = import.meta.env.VITE_API_URL || ''
+export const BASE = import.meta.env.VITE_API_URL || ''
 
 /**
  * Read the access token from Zustand's persisted localStorage state.
