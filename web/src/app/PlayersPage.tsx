@@ -5,7 +5,6 @@ import { playersApi, Player } from '../lib/api'
 import { useRole } from '../hooks/useRole'
 import { useAuthStore } from '../store/authStore'
 import { PageHeader } from '../components/ui/AppShell'
-import { FAB } from '../components/ui/FAB'
 import { Badge, PositionBadge } from '../components/ui/Badge'
 import { PlayerAvatar } from '../components/players/PlayerAvatar'
 import { Plus, Edit3, Trash2, ShieldCheck } from 'lucide-react'
@@ -38,9 +37,9 @@ export function PlayersPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/players/new')}
-            className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
           >
-            <Plus size={16} className="text-on-surface" />
+            <Plus size={16} className="text-white" />
           </button>
         ) : undefined}
       />
@@ -131,9 +130,6 @@ export function PlayersPage() {
         })}
       </div>
 
-      {isManager && (
-        <FAB onClick={() => navigate('/players/new')} icon={<Plus size={22} />} />
-      )}
     </div>
   )
 }

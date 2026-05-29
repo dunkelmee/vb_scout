@@ -4,9 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { gamesApi, Match } from '../lib/api'
 import { useRole } from '../hooks/useRole'
 import { PageHeader } from '../components/ui/AppShell'
-import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { FAB } from '../components/ui/FAB'
 import { Tabs } from '../components/ui/Tabs'
 import { format } from '../lib/dateUtils'
 import { Plus, MapPin, Edit3, Trash2, BarChart2, Radio, Swords, Gavel } from 'lucide-react'
@@ -50,9 +48,12 @@ export function GamesPage() {
         title="Games"
         subtitle="Match Schedule"
         right={isManager ? (
-          <Button variant="ghost" size="sm" onClick={() => navigate('/games/new')}>
-            <Plus size={16} />
-          </Button>
+          <button
+            onClick={() => navigate('/games/new')}
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
+          >
+            <Plus size={16} className="text-white" />
+          </button>
         ) : undefined}
       />
 
@@ -117,20 +118,17 @@ export function GamesPage() {
             </div>
             <p className="text-on-surface-variant text-center">No games found.</p>
             {isManager && (
-              <Button variant="outline" size="sm" onClick={() => navigate('/games/new')}>
+              <button
+                onClick={() => navigate('/games/new')}
+                className="text-orange font-bold text-sm border border-orange/30 rounded-full px-4 py-2"
+              >
                 Create first game
-              </Button>
+              </button>
             )}
           </div>
         )}
       </div>
 
-      {isManager && (
-        <FAB
-          onClick={() => navigate('/games/new')}
-          icon={<Plus size={22} />}
-        />
-      )}
     </div>
   )
 }

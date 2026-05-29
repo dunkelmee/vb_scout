@@ -5,7 +5,6 @@ import { trainingsApi, TrainingSession } from '../lib/api'
 import { useRole } from '../hooks/useRole'
 import { useAuthStore } from '../store/authStore'
 import { PageHeader } from '../components/ui/AppShell'
-import { FAB } from '../components/ui/FAB'
 import { Badge } from '../components/ui/Badge'
 import { format, formatDuration, isUpcoming } from '../lib/dateUtils'
 import { Plus, MapPin, ChevronRight, Trash2, Edit3 } from 'lucide-react'
@@ -39,7 +38,18 @@ export function TrainingsPage() {
 
   return (
     <div className="min-h-dvh bg-background">
-      <PageHeader title="Trainings" subtitle="Sessions" />
+      <PageHeader
+        title="Trainings"
+        subtitle="Sessions"
+        right={isManager ? (
+          <button
+            onClick={() => navigate('/trainings/new')}
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
+          >
+            <Plus size={16} className="text-white" />
+          </button>
+        ) : undefined}
+      />
 
       {isLoading && <div className="px-5 space-y-3 animate-pulse">{[...Array(3)].map((_, i) => <div key={i} className="card h-28" />)}</div>}
 
@@ -105,12 +115,6 @@ export function TrainingsPage() {
         )}
       </div>
 
-      {isManager && (
-        <FAB
-          onClick={() => navigate('/trainings/new')}
-          icon={<Plus size={22} />}
-        />
-      )}
     </div>
   )
 }
