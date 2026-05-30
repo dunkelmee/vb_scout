@@ -8,10 +8,12 @@ A mobile-optimised volleyball team management and match logging application for 
 
 - [User Guide](#user-guide)
   - [Getting Started as a Manager](#getting-started-as-a-manager)
+  - [Installing as an App (PWA)](#installing-as-an-app-pwa)
   - [Managing Your Roster](#managing-your-roster)
   - [Organising Seasons](#organising-seasons)
   - [Scheduling and Managing Matches](#scheduling-and-managing-matches)
   - [Live Match Logging](#live-match-logging)
+  - [Offline Mode](#offline-mode)
   - [Match Statistics and AI Analysis](#match-statistics-and-ai-analysis)
   - [Training Sessions](#training-sessions)
   - [Training Priorities](#training-priorities)
@@ -27,6 +29,7 @@ A mobile-optimised volleyball team management and match logging application for 
   - [API Reference](#api-reference)
   - [Analysis Service](#analysis-service)
   - [Auth System](#auth-system)
+  - [Progressive Web App (PWA)](#progressive-web-app-pwa)
   - [Design System — Kinetic Court](#design-system--kinetic-court)
   - [Testing](#testing)
   - [Ports](#ports)
@@ -40,6 +43,28 @@ A mobile-optimised volleyball team management and match logging application for 
 1. Open the app at `http://localhost:3004` (or your hosted URL).
 2. Click **Register** and enter your name, email, password, and team name. This creates your account, your team, and an initial active season.
 3. Log in. You land on the **Dashboard**, which shows your team's KPIs, upcoming games and trainings, and recent AI analysis highlights.
+
+---
+
+### Installing as an App (PWA)
+
+Courtside is a Progressive Web App (PWA). You can install it directly on your phone or tablet for a full-screen, native-like experience — no app store required.
+
+**Android (Chrome)**
+1. Open the app in Chrome.
+2. Tap the three-dot menu → **Add to Home screen**.
+3. Tap **Install**. The app appears on your home screen and opens without the browser chrome.
+
+**iOS (Safari)**
+1. Open the app in Safari.
+2. Tap the Share icon (square with arrow) → **Add to Home Screen**.
+3. Tap **Add**. The app appears on your home screen.
+
+**Desktop (Chrome / Edge)**
+1. Look for the install icon in the address bar (a `+` or screen icon).
+2. Click it and confirm. The app opens in its own window.
+
+Once installed, the app shell loads from cache even without a network connection, and live match logging works fully offline (see [Offline Mode](#offline-mode)).
 
 ---
 
@@ -129,6 +154,32 @@ The live logging screen (`GameLog`) is designed for one-handed use during a real
 
 ---
 
+### Offline Mode
+
+The live logging screen works without an internet connection. This is useful when logging in a sports hall with poor Wi-Fi or no mobile signal.
+
+**What works offline:**
+- Scoring rallies (tap Us / Them, then point type)
+- Logging substitutions
+- Logging timeouts (countdown timer still runs)
+- Undoing the last rally (only if it was logged during the same offline session)
+- Viewing the current score, lineup, and rotation
+
+**What requires a connection:**
+- Ending a set or match
+- Viewing historical stats and AI analysis
+- Undoing a rally that was logged before going offline
+
+**How syncing works:**
+
+While offline, every scored rally, substitution, and timeout is saved to a local queue on the device. A banner at the top of the live logging screen shows the connection status and how many actions are pending.
+
+As soon as the connection is restored, the app automatically replays the queued actions to the server in the order they were logged, then refreshes its state from the server to ensure everything is in sync. No manual action is required.
+
+> The offline queue survives page refreshes and app restarts — actions are stored persistently on the device and will sync the next time the app connects.
+
+---
+
 ### Match Statistics and AI Analysis
 
 Open any completed match and switch to the **Stats** tab.
@@ -214,6 +265,7 @@ You cannot create matches, edit other players' data, or manage the roster.
 |---|---|
 | Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
 | State / Data | Zustand + TanStack Query |
+| PWA | vite-plugin-pwa (Workbox) |
 | Backend | Node.js + Express + Prisma ORM |
 | Database | PostgreSQL 15 |
 | Analysis | Python 3.11 + FastAPI |
@@ -565,6 +617,57 @@ The FastAPI service runs independently and connects to PostgreSQL directly.
 1. Manager calls `POST /api/auth/invite/:playerId` → receives a signed 7-day JWT invite token.
 2. Manager shares the invite URL with the player.
 3. Player calls `POST /api/auth/accept-invite` with the token, email, and chosen password → account is created and linked to the player record.
+
+---
+
+### Progressive Web App (PWA)
+
+The frontend is configured as a PWA using [`vite-plugin-pwa`](https://vite-pwa-org.netlify.app/) (Workbox under the hood).
+
+**What's cached:**
+
+| Resource | Strategy |
+|---|---|
+| App shell (HTML, JS, CSS, images, fonts) | Pre-cached at install time — available offline immediately |
+| Google Fonts stylesheets + files | `CacheFirst`, 1-year TTL |
+| API responses | Not cached — always require a live connection |
+
+**Offline queue (`offlineStore`):**
+
+Queued operations are persisted in `localStorage` via a dedicated Zustand store (`web/src/store/offlineStore.ts`). Each entry records the HTTP method, URL, and body needed to replay the action. The queue key is `vbscout-offline-queue`.
+
+**Sync hook (`useSyncQueue`):**
+
+Mounted inside `GameLogPage`. Listens for the `online` browser event. On reconnect, replays the queue sequentially (order matters — rallies must reach the server in the order they were logged). After all items process, calls `refreshFromDB()` to reconcile local state with the canonical server response.
+
+Server 4xx responses for a queued item are treated as permanently invalid (e.g. the set was closed while offline) and are discarded to prevent the queue from blocking.
+
+**Icons:**
+
+PWA icons are generated from `web/public/vb-icon.svg` using `@vite-pwa/assets-generator`. To regenerate after changing the icon:
+
+```bash
+cd web
+npx pwa-assets-generator --preset minimal-2023 public/vb-icon.svg
+```
+
+This produces `pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`, and `favicon.ico` in `web/public/`.
+
+**Testing PWA features:**
+
+The service worker is intentionally disabled in `vite dev` mode to avoid conflicts with Hot Module Replacement. To test installation and offline behaviour, use a production build:
+
+```bash
+cd web
+npm run build
+npm run preview   # serves the built app at http://localhost:4173
+```
+
+Then open Chrome DevTools → **Application → Service Workers** to inspect the SW state, or use the **Network** tab to simulate offline.
+
+**Nginx (production):**
+
+`web/nginx.conf` serves the service worker with `Cache-Control: no-cache` so browser updates are applied immediately when a new version is deployed. The manifest is similarly uncached.
 
 ---
 

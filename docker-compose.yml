@@ -74,6 +74,21 @@ services:
     depends_on:
       - api
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: vbscout_caddy
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
 volumes:
   pgdata:
   player_photos:
+  caddy_data:
+  caddy_config:

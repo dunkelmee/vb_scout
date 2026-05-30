@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMatchStore } from '../store/matchStore'
+import { useOfflineStore } from '../store/offlineStore'
 import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet, Substitution } from '../lib/api'
 import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
 import { BottomSheet } from '../components/ui/Modal'
+import { OfflineBanner } from '../components/ui/OfflineBanner'
 import { CourtView } from '../components/court/CourtView'
 import { LiveStatsTab } from '../components/stats/LiveStatsTab'
 import { TimelineTab } from '../components/timeline/TimelineTab'
@@ -17,6 +19,7 @@ import { cn } from '../components/ui/cn'
 import { Lineup, Zone } from '../lib/rotation'
 import { CourtLineupSetup } from '../components/court/CourtLineupSetup'
 import { TacticsTab } from '../components/court/TacticsTab'
+import { useSyncQueue } from '../hooks/useSyncQueue'
 
 const LOG_TABS = [
   { id: 'log', label: 'Log' },
@@ -57,6 +60,7 @@ export function GameLogPage() {
   const [autoFallbackProgress, setAutoFallbackProgress] = useState(0)
 
   const store = useMatchStore()
+  const { pendingCount, isOnline } = useSyncQueue()
 
   useEffect(() => {
     if (matchId) {
@@ -176,23 +180,40 @@ export function GameLogPage() {
     }
   }
 
+  const startTimeoutCountdown = (calledBy: 'us' | 'them') => {
+    setTimeoutCaller(calledBy)
+    setTimeoutStep('timing')
+    setTimeoutSeconds(60)
+    timeoutIntervalRef.current = setInterval(() => {
+      setTimeoutSeconds((prev: number) => {
+        if (prev <= 1) {
+          clearInterval(timeoutIntervalRef.current!)
+          timeoutIntervalRef.current = null
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
   const timeoutMutation = useMutation({
     mutationFn: (calledBy: 'us' | 'them') => timeoutsApi.add(store.currentSetId!, calledBy),
     onSuccess: (_data: unknown, calledBy: 'us' | 'them') => {
       qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
-      setTimeoutCaller(calledBy)
-      setTimeoutStep('timing')
-      setTimeoutSeconds(60)
-      timeoutIntervalRef.current = setInterval(() => {
-        setTimeoutSeconds((prev: number) => {
-          if (prev <= 1) {
-            clearInterval(timeoutIntervalRef.current!)
-            timeoutIntervalRef.current = null
-            return 0
-          }
-          return prev - 1
+      startTimeoutCountdown(calledBy)
+    },
+    onError: (_err: unknown, calledBy: 'us' | 'them') => {
+      if (!navigator.onLine) {
+        useOfflineStore.getState().enqueue({
+          type: 'timeout',
+          matchId: matchId!,
+          setId: store.currentSetId!,
+          method: 'POST',
+          url: `/api/sets/${store.currentSetId}/timeouts`,
+          body: { calledBy },
         })
-      }, 1000)
+        startTimeoutCountdown(calledBy)
+      }
     },
   })
 
@@ -325,6 +346,7 @@ export function GameLogPage() {
         <div className="bg-surface-container">
           <Tabs tabs={LOG_TABS} activeTab={activeTab} onChange={setActiveTab} />
         </div>
+        <OfflineBanner pendingCount={pendingCount} isOnline={isOnline} />
       </div>
 
       {/* Rotation toast */}
@@ -492,6 +514,7 @@ export function GameLogPage() {
       >
         <SubstitutionForm
           setId={store.currentSetId || ''}
+          matchId={matchId || ''}
           players={players}
           lineup={store.lineup}
           onSuccess={(playerOutId, playerInId) => {
@@ -656,9 +679,10 @@ export function GameLogPage() {
 }
 
 function SubstitutionForm({
-  setId, players, lineup, onSuccess,
+  setId, matchId, players, lineup, onSuccess,
 }: {
   setId: string
+  matchId: string
   players: Player[]
   lineup: Lineup | null
   onSuccess: (playerOutId: string, playerInId: string) => void
@@ -670,6 +694,19 @@ function SubstitutionForm({
   const mutation = useMutation({
     mutationFn: () => subsApi.add(setId, { playerOutId, playerInId, isLiberoSwap }),
     onSuccess: () => onSuccess(playerOutId, playerInId),
+    onError: () => {
+      if (!navigator.onLine) {
+        useOfflineStore.getState().enqueue({
+          type: 'substitution',
+          matchId,
+          setId,
+          method: 'POST',
+          url: `/api/sets/${setId}/substitutions`,
+          body: { playerOutId, playerInId, isLiberoSwap },
+        })
+        onSuccess(playerOutId, playerInId)
+      }
+    },
   })
 
   const onCourtIds = lineup ? Object.values(lineup) : []

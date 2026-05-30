@@ -332,6 +332,8 @@ export interface Rally {
   rotated: boolean
   currentServer: 'us' | 'them'
   loggedAt: string
+  /** True for rallies added while offline that have not yet been synced to the server. */
+  isOffline?: boolean
 }
 
 export interface Substitution {

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { Lineup } from '../lib/rotation'
 import { Rally, ralliesApi, setsApi, gamesApi } from '../lib/api'
 import { addPoint } from '../lib/rotation'
+import { useOfflineStore } from './offlineStore'
 
 function deriveInitials(name?: string | null): string {
   if (!name) return 'US'
@@ -29,6 +30,10 @@ interface MatchState {
   opponentInitials: string
   teamName: string
   teamInitials: string
+  /** Initial lineup for the current set — used to restore state when all offline rallies are undone. */
+  setStartLineup: Lineup | null
+  /** Who served first in this set — used alongside setStartLineup for restoration. */
+  setStartServingTeam: 'us' | 'them'
 
   // Actions
   initMatch: (matchId: string) => Promise<void>
@@ -58,12 +63,12 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   opponentInitials: 'OPP',
   teamName: 'US',
   teamInitials: 'US',
+  setStartLineup: null,
+  setStartServingTeam: 'us',
 
   initMatch: async (matchId: string) => {
     try {
       const match = await gamesApi.get(matchId)
-      // Only allow logging to a set that is still in progress.
-      // Never fall back to a completed set — the API would reject any new rallies.
       const currentSet = match.sets?.find(s => s.status === 'in_progress')
 
       if (!currentSet) return
@@ -72,13 +77,16 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       const rallies = setData.rallies || []
       const lastRally = rallies[rallies.length - 1]
 
+      const startLineup = currentSet.startingLineup as unknown as Lineup
+      const startServer = currentSet.servingFirst as 'us' | 'them'
+
       const lineup = lastRally
         ? (lastRally.rotationAfter as unknown as Lineup)
-        : (currentSet.startingLineup as unknown as Lineup)
+        : startLineup
 
       const servingTeam = lastRally
         ? (lastRally.currentServer as 'us' | 'them')
-        : (currentSet.servingFirst as 'us' | 'them')
+        : startServer
 
       set({
         matchId,
@@ -92,9 +100,10 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         rallies: rallies as Rally[],
         scoringStep: 'idle',
         pendingScorer: null,
+        setStartLineup: startLineup,
+        setStartServingTeam: startServer,
         opponentInitials: match.opponentInitials || match.opponent?.slice(0, 3).toUpperCase() || 'OPP',
         teamName: match.team?.name || 'US',
-        // Prefer the stored initials override; fall back to auto-deriving from name.
         teamInitials: match.team?.initials || deriveInitials(match.team?.name),
       })
     } catch (err) {
@@ -106,10 +115,8 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     const state = get()
     if (state.scoringStep !== 'idle') return
 
-    // Clear any existing timer
     if (state.autoFallbackTimer) clearTimeout(state.autoFallbackTimer)
 
-    // Set up auto-fallback after 4 seconds
     const timer = setTimeout(() => {
       const s = get()
       if (s.scoringStep === 'awaiting_type' && s.pendingScorer === scorer) {
@@ -130,9 +137,9 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     let pointType: string
 
     if (scorer === 'us') {
-      pointType = type === 'positive' ? 'us_positive' : 'them_error' // us scored via own play OR their error
+      pointType = type === 'positive' ? 'us_positive' : 'them_error'
     } else {
-      pointType = type === 'positive' ? 'them_positive' : 'us_error' // them scored via own play OR our error
+      pointType = type === 'positive' ? 'them_positive' : 'us_error'
     }
 
     get().commitRally(scorer, pointType)
@@ -166,16 +173,45 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       const rally = await ralliesApi.add(state.currentSetId, { scorer, pointType })
       set((s) => ({ rallies: [...s.rallies, rally], isCommitting: false }))
     } catch (err) {
-      console.error('Failed to commit rally:', err)
-      // Rollback
-      set({
-        lineup: state.lineup,
-        servingTeam: state.servingTeam,
-        scoreUs: state.scoreUs,
-        scoreThem: state.scoreThem,
-        rallyCount: state.rallyCount,
-        isCommitting: false,
-      })
+      if (!navigator.onLine) {
+        // Offline: keep the optimistic update and queue the operation for later sync.
+        useOfflineStore.getState().enqueue({
+          type: 'rally',
+          matchId: state.matchId!,
+          setId: state.currentSetId!,
+          method: 'POST',
+          url: `/api/sets/${state.currentSetId}/rallies`,
+          body: { scorer, pointType },
+        })
+        // Build a local rally object so the timeline and undo logic stay consistent.
+        const offlineRally: Rally = {
+          id: crypto.randomUUID(),
+          setId: state.currentSetId!,
+          rallyIndex: state.rallyCount,
+          scorer,
+          pointType,
+          scoreUs: newScoreUs,
+          scoreThem: newScoreThem,
+          servingTeam: state.servingTeam,
+          rotationAfter: newLineup as unknown as Record<string, string>,
+          rotated,
+          currentServer: newServer,
+          loggedAt: new Date().toISOString(),
+          isOffline: true,
+        }
+        set((s) => ({ rallies: [...s.rallies, offlineRally], isCommitting: false }))
+      } else {
+        // Online but request failed — roll back the optimistic update.
+        console.error('Failed to commit rally:', err)
+        set({
+          lineup: state.lineup,
+          servingTeam: state.servingTeam,
+          scoreUs: state.scoreUs,
+          scoreThem: state.scoreThem,
+          rallyCount: state.rallyCount,
+          isCommitting: false,
+        })
+      }
     }
   },
 
@@ -183,10 +219,49 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     const state = get()
     if (!state.currentSetId || state.rallies.length === 0) return
 
+    const lastRally = state.rallies[state.rallies.length - 1]
+
+    // Offline path: only undo rallies that were themselves added offline.
+    if (!navigator.onLine) {
+      if (!lastRally.isOffline) return // can't undo a synced rally while offline
+
+      const removed = useOfflineStore.getState().removeLastRallyForSet(state.currentSetId)
+      if (!removed) return
+
+      const newRallies = state.rallies.slice(0, -1)
+
+      if (newRallies.length === 0) {
+        // All rallies in this set were offline — restore to the set's initial state.
+        set({
+          rallies: [],
+          scoreUs: 0,
+          scoreThem: 0,
+          servingTeam: state.setStartServingTeam,
+          lineup: state.setStartLineup,
+          rallyCount: 0,
+          scoringStep: 'idle',
+          pendingScorer: null,
+        })
+      } else {
+        const prev = newRallies[newRallies.length - 1]
+        set({
+          rallies: newRallies,
+          scoreUs: prev.scoreUs,
+          scoreThem: prev.scoreThem,
+          servingTeam: prev.currentServer,
+          lineup: prev.rotationAfter as unknown as Lineup,
+          rallyCount: newRallies.length,
+          scoringStep: 'idle',
+          pendingScorer: null,
+        })
+      }
+      return
+    }
+
+    // Online path
     try {
       const { restoredRally } = await ralliesApi.undoLast(state.currentSetId)
 
-      // Rebuild state from restored rally
       const newRallies = state.rallies.slice(0, -1)
       const prev = restoredRally
 
