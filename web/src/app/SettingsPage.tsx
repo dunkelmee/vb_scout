@@ -313,7 +313,7 @@ function SeasonsManager() {
             {!s.isActive && (
               <button
                 onClick={() => activateMutation.mutate(s.id)}
-                className="p-1.5 rounded hover:bg-surface-high text-on-surface-variant"
+                className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant"
                 title="Set active"
               >
                 <Check size={12} />
@@ -323,7 +323,7 @@ function SeasonsManager() {
               onClick={() => {
                 if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id)
               }}
-              className="p-1.5 rounded hover:bg-surface-high text-error/60"
+              className="p-1.5 rounded hover:bg-white/[0.06] text-error/60"
             >
               ✕
             </button>

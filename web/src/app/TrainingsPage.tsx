@@ -44,7 +44,7 @@ export function TrainingsPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/trainings/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
             <Plus size={16} className="text-white" />
           </button>
@@ -176,15 +176,15 @@ function TrainingCard({
         <div className="flex items-center gap-2">
           {isManager && (
             <>
-              <button onClick={onEdit} className="p-1.5 rounded hover:bg-surface-high text-on-surface-variant">
+              <button onClick={onEdit} className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant">
                 <Edit3 size={14} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded hover:bg-surface-high text-error/60">
+              <button onClick={onDelete} className="p-1.5 rounded hover:bg-white/[0.06] text-error/60">
                 <Trash2 size={14} />
               </button>
             </>
           )}
-          <Link to={`/trainings/${session.id}`} className="p-1.5 rounded hover:bg-surface-high text-on-surface-variant">
+          <Link to={`/trainings/${session.id}`} className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant">
             <ChevronRight size={14} />
           </Link>
         </div>

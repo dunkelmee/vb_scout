@@ -49,7 +49,7 @@ export function GameStatsPage() {
     <div className="min-h-dvh bg-background">
       {/* Header */}
       <div className="px-4 pt-safe-top pt-4 pb-2 flex items-center gap-2 border-b border-outline/10">
-        <Link to="/games" className="p-2 -ml-2 rounded-full hover:bg-surface-high">
+        <Link to="/games" className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
           <ArrowLeft size={18} className="text-on-surface" />
         </Link>
         <div className="flex-1 min-w-0">

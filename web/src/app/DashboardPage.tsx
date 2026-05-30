@@ -117,7 +117,7 @@ export function DashboardPage() {
                 <Link
                   key={match.id}
                   to={`/games/${match.id}/stats`}
-                  className="card p-4 hover:bg-surface-highest transition-colors"
+                  className="card p-4 transition-colors"
                 >
                   <p className="text-xs text-orange font-bold uppercase tracking-wide mb-1">
                     {match.matchType === 'playing' ? 'Playing' : 'Officiating'}
@@ -160,7 +160,7 @@ export function DashboardPage() {
                   <Link
                     key={session.id}
                     to={`/trainings/${session.id}`}
-                    className="card p-4 flex items-center justify-between gap-3 hover:bg-surface-highest transition-colors"
+                    className="card p-4 flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-bold text-sm text-on-surface truncate">{session.title}</p>

@@ -381,7 +381,7 @@ export function GameLogPage() {
                     disabled={store.isCommitting}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
-                      'border-orange text-orange hover:bg-orange/10',
+                      'border-orange text-orange backdrop-blur-[20px] backdrop-saturate-[180%] bg-orange/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-orange/10',
                       store.isCommitting && 'opacity-50'
                     )}
                   >
@@ -392,7 +392,7 @@ export function GameLogPage() {
                     disabled={store.isCommitting}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
-                      'border-surface-bright text-on-surface hover:bg-surface-high',
+                      'border-white/20 text-on-surface backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]',
                       store.isCommitting && 'opacity-50'
                     )}
                   >
@@ -410,10 +410,10 @@ export function GameLogPage() {
                     <button
                       onClick={() => store.tapPointType('positive')}
                       className={cn(
-                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95',
+                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95 backdrop-blur-[20px] backdrop-saturate-[180%] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]',
                         store.pendingScorer === 'us'
-                          ? 'border-green-500 text-green-400 hover:bg-green-900/20'
-                          : 'border-red-500 text-red-400 hover:bg-red-900/20'
+                          ? 'border-green-500 text-green-400 bg-green-900/[0.15] hover:bg-green-900/25'
+                          : 'border-red-500 text-red-400 bg-red-900/[0.15] hover:bg-red-900/25'
                       )}
                     >
                       {store.pendingScorer === 'us' ? '✓ Own point' : '✓ Their play'}
@@ -422,7 +422,7 @@ export function GameLogPage() {
                       onClick={() => store.tapPointType('error')}
                       className={cn(
                         'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95',
-                        'border-surface-bright text-on-surface-variant hover:bg-surface-high'
+                        'border-white/20 text-on-surface-variant backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]'
                       )}
                     >
                       {store.pendingScorer === 'us' ? '✗ Their error' : '✗ Our error'}
@@ -462,7 +462,7 @@ export function GameLogPage() {
                 disabled={disabled}
                 className={cn(
                   'flex flex-col items-center gap-1 p-3 rounded-xl transition-all',
-                  disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-surface-high'
+                  disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/[0.06] hover:shadow-[0_2px_12px_rgba(0,0,0,0.25)]'
                 )}
               >
                 <span className={cn('text-on-surface-variant', label === 'End Set' && setWon && 'text-orange')}>{icon}</span>
@@ -615,7 +615,7 @@ export function GameLogPage() {
           <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-2 border-b border-outline/10 shrink-0">
             <button
               onClick={() => setShowNewSetSetup(false)}
-              className="p-2 -ml-2 rounded-full hover:bg-surface-high"
+              className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]"
             >
               <ArrowLeft size={18} className="text-on-surface" />
             </button>

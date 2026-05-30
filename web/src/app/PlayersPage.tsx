@@ -37,7 +37,7 @@ export function PlayersPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/players/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
             <Plus size={16} className="text-white" />
           </button>
@@ -100,7 +100,7 @@ export function PlayersPage() {
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => navigate(`/players/${player.id}`)}
-                    className="p-2 rounded-full hover:bg-surface-high text-on-surface-variant"
+                    className="p-2 rounded-full hover:bg-white/[0.06] text-on-surface-variant"
                   >
                     <Edit3 size={16} />
                   </button>
@@ -110,7 +110,7 @@ export function PlayersPage() {
                         deleteMutation.mutate(player.id)
                       }
                     }}
-                    className="p-2 rounded-full hover:bg-surface-high text-error/60"
+                    className="p-2 rounded-full hover:bg-white/[0.06] text-error/60"
                   >
                     <Trash2 size={16} />
                   </button>

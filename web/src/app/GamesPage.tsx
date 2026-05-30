@@ -50,7 +50,7 @@ export function GamesPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/games/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center"
+            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
             <Plus size={16} className="text-white" />
           </button>

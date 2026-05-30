@@ -126,7 +126,7 @@ export function GameEditPage() {
       <div className="px-5 pt-safe-top pt-4 pb-4 flex items-center gap-3 border-b border-outline/10 sticky top-0 bg-background z-10">
         <button
           onClick={() => navigate('/games')}
-          className="p-2 -ml-2 rounded-full hover:bg-surface-high transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-white/[0.06] transition-colors"
         >
           <ArrowLeft size={20} className="text-on-surface" />
         </button>

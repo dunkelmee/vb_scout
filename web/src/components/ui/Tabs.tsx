@@ -25,8 +25,8 @@ export function Tabs({ tabs, activeTab, onChange, variant = 'underline', classNa
             className={cn(
               'px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition-all border',
               activeTab === tab.id
-                ? 'bg-orange text-white border-orange'
-                : 'bg-surface-high text-on-surface-variant border-outline/20 hover:border-orange/40'
+                ? 'bg-orange text-white border-orange shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)]'
+                : 'backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.06] border-white/[0.12] text-on-surface-variant shadow-[0_2px_12px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-white/[0.09] hover:border-white/[0.18]'
             )}
           >
             {tab.label}

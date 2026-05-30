@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             <h2 className="font-display font-bold text-headline-md text-on-surface">{title}</h2>
             <button
               onClick={onClose}
-              className="p-2 rounded-full hover:bg-surface-high transition-colors"
+              className="p-2 rounded-full hover:bg-white/[0.06] transition-colors"
             >
               <X size={20} className="text-on-surface-variant" />
             </button>
@@ -50,7 +50,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         {!title && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full hover:bg-surface-high transition-colors"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/[0.06] transition-colors"
           >
             <X size={20} className="text-on-surface-variant" />
           </button>
@@ -87,7 +87,7 @@ export function BottomSheet({ open, onClose, title, children, className }: Modal
         {title && (
           <div className="flex items-center justify-between px-6 mb-5">
             <h2 className="font-display font-bold text-headline-md text-on-surface">{title}</h2>
-            <button onClick={onClose} className="p-2 rounded-full hover:bg-surface-high">
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-white/[0.06]">
               <X size={20} className="text-on-surface-variant" />
             </button>
           </div>

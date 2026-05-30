@@ -20,6 +20,9 @@
     margin: 0;
     padding: 0;
     background-color: #101415;
+    background-image:
+      radial-gradient(ellipse 70vw 55vh at 12% 18%, rgba(255, 92, 0, 0.13) 0%, transparent 65%),
+      radial-gradient(ellipse 55vw 50vh at 88% 78%, rgba(0, 224, 255, 0.09) 0%, transparent 65%);
     color: #e0e3e5;
     font-family: 'Inter', sans-serif;
     font-size: 16px;
@@ -40,23 +43,43 @@
     font-family: 'Montserrat', sans-serif;
   }
 
-  /* Glassmorphism overlay */
+  /* Glassmorphism overlay — cyan accent */
   .glass {
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    background: rgba(0, 224, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(0, 224, 255, 0.08);
+    border-top: 1px solid rgba(0, 224, 255, 0.22);
+    border-left: 1px solid rgba(0, 224, 255, 0.16);
+    border-bottom: 1px solid rgba(0, 224, 255, 0.07);
+    border-right: 1px solid rgba(0, 224, 255, 0.07);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(0, 224, 255, 0.15);
   }
 
-  /* Card with Level 1 elevation */
+  /* Card — Apple-style frosted glass */
   .card {
-    @apply bg-surface-high rounded-lg border border-white/5;
+    @apply rounded-2xl;
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    background: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.18);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow:
+      0 4px 24px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+
+  .card:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 
   /* Orange action button gradient */
   .btn-primary {
     background: linear-gradient(135deg, #ff5c00, #ff8c00);
-    box-shadow: 0 4px 16px rgba(255, 92, 0, 0.3);
+    box-shadow: 0 4px 20px rgba(255, 92, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.22);
     @apply text-white font-display font-bold uppercase tracking-wide rounded-full min-h-[48px] px-6 flex items-center justify-center transition-all active:scale-95;
   }
 

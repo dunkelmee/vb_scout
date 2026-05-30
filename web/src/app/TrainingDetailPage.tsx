@@ -59,7 +59,7 @@ export function TrainingDetailPage() {
     <div className="min-h-dvh bg-background">
       {/* Header */}
       <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-2 border-b border-outline/10">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-surface-high">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
           <ArrowLeft size={18} className="text-on-surface" />
         </button>
         <div className="flex-1">
@@ -71,7 +71,7 @@ export function TrainingDetailPage() {
         {isManager && (
           <button
             onClick={() => navigate(`/trainings/${id}/edit`)}
-            className="p-2 rounded-full hover:bg-surface-high"
+            className="p-2 rounded-full hover:bg-white/[0.06]"
           >
             <Edit3 size={16} className="text-on-surface-variant" />
           </button>
