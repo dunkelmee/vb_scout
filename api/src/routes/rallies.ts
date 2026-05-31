@@ -5,6 +5,13 @@ import { addPoint, Lineup } from '../lib/rotation'
 
 const router = Router({ mergeParams: true })
 
+function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
+  const target = setNumber === 5 ? 15 : 25
+  if (scoreUs >= target && scoreUs - scoreThem >= 2) return true
+  if (scoreThem >= target && scoreThem - scoreUs >= 2) return true
+  return false
+}
+
 // GET /api/sets/:setId/rallies — get all rallies
 router.get('/', async (req: Request, res: Response) => {
   const { setId } = req.params
@@ -52,6 +59,10 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
     const currentScoreUs = lastRally ? lastRally.scoreUs : 0
     const currentScoreThem = lastRally ? lastRally.scoreThem : 0
     const rallyIndex = lastRally ? lastRally.rallyIndex + 1 : 0
+
+    if (isSetComplete(currentScoreUs, currentScoreThem, set.setNumber)) {
+      return res.status(400).json({ error: 'Set is already won' })
+    }
 
     // Determine serving team
     let currentServer: 'us' | 'them' = set.servingFirst as 'us' | 'them'

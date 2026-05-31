@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VB Scout — Set Summary</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0b0f10;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    color: #F8FAFC;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 24px 16px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ── phone shell ── */
+  .phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .phone-label {
+    font-size: 10px; font-weight: 600; color: #5F5E5A;
+    text-transform: uppercase; letter-spacing: 0.09em;
+  }
+  .phone {
+    background: #101415;
+    border-radius: 36px;
+    width: 390px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+  }
+  .scroll-area {
+    overflow-y: auto; flex: 1;
+    padding: 20px 16px 24px;
+    max-height: 820px;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  /* ── sticky top bar ── */
+  .top-bar {
+    background: #101415;
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 0.5px solid #1d2022;
+    flex-shrink: 0;
+  }
+  .top-bar-center { text-align: center; flex: 1; }
+  .top-bar-context { font-size: 11px; color: #888780; }
+  .top-bar-title   { font-size: 15px; font-weight: 600; color: #F8FAFC; margin-top: 1px; }
+  .top-bar-icon    { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #888780; font-size: 20px; }
+
+  /* ── score hero ── */
+  .score-hero {
+    background: #1d2022;
+    border-radius: 16px;
+    padding: 20px 16px;
+    text-align: center;
+    margin-bottom: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% -10%, rgba(255,92,0,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .score-hero-teams {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .score-team { flex: 1; }
+  .score-team-name { font-size: 11px; color: #888780; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .score-team-pts  { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .score-sep { font-size: 28px; font-weight: 300; color: #5F5E5A; flex-shrink: 0; }
+  .score-result-badge {
+    margin: 12px auto 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .score-sets-row {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .set-pip {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    border: 1.5px solid transparent;
+  }
+  .set-pip.current { border-color: #FF5C00; }
+
+  /* ── section label ── */
+  .section-label {
+    font-size: 10px; font-weight: 600; color: #5F5E5A;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    margin: 16px 0 8px;
+  }
+
+  /* ── stat row cards ── */
+  .stat-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-tile {
+    background: #1d2022; border-radius: 12px; padding: 12px;
+  }
+  .stat-tile-label { font-size: 10px; color: #888780; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .stat-tile-val   { font-size: 22px; font-weight: 600; line-height: 1; }
+  .stat-tile-sub   { font-size: 10px; color: #5F5E5A; margin-top: 4px; }
+  .stat-tile-bar-wrap { height: 3px; background: #272a2c; border-radius: 2px; margin-top: 8px; }
+  .stat-tile-bar      { height: 3px; border-radius: 2px; }
+
+  /* ── bar rows ── */
+  .card { background: #1d2022; border-radius: 12px; padding: 14px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 600; color: #888780; text-transform: uppercase; letter-spacing: 0.07em; }
+  .badge { font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 600; }
+  .badge-good { background: rgba(99,153,34,0.2);   color: #97C459; }
+  .badge-warn { background: rgba(186,117,23,0.2);  color: #EF9F27; }
+  .badge-red  { background: rgba(226,75,74,0.2);   color: #E24B4A; }
+
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-label { font-size: 11px; color: #888780; width: 66px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: #272a2c; border-radius: 3px; position: relative; }
+  .bar-fill  { height: 6px; border-radius: 3px; }
+  .bar-val   { font-size: 11px; font-weight: 600; width: 36px; text-align: right; flex-shrink: 0; }
+  /* vs previous set indicator */
+  .bar-delta { font-size: 10px; width: 28px; text-align: right; flex-shrink: 0; }
+
+  /* ── rotation cells ── */
+  .rot-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+  .rot-cell { border-radius: 7px; padding: 7px 3px; text-align: center; cursor: default; }
+  .rot-cell-lbl { font-size: 9px; color: #5F5E5A; margin-bottom: 3px; }
+  .rot-cell-val { font-size: 13px; font-weight: 600; }
+  .rot-cell-rallies { font-size: 8px; color: #5F5E5A; margin-top: 2px; }
+
+  /* ── score timeline mini ── */
+  .timeline-wrap { height: 110px; width: 100%; }
+
+  /* ── alert card ── */
+  .alert-card {
+    background: rgba(255,92,0,0.07);
+    border: 1px solid rgba(255,92,0,0.2);
+    border-radius: 12px;
+    padding: 13px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .alert-icon { font-size: 18px; color: #FF5C00; flex-shrink: 0; margin-top: 1px; }
+  .alert-text { flex: 1; }
+  .alert-title  { font-size: 12px; font-weight: 600; color: #F8FAFC; margin-bottom: 3px; }
+  .alert-detail { font-size: 11px; color: #888780; line-height: 1.5; }
+
+  /* ── rally dot strip ── */
+  .dot-strip { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+  .dot {
+    width: 14px; height: 14px; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 600;
+  }
+
+  /* ── bottom actions ── */
+  .bottom-actions {
+    padding: 12px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #101415;
+    border-top: 0.5px solid #1d2022;
+    flex-shrink: 0;
+  }
+  .btn-primary {
+    background: #FF5C00;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 15px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .btn-secondary {
+    background: #1d2022;
+    color: #888780;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+  }
+  /* ── section label ── */
+  .sl {
+    font-size: 10px; font-weight: 600; color: #5F5E5A;
+    text-transform: uppercase; letter-spacing: 0.09em;
+    margin: 18px 0 8px;
+  }
+  .sl:first-child { margin-top: 0; }
+  /* ── point origin donut row ── */
+  .donut-row { display: flex; justify-content: space-around; align-items: center; gap: 8px; }
+  .donut-item { text-align: center; flex: 1; }
+  .donut-wrap { width: 80px; height: 80px; margin: 0 auto 8px; position: relative; }
+  .donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .donut-center-val { font-size: 16px; font-weight: 700; }
+  .donut-center-lbl { font-size: 9px; color: #5F5E5A; }
+  .donut-label { font-size: 11px; font-weight: 600; }
+  .donut-sub   { font-size: 10px; color: #5F5E5A; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SET WON ═══════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Set won — 25 · 18</div>
+  <div class="phone">
+
+    <div class="top-bar">
+      <div class="top-bar-icon"><i class="ti ti-x"></i></div>
+      <div class="top-bar-center">
+        <div class="top-bar-context">vs Rising Spikes · Set 2 of 5</div>
+        <div class="top-bar-title">Set summary</div>
+      </div>
+      
+    </div>
+
+    <div class="scroll-area">
+
+      <!-- score hero -->
+      <div class="score-hero">
+        <div class="score-hero-teams">
+          <div class="score-team">
+            <div class="score-team-name">VolleyElite</div>
+            <div class="score-team-pts" style="color:#97C459;">25</div>
+          </div>
+          <div class="score-sep">–</div>
+          <div class="score-team">
+            <div class="score-team-name">Rising Spikes</div>
+            <div class="score-team-pts" style="color:#5F5E5A;">18</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="score-result-badge" style="background:rgba(99,153,34,0.18);color:#97C459;">
+            <i class="ti ti-check" style="font-size:13px;"></i> Set won
+          </div>
+        </div>
+        <!-- match sets so far -->
+        <div class="score-sets-row">
+          <div class="set-pip" style="background:rgba(99,153,34,0.2);color:#97C459;">1</div>
+          <div class="set-pip current" style="background:rgba(99,153,34,0.2);color:#97C459;">2</div>
+          <div class="set-pip" style="background:#272a2c;color:#5F5E5A;">3</div>
+          <div class="set-pip" style="background:#272a2c;color:#5F5E5A;">4</div>
+          <div class="set-pip" style="background:#272a2c;color:#5F5E5A;">5</div>
+        </div>
+        <div style="font-size:11px;color:#5F5E5A;margin-top:8px;">Leading 2–0 · 43 rallies</div>
+      </div>
+	  
+	  
+
+      <!-- key stats -->
+      <div class="section-label">This set</div>
+      <div class="stat-grid-2">
+        <div class="stat-tile">
+          <div class="stat-tile-label">Sideout %</div>
+          <div class="stat-tile-val" style="color:#97C459;">63%</div>
+          <div class="stat-tile-sub">vs 58% last set ↑</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:63%;background:#639922;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Break %</div>
+          <div class="stat-tile-val" style="color:#EF9F27;">44%</div>
+          <div class="stat-tile-sub">vs 41% last set ↑</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:44%;background:#BA7517;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Error ratio</div>
+          <div class="stat-tile-val" style="color:#97C459;">0.31</div>
+          <div class="stat-tile-sub">vs 0.38 last set ↑</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:31%;background:#639922;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Positive play</div>
+          <div class="stat-tile-val" style="color:#97C459;">65%</div>
+          <div class="stat-tile-sub">vs 62% last set ↑</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:65%;background:#639922;"></div></div>
+        </div>
+      </div>
+
+      <!-- score timeline -->
+      <div class="section-label">Score timeline</div>
+      <div class="card">
+        <div class="timeline-wrap">
+          <canvas id="timelineWon"></canvas>
+        </div>
+      </div>
+
+      <!-- rotation health -->
+      <div class="section-label">Rotation performance</div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Win rate per rotation</span>
+          <span class="badge badge-warn">R4 weak</span>
+        </div>
+        <div class="rot-grid">
+          <div class="rot-cell" style="background:rgba(99,153,34,0.2);">
+            <div class="rot-cell-lbl">R1</div>
+            <div class="rot-cell-val" style="color:#97C459;">80%</div>
+            <div class="rot-cell-rallies">5R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(99,153,34,0.15);">
+            <div class="rot-cell-lbl">R2</div>
+            <div class="rot-cell-val" style="color:#97C459;">67%</div>
+            <div class="rot-cell-rallies">6R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(99,153,34,0.18);">
+            <div class="rot-cell-lbl">R3</div>
+            <div class="rot-cell-val" style="color:#97C459;">75%</div>
+            <div class="rot-cell-rallies">8R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(226,75,74,0.22);">
+            <div class="rot-cell-lbl">R4</div>
+            <div class="rot-cell-val" style="color:#E24B4A;">33%</div>
+            <div class="rot-cell-rallies">6R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(186,117,23,0.18);">
+            <div class="rot-cell-lbl">R5</div>
+            <div class="rot-cell-val" style="color:#EF9F27;">57%</div>
+            <div class="rot-cell-rallies">7R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(99,153,34,0.12);">
+            <div class="rot-cell-lbl">R6</div>
+            <div class="rot-cell-val" style="color:#97C459;">64%</div>
+            <div class="rot-cell-rallies">11R</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- sticky bottom actions -->
+    <div class="bottom-actions">
+      <button class="btn-primary">
+        <i class="ti ti-arrow-right" style="font-size:16px;"></i>
+        Set up Set 3
+      </button>
+      <button class="btn-secondary">
+        <i class="ti ti-chart-bar" style="font-size:15px;"></i>
+        View full match stats
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════ SET LOST ═══════════════════════════ -->
+<div class="phone-wrap">
+  <div class="phone-label">Set lost — 22 · 25</div>
+  <div class="phone">
+
+    <div class="top-bar">
+      <div class="top-bar-icon"><i class="ti ti-x"></i></div>
+      <div class="top-bar-center">
+        <div class="top-bar-context">vs Rising Spikes · Set 3 of 5</div>
+        <div class="top-bar-title">Set summary</div>
+      </div>
+      <div class="top-bar-icon"><i class="ti ti-dots"></i></div>
+    </div>
+
+    <div class="scroll-area">
+
+      <!-- score hero -->
+      <div class="score-hero">
+        <div class="score-hero-teams">
+          <div class="score-team">
+            <div class="score-team-name">VolleyElite</div>
+            <div class="score-team-pts" style="color:#5F5E5A;">22</div>
+          </div>
+          <div class="score-sep">–</div>
+          <div class="score-team">
+            <div class="score-team-name">Rising Spikes</div>
+            <div class="score-team-pts" style="color:#E24B4A;">25</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;">
+          <div class="score-result-badge" style="background:rgba(163,45,45,0.18);color:#E24B4A;">
+            <i class="ti ti-x" style="font-size:13px;"></i> Set lost
+          </div>
+        </div>
+        <div class="score-sets-row">
+          <div class="set-pip" style="background:rgba(99,153,34,0.2);color:#97C459;">1</div>
+          <div class="set-pip" style="background:rgba(99,153,34,0.2);color:#97C459;">2</div>
+          <div class="set-pip current" style="background:rgba(163,45,45,0.2);color:#E24B4A;">3</div>
+          <div class="set-pip" style="background:#272a2c;color:#5F5E5A;">4</div>
+          <div class="set-pip" style="background:#272a2c;color:#5F5E5A;">5</div>
+        </div>
+        <div style="font-size:11px;color:#5F5E5A;margin-top:8px;">Leading 2–1 · 47 rallies</div>
+      </div>
+
+      <!-- key stats — with vs prev set deltas -->
+      <div class="section-label">This set</div>
+      <div class="stat-grid-2">
+        <div class="stat-tile">
+          <div class="stat-tile-label">Sideout %</div>
+          <div class="stat-tile-val" style="color:#EF9F27;">51%</div>
+          <div class="stat-tile-sub" style="color:#E24B4A;">vs 63% last set ↓</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:51%;background:#BA7517;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Break %</div>
+          <div class="stat-tile-val" style="color:#E24B4A;">38%</div>
+          <div class="stat-tile-sub" style="color:#E24B4A;">vs 44% last set ↓</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:38%;background:#A32D2D;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Error ratio</div>
+          <div class="stat-tile-val" style="color:#E24B4A;">0.52</div>
+          <div class="stat-tile-sub" style="color:#E24B4A;">vs 0.31 last set ↓</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:52%;background:#A32D2D;"></div></div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-label">Positive play</div>
+          <div class="stat-tile-val" style="color:#EF9F27;">54%</div>
+          <div class="stat-tile-sub" style="color:#E24B4A;">vs 65% last set ↓</div>
+          <div class="stat-tile-bar-wrap"><div class="stat-tile-bar" style="width:54%;background:#BA7517;"></div></div>
+        </div>
+      </div>
+
+      <!-- score timeline -->
+      <div class="section-label">Score timeline</div>
+      <div class="card">
+        <div class="timeline-wrap">
+          <canvas id="timelineLost"></canvas>
+        </div>
+      </div>
+
+      <!-- rotation health -->
+      <div class="section-label">Rotation performance</div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Win rate per rotation</span>
+          <span class="badge badge-red">R2 + R5 critical</span>
+        </div>
+        <div class="rot-grid">
+          <div class="rot-cell" style="background:rgba(186,117,23,0.18);">
+            <div class="rot-cell-lbl">R1</div>
+            <div class="rot-cell-val" style="color:#EF9F27;">50%</div>
+            <div class="rot-cell-rallies">6R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(226,75,74,0.25);">
+            <div class="rot-cell-lbl">R2</div>
+            <div class="rot-cell-val" style="color:#E24B4A;">25%</div>
+            <div class="rot-cell-rallies">8R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(99,153,34,0.15);">
+            <div class="rot-cell-lbl">R3</div>
+            <div class="rot-cell-val" style="color:#97C459;">67%</div>
+            <div class="rot-cell-rallies">6R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(186,117,23,0.15);">
+            <div class="rot-cell-lbl">R4</div>
+            <div class="rot-cell-val" style="color:#EF9F27;">55%</div>
+            <div class="rot-cell-rallies">9R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(226,75,74,0.22);">
+            <div class="rot-cell-lbl">R5</div>
+            <div class="rot-cell-val" style="color:#E24B4A;">29%</div>
+            <div class="rot-cell-rallies">7R</div>
+          </div>
+          <div class="rot-cell" style="background:rgba(186,117,23,0.12);">
+            <div class="rot-cell-lbl">R6</div>
+            <div class="rot-cell-val" style="color:#EF9F27;">55%</div>
+            <div class="rot-cell-rallies">11R</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="bottom-actions">
+      <button class="btn-primary">
+        <i class="ti ti-arrow-right" style="font-size:16px;"></i>
+        Set up Set 4
+      </button>
+      <button class="btn-secondary">
+        <i class="ti ti-chart-bar" style="font-size:15px;"></i>
+        View full match stats
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+// ── shared chart defaults ──
+Chart.defaults.color = '#888780';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Inter', sans-serif";
+Chart.defaults.font.size = 10;
+
+const GRID = 'rgba(255,255,255,0.05)';
+
+function buildTimeline(canvasId, diff, won) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: diff.map((_, i) => i),
+      datasets: [
+        {
+          data: diff,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.3,
+          fill: {
+            target: { value: 0 },
+            above: 'rgba(99,153,34,0.15)',
+            below: 'rgba(226,75,74,0.15)',
+          },
+          segment: {
+            borderColor: ctx => diff[ctx.p1DataIndex] >= 0 ? '#97C459' : '#E24B4A',
+          },
+        },
+        {
+          data: diff.map(() => 0),
+          borderColor: 'rgba(255,255,255,0.07)',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 400 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a1a', titleColor: '#e0e0e0',
+          bodyColor: '#b0b0b0', padding: 8, cornerRadius: 6,
+          callbacks: {
+            title: items => `Rally ${items[0].dataIndex}`,
+            label: item => {
+              if (item.datasetIndex !== 0) return null;
+              const v = item.raw;
+              return v > 0 ? ` Leading +${v}` : v < 0 ? ` Trailing ${v}` : ` Level`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 8, color: '#5F5E5A' } },
+        y: {
+          grid: { color: GRID, drawTicks: false },
+          border: { display: false },
+          ticks: { color: '#888780', callback: v => v > 0 ? `+${v}` : v }
+        }
+      }
+    }
+  });
+}
+
+// ── generate pseudo-random set rallies ──
+function genSet(targetUs, targetThem, seed) {
+  let us = 0, them = 0, r = seed;
+  const scores = [[0, 0]];
+  function rand() { r = (r * 1664525 + 1013904223) & 0xffffffff; return (r >>> 0) / 0xffffffff; }
+  while (us < targetUs && them < targetThem) {
+    const remaining = (targetUs + targetThem) - us - them;
+    const p = Math.min(0.82, Math.max(0.18, (targetUs - us) / remaining));
+    if (rand() < p) us++; else them++;
+    scores.push([us, them]);
+  }
+  return scores;
+}
+
+const wonScores  = genSet(25, 18, 12345);
+const lostScores = genSet(22, 25, 77891);
+
+const wonDiff  = wonScores.map(([u, t]) => u - t);
+const lostDiff = lostScores.map(([u, t]) => u - t);
+
+buildTimeline('timelineWon',  wonDiff,  true);
+buildTimeline('timelineLost', lostDiff, false);
+
+// ── dot strips ──
+function buildDotStrip(containerId, scores, isWon) {
+  const container = document.getElementById(containerId);
+  for (let i = 1; i < scores.length; i++) {
+    const [prevU, prevT] = scores[i - 1];
+    const [u, t] = scores[i];
+    const weScored = u > prevU;
+    const dot = document.createElement('div');
+    dot.className = 'dot';
+    if (weScored) {
+      // our point — show dot indicator for positive play occasionally
+      const isPositive = Math.random() > 0.4;
+      dot.style.background = isPositive
+        ? 'rgba(59,109,17,0.9)'
+        : 'rgba(59,109,17,0.5)';
+      dot.style.border = isPositive ? '1px solid rgba(151,196,89,0.6)' : 'none';
+    } else {
+      const isError = Math.random() > 0.5;
+      dot.style.background = isError
+        ? 'rgba(163,45,45,0.85)'
+        : 'rgba(163,45,45,0.45)';
+      dot.style.border = isError ? '1px solid rgba(226,75,74,0.5)' : 'none';
+    }
+    container.appendChild(dot);
+  }
+}
+
+buildDotStrip('dotStripWon',  wonScores,  true);
+buildDotStrip('dotStripLost', lostScores, false);
+</script>
+</body>
+</html>

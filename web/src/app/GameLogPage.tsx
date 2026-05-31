@@ -19,6 +19,7 @@ import { cn } from '../components/ui/cn'
 import { Lineup, Zone } from '../lib/rotation'
 import { CourtLineupSetup } from '../components/court/CourtLineupSetup'
 import { TacticsTab } from '../components/court/TacticsTab'
+import { SetSummaryOverlay } from '../components/SetSummaryOverlay'
 import { useSyncQueue } from '../hooks/useSyncQueue'
 
 const LOG_TABS = [
@@ -45,6 +46,7 @@ export function GameLogPage() {
   const [showSubModal, setShowSubModal] = useState(false)
   const [showTimeoutModal, setShowTimeoutModal] = useState(false)
   const [showEndSetModal, setShowEndSetModal] = useState(false)
+  const [showSetSummary, setShowSetSummary] = useState(false)
   const [showRotationToast, setShowRotationToast] = useState(false)
 
   // New-set lineup setup (shown after ending a non-final set)
@@ -130,28 +132,9 @@ export function GameLogPage() {
       const matchDone   = setsWonUs === 3 || setsWonThem === 3
 
       if (matchDone) {
-        // Match is over — go to the stats / analysis page
         navigate(`/games/${matchId}/stats`)
       } else {
-        // More sets to play — pre-fill the lineup with the current rotation and
-        // ask the manager to confirm (or adjust) before starting the next set.
-        if (store.lineup) {
-          // Derive zone-level position map from the playerSetRoles we already have
-          const preFilledPositions = Object.fromEntries(
-            Object.entries(store.lineup).map(([zone, pid]) => {
-              const playerId = pid as string
-              return [
-                zone,
-                [playerSetRoles[playerId] ?? players.find((p: Player) => p.id === playerId)?.positions[0] ?? 'Unknown'],
-              ]
-            })
-          ) as Record<Zone, string[]>
-
-          setNewSetLineup(store.lineup as Partial<Lineup>)
-          setNewSetPositions(preFilledPositions)
-        }
-        setNewSetServingFirst('us')
-        setShowNewSetSetup(true)
+        setShowSetSummary(true)
       }
     },
   })
@@ -277,6 +260,13 @@ export function GameLogPage() {
   // Volleyball set-win logic
   const setWon = isSetComplete(store.scoreUs, store.scoreThem, store.currentSetNumber)
 
+  // Auto-open the end-set modal when the winning point is confirmed
+  useEffect(() => {
+    if (setWon && !showEndSetModal && !showSetSummary && !showNewSetSetup) {
+      setShowEndSetModal(true)
+    }
+  }, [setWon])
+
   // Non-libero substitutions used this set (max 6)
   const nonLiberoSubs = (setData?.substitutions ?? []).filter((s: Substitution) => !s.isLiberoSwap).length
 
@@ -378,22 +368,22 @@ export function GameLogPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => store.tapScore('us')}
-                    disabled={store.isCommitting}
+                    disabled={store.isCommitting || setWon}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
                       'border-orange text-orange backdrop-blur-[20px] backdrop-saturate-[180%] bg-orange/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-orange/10',
-                      store.isCommitting && 'opacity-50'
+                      (store.isCommitting || setWon) && 'opacity-50'
                     )}
                   >
                     {store.teamInitials} ⊕
                   </button>
                   <button
                     onClick={() => store.tapScore('them')}
-                    disabled={store.isCommitting}
+                    disabled={store.isCommitting || setWon}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
                       'border-white/20 text-on-surface backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]',
-                      store.isCommitting && 'opacity-50'
+                      (store.isCommitting || setWon) && 'opacity-50'
                     )}
                   >
                     {store.opponentInitials} ⊕
@@ -673,6 +663,41 @@ export function GameLogPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Set Summary Overlay */}
+      {showSetSummary && (
+        <SetSummaryOverlay
+          matchId={matchId!}
+          setNumber={store.currentSetNumber}
+          scoreUs={store.scoreUs}
+          scoreThem={store.scoreThem}
+          rallies={store.rallies}
+          setterPlayerId={setterPlayerId}
+          teamName={store.teamName}
+          teamInitials={store.teamInitials}
+          opponentName={match?.opponent ?? store.opponentInitials}
+          sets={match?.sets ?? []}
+          onSetupNextSet={() => {
+            setShowSetSummary(false)
+            if (store.lineup) {
+              const preFilledPositions = Object.fromEntries(
+                Object.entries(store.lineup).map(([zone, pid]) => {
+                  const playerId = pid as string
+                  return [
+                    zone,
+                    [playerSetRoles[playerId] ?? players.find((p: Player) => p.id === playerId)?.positions[0] ?? 'Unknown'],
+                  ]
+                })
+              ) as Record<Zone, string[]>
+              setNewSetLineup(store.lineup as Partial<Lineup>)
+              setNewSetPositions(preFilledPositions)
+            }
+            setNewSetServingFirst('us')
+            setShowNewSetSetup(true)
+          }}
+          onViewStats={() => navigate(`/games/${matchId}/stats`)}
+        />
       )}
     </div>
   )
