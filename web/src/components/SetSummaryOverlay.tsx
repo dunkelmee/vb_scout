@@ -135,12 +135,12 @@ export function SetSummaryOverlay({
 
   // Score differential chart data (starts at 0-0)
   const chartData = useMemo(() => {
-    const pts: { rally: number; diff: number; pos: number; neg: number }[] = [
-      { rally: 0, diff: 0, pos: 0, neg: 0 },
+    const pts: { rally: number; pos: number; neg: number }[] = [
+      { rally: 0, pos: 0, neg: 0 },
     ]
     rallies.forEach(r => {
       const diff = r.scoreUs - r.scoreThem
-      pts.push({ rally: r.rallyIndex + 1, diff, pos: Math.max(0, diff), neg: Math.min(0, diff) })
+      pts.push({ rally: r.rallyIndex + 1, pos: Math.max(0, diff), neg: Math.min(0, diff) })
     })
     return pts
   }, [rallies])
@@ -289,15 +289,16 @@ export function SetSummaryOverlay({
               <Tooltip
                 contentStyle={{ background: '#1a1d1e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11 }}
                 labelFormatter={(v) => `Rally ${v}`}
-                formatter={(value: number) => [value > 0 ? `+${value}` : `${value}`, 'Diff']}
+                formatter={(value: number, name: string) => [
+                  value > 0 ? `+${value}` : `${value}`,
+                  name === 'pos' ? 'Lead' : 'Deficit',
+                ]}
               />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.10)" />
-              {/* Green fill above zero */}
-              <Area dataKey="pos" fill="rgba(99,153,34,0.15)"  stroke="none" baseValue={0} isAnimationActive={false} />
-              {/* Red fill below zero */}
-              <Area dataKey="neg" fill="rgba(226,75,74,0.15)"  stroke="none" baseValue={0} isAnimationActive={false} />
-              {/* Score differential line */}
-              <Line dataKey="diff" stroke="rgba(255,255,255,0.45)" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              {/* Green fill + line above zero */}
+              <Area dataKey="pos" fill="rgba(99,153,34,0.28)"  stroke="#97C459" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+              {/* Red fill + line below zero */}
+              <Area dataKey="neg" fill="rgba(226,75,74,0.28)"  stroke="#E24B4A" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
