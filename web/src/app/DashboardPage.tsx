@@ -9,11 +9,13 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid
 } from 'recharts'
-import { Trophy, Target, Zap, Calendar, ChevronRight, MapPin } from 'lucide-react'
+import { Trophy, Target, Zap, Calendar, ChevronRight, MapPin, CalendarDays, Users, Dumbbell } from 'lucide-react'
 import { format } from '../lib/dateUtils'
+import { useNavigate } from 'react-router-dom'
 
 export function DashboardPage() {
   const { isManager } = useRole()
+  const navigate = useNavigate()
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: dashboardApi.get,
@@ -29,18 +31,44 @@ export function DashboardPage() {
     <div className="min-h-dvh bg-background">
       {/* Header */}
       <div className="px-5 pt-safe-top pt-5 pb-2 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
-            <span className="font-harabara text-2xl tracking-wide text-on-surface">courtside</span>
-          </div>
-          {data?.activeSeason && (
-            <p className="text-xs text-on-surface-variant mt-0.5 ml-10">{data.activeSeason.name}</p>
-          )}
+        <div className="flex items-center gap-2">
+          <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
+          <span className="font-harabara text-2xl tracking-wide text-on-surface">courtside</span>
         </div>
       </div>
 
       <div className="px-5 space-y-5 pb-6">
+        {/* Season name + quick actions */}
+        <div>
+          {data?.activeSeason && (
+            <h3 className="font-display font-bold text-sm uppercase tracking-wide text-orange mb-3">
+              {data.activeSeason.name}
+            </h3>
+          )}
+          {isManager && (
+            <div className="flex justify-between gap-2">
+              <button
+                onClick={() => navigate('/games/new')}
+                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
+              >
+                <CalendarDays size={12} className="text-orange" /> Game
+              </button>
+              <button
+                onClick={() => navigate('/players/new')}
+                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
+              >
+                <Users size={12} className="text-orange" /> Player
+              </button>
+              <button
+                onClick={() => navigate('/trainings/new')}
+                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
+              >
+                <Dumbbell size={12} className="text-orange" /> Training
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* KPI cards */}
         {kpis && (
           <div className="grid grid-cols-2 gap-3">

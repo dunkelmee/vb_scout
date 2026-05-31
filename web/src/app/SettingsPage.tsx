@@ -267,6 +267,7 @@ function SeasonsManager() {
   const { showToast } = useToast()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10))
   const [endDate, setEndDate] = useState('')
@@ -283,6 +284,18 @@ function SeasonsManager() {
       setShowForm(false)
       setName('')
     },
+  })
+
+  const renameMutation = useMutation({
+    mutationFn: ({ id, newName }: { id: string; newName: string }) =>
+      seasonsApi.update(id, { name: newName }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['seasons'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      setEditId(null)
+      showToast('Season renamed', 'success')
+    },
+    onError: () => showToast('Failed to rename season', 'error'),
   })
 
   const activateMutation = useMutation({
@@ -303,14 +316,48 @@ function SeasonsManager() {
       {seasons.map(s => (
         <div key={s.id} className="flex items-center gap-2 py-2 border-b border-outline/10">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-on-surface truncate">{s.name}</p>
-              {s.isActive && <Badge label="Active" variant="green" size="sm" />}
-            </div>
-            <p className="text-xs text-on-surface-variant">{format(s.startDate)}</p>
+            {editId === s.id ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="Season name"
+                  autoFocus
+                />
+                <button
+                  onClick={() => renameMutation.mutate({ id: s.id, newName: editName })}
+                  disabled={!editName.trim() || renameMutation.isPending}
+                  className="p-1.5 rounded text-orange disabled:opacity-40"
+                  title="Save"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={() => setEditId(null)}
+                  className="p-1.5 rounded text-on-surface-variant"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-on-surface truncate">{s.name}</p>
+                {s.isActive && <Badge label="Active" variant="green" size="sm" />}
+              </div>
+            )}
+            <p className="text-xs text-on-surface-variant mt-0.5">{format(s.startDate)}</p>
           </div>
           <div className="flex items-center gap-1">
-            {!s.isActive && (
+            {editId !== s.id && (
+              <button
+                onClick={() => { setEditId(s.id); setEditName(s.name) }}
+                className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant"
+                title="Rename"
+              >
+                <Edit3 size={12} />
+              </button>
+            )}
+            {!s.isActive && editId !== s.id && (
               <button
                 onClick={() => activateMutation.mutate(s.id)}
                 className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant"
@@ -319,14 +366,16 @@ function SeasonsManager() {
                 <Check size={12} />
               </button>
             )}
-            <button
-              onClick={() => {
-                if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id)
-              }}
-              className="p-1.5 rounded hover:bg-white/[0.06] text-error/60"
-            >
-              ✕
-            </button>
+            {editId !== s.id && (
+              <button
+                onClick={() => {
+                  if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id)
+                }}
+                className="p-1.5 rounded hover:bg-white/[0.06] text-error/60"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
       ))}
