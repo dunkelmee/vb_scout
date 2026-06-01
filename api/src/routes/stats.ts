@@ -84,22 +84,76 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       }
     }
 
-    // Win/loss trend for charts
+    // Per-match performance stats for trend chart
     const recentMatches = await prisma.match.findMany({
       where: matchFilter as Record<string, unknown>,
       orderBy: { date: 'asc' },
-      take: 10,
-      include: { sets: { select: { scoreUs: true, scoreThem: true, setNumber: true } } },
+      include: {
+        sets: {
+          orderBy: { setNumber: 'asc' },
+          include: { rallies: { orderBy: { rallyIndex: 'asc' } } },
+        },
+      },
     })
 
-    const winLossTrend = recentMatches.map(m => ({
-      id: m.id,
-      date: m.date,
-      opponent: m.opponent,
-      setsWon: m.setsWonUs,
-      setsLost: m.setsWonThem,
-      result: m.setsWonUs > m.setsWonThem ? 'W' : 'L',
-    }))
+    const winLossTrend = recentMatches.map(m => {
+      const allRallies = m.sets.flatMap(s => s.rallies)
+      const receive = allRallies.filter(r => r.servingTeam === 'them')
+      const serve = allRallies.filter(r => r.servingTeam === 'us')
+      return {
+        id: m.id,
+        date: m.date,
+        opponent: m.opponent,
+        opponentInitials: m.opponentInitials,
+        setsWon: m.setsWonUs,
+        setsLost: m.setsWonThem,
+        result: m.setsWonUs > m.setsWonThem ? 'W' as const : 'L' as const,
+        sideoutPct: receive.length > 0 ? receive.filter(r => r.scorer === 'us').length / receive.length : null,
+        breakPct: serve.length > 0 ? serve.filter(r => r.scorer === 'us').length / serve.length : null,
+        errorRatio: allRallies.length > 0
+          ? allRallies.filter(r => r.pointType === 'us_error' || r.pointType === 'them_positive').length / allRallies.length
+          : null,
+      }
+    })
+
+    // Season-wide performance averages
+    const allRallies = recentMatches.flatMap(m => m.sets.flatMap(s => s.rallies))
+    let seasonPerf = null
+    if (allRallies.length > 0) {
+      const receive = allRallies.filter(r => r.servingTeam === 'them')
+      const serve = allRallies.filter(r => r.servingTeam === 'us')
+      seasonPerf = {
+        sideoutPct: Math.round(receive.length > 0 ? receive.filter(r => r.scorer === 'us').length / receive.length * 100 : 0),
+        breakPct: Math.round(serve.length > 0 ? serve.filter(r => r.scorer === 'us').length / serve.length * 100 : 0),
+        errorRatio: Math.round(allRallies.filter(r => r.pointType === 'us_error' || r.pointType === 'them_positive').length / allRallies.length * 100) / 100,
+      }
+    }
+
+    // Weakest rotation (position-based, cycling through 6 slots per set)
+    const rotWins = new Array<number>(6).fill(0)
+    const rotLosses = new Array<number>(6).fill(0)
+    for (const m of recentMatches) {
+      for (const set of m.sets) {
+        let rot = 0
+        for (const rally of set.rallies) {
+          const idx = rot % 6
+          if (rally.scorer === 'us') rotWins[idx]++
+          else rotLosses[idx]++
+          if (rally.rotated) rot++
+        }
+      }
+    }
+    let weakestRotation: { rotation: number; winPct: number } | null = null
+    let worstPct = Infinity
+    for (let i = 0; i < 6; i++) {
+      const total = rotWins[i] + rotLosses[i]
+      if (total < 5) continue
+      const pct = rotWins[i] / total
+      if (pct < worstPct) {
+        worstPct = pct
+        weakestRotation = { rotation: i + 1, winPct: Math.round(pct * 100) }
+      }
+    }
 
     res.json({
       activeSeason,
@@ -113,6 +167,8 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       upcomingTrainings,
       recentAnalysis,
       winLossTrend,
+      seasonPerf,
+      weakestRotation,
     })
   } catch (err) {
     console.error(err)

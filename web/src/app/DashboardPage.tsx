@@ -3,13 +3,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { dashboardApi, DashboardData, BASE } from '../lib/api'
 import { useRole } from '../hooks/useRole'
-import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid
+  LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine,
+  ResponsiveContainer,
 } from 'recharts'
-import { Trophy, Target, Zap, Calendar, ChevronRight, MapPin, CalendarDays, Users, Dumbbell } from 'lucide-react'
+import { ChevronRight, MapPin, CalendarDays, Users, Dumbbell } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { useNavigate } from 'react-router-dom'
 
@@ -26,6 +25,8 @@ export function DashboardPage() {
 
   const kpis = data?.kpis
   const winLossTrend = data?.winLossTrend || []
+  const seasonPerf = data?.seasonPerf ?? null
+  const weakestRotation = data?.weakestRotation ?? null
 
   return (
     <div className="min-h-dvh bg-background">
@@ -37,7 +38,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="px-5 space-y-5 pb-6">
+      <div className="px-5 space-y-6 pb-6">
         {/* Season name + quick actions */}
         <div>
           {data?.activeSeason && (
@@ -69,69 +70,22 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* KPI cards */}
-        {kpis && (
-          <div className="grid grid-cols-2 gap-3">
-            <KPICard
-              icon={<Trophy size={18} />}
-              label="Win / Loss"
-              value={`${kpis.matchRecord.wins}–${kpis.matchRecord.losses}`}
-              sub={`${kpis.setRecord.wins}–${kpis.setRecord.losses} sets`}
-              accent={kpis.matchRecord.wins >= kpis.matchRecord.losses ? 'green' : 'red'}
-            />
-            <KPICard
-              icon={<Target size={18} />}
-              label="Points"
-              value={`${kpis.points.us}`}
-              sub={`vs ${kpis.points.them} conceded`}
-              accent="blue"
-            />
-            <KPICard
-              icon={<Zap size={18} />}
-              label="Matches"
-              value={String(kpis.totalMatches)}
-              sub="total this season"
-              accent="orange"
-            />
-            <KPICard
-              icon={<Calendar size={18} />}
-              label="Sets Won"
-              value={`${kpis.setRecord.wins}`}
-              sub={`of ${kpis.setRecord.wins + kpis.setRecord.losses}`}
-              accent="blue"
-            />
-          </div>
+        {/* Season Snapshot */}
+        {kpis && <SeasonSnapshot kpis={kpis} seasonPerf={seasonPerf} />}
+
+        {/* Season Results */}
+        {winLossTrend.length > 0 && <SeasonResults matches={winLossTrend} />}
+
+        {/* Season Performance */}
+        {seasonPerf && winLossTrend.length > 0 && (
+          <SeasonPerformance
+            trend={winLossTrend}
+            seasonPerf={seasonPerf}
+            weakestRotation={weakestRotation}
+          />
         )}
 
-        {/* Win/Loss Trend Chart */}
-        {winLossTrend.length > 0 && (
-          <div className="card p-4">
-            <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant mb-3">
-              Win / Loss Trend
-            </h3>
-            <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={winLossTrend} barSize={18} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis
-                  dataKey="opponent"
-                  tick={{ fill: '#e0e3e5', fontSize: 10 }}
-                  tickFormatter={v => v?.slice(0, 3) || '–'}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  contentStyle={{ background: '#1d2022', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                  labelStyle={{ color: '#e0e3e5', fontSize: 12 }}
-                  itemStyle={{ color: '#e0e3e5', fontSize: 11 }}
-                />
-                <Bar dataKey="setsWon" name="Sets won" fill="#ff5c00" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="setsLost" name="Sets lost" fill="rgba(255,255,255,0.15)" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Upcoming section */}
+        {/* Upcoming games */}
         {(data?.upcomingGames?.length ?? 0) > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -248,6 +202,335 @@ export function DashboardPage() {
   )
 }
 
+// ---- Season Snapshot ----
+
+function SeasonSnapshot({
+  kpis,
+  seasonPerf,
+}: {
+  kpis: NonNullable<DashboardData['kpis']>
+  seasonPerf: DashboardData['seasonPerf']
+}) {
+  const { matchRecord, setRecord, points } = kpis
+  const pointsRatio = points.them > 0 ? (points.us / points.them).toFixed(2) : '—'
+  const trendLabel = matchRecord.wins >= matchRecord.losses ? 'winning' : 'losing'
+
+  return (
+    <div>
+      <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+        Season Snapshot
+      </h3>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Matches</p>
+          <p className="font-display font-black text-2xl text-on-surface">
+            {matchRecord.wins}–{matchRecord.losses}
+          </p>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            {setRecord.wins}–{setRecord.losses} sets · {trendLabel}
+          </p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Points</p>
+          <p className="font-display font-black text-2xl text-secondary-container">{pointsRatio}</p>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            {points.us} scored · {points.them} conceded
+          </p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Sideout %</p>
+          <p className="font-display font-black text-2xl text-orange">
+            {seasonPerf ? `${seasonPerf.sideoutPct}%` : '—'}
+          </p>
+        </div>
+        <div className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Break %</p>
+          <p className="font-display font-black text-2xl text-secondary-container">
+            {seasonPerf ? `${seasonPerf.breakPct}%` : '—'}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---- Season Results ----
+
+function SeasonResults({ matches }: { matches: DashboardData['winLossTrend'] }) {
+  return (
+    <div>
+      <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+        Season Results
+      </h3>
+      <div className="-mx-5 px-5 overflow-x-auto">
+        <div className="flex gap-2 pb-1 w-max">
+          {matches.map(m => {
+            const won = m.result === 'W'
+            const initials = m.opponentInitials || getInitials(m.opponent)
+            return (
+              <Link
+                key={m.id}
+                to={`/games/${m.id}/stats`}
+                className={cn(
+                  'flex-none flex flex-col items-center gap-0.5 rounded-sm px-2.5 py-2 min-w-[52px] active:scale-95 transition-transform',
+                  won
+                    ? 'bg-green-500/15 border border-green-500/30'
+                    : 'bg-error/15 border border-error/30',
+                )}
+              >
+                <span className={cn(
+                  'font-display font-black text-sm leading-tight',
+                  won ? 'text-green-400' : 'text-error',
+                )}>
+                  {m.setsWon}–{m.setsLost}
+                </span>
+                <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wide">
+                  {initials}
+                </span>
+              </Link>
+            )
+          })}
+          <div className="w-5 flex-none" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ---- Season Performance ----
+
+function SeasonPerformance({
+  trend,
+  seasonPerf,
+  weakestRotation,
+}: {
+  trend: DashboardData['winLossTrend']
+  seasonPerf: NonNullable<DashboardData['seasonPerf']>
+  weakestRotation: DashboardData['weakestRotation']
+}) {
+  const withData = trend.filter(m => m.sideoutPct != null)
+  const lastMatch = withData[withData.length - 1]
+
+  const sideoutTrend = computeTrend(
+    lastMatch?.sideoutPct != null ? Math.round(lastMatch.sideoutPct * 100) : null,
+    seasonPerf.sideoutPct,
+    true,
+  )
+  const breakTrend = computeTrend(
+    lastMatch?.breakPct != null ? Math.round(lastMatch.breakPct * 100) : null,
+    seasonPerf.breakPct,
+    true,
+  )
+  const errorTrend = computeTrend(
+    lastMatch?.errorRatio != null ? Math.round(lastMatch.errorRatio * 100) : null,
+    Math.round(seasonPerf.errorRatio * 100),
+    false,
+  )
+
+  const chartData = trend.map(m => ({
+    label: m.opponentInitials || getInitials(m.opponent),
+    sideout: m.sideoutPct != null ? Math.round(m.sideoutPct * 100) : undefined,
+    break: m.breakPct != null ? Math.round(m.breakPct * 100) : undefined,
+    error: m.errorRatio != null ? Math.round(m.errorRatio * 100) : undefined,
+  }))
+
+  return (
+    <div>
+      <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+        Season Performance
+      </h3>
+      <div className="card p-4">
+        <div className="flex justify-between items-center mb-4">
+          <span className="font-display font-bold text-xs uppercase tracking-widest text-on-surface">
+            Trends across {trend.length} {trend.length === 1 ? 'match' : 'matches'}
+          </span>
+          <button className="text-xs text-orange font-bold uppercase tracking-wide flex items-center gap-0.5">
+            Full view <ChevronRight size={11} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <StatColumn
+            label="Error Ratio"
+            value={seasonPerf.errorRatio.toFixed(2)}
+            trend={errorTrend}
+            valueColor="text-error"
+          />
+          <StatColumn
+            label="Sideout"
+            value={`${seasonPerf.sideoutPct}%`}
+            trend={sideoutTrend}
+            valueColor="text-orange"
+          />
+          <StatColumn
+            label="Break %"
+            value={`${seasonPerf.breakPct}%`}
+            trend={breakTrend}
+            valueColor="text-secondary-container"
+          />
+        </div>
+
+        {chartData.length > 1 && (
+          <div>
+            <SwimlaneLine data={chartData} dataKey="sideout" color="#00e0ff" label="Sideout %" valueLabel="Sideout" />
+            <SwimlaneLine data={chartData} dataKey="error" color="#ffb4ab" label="Error ratio" valueLabel="Error ratio" />
+            <SwimlaneLine data={chartData} dataKey="break" color="#ff5c00" label="Break %" valueLabel="Break" showXAxis />
+          </div>
+        )}
+
+        <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/[0.07]">
+          <p className="text-xs text-on-surface-variant">
+            Weakest rotation:{' '}
+            {weakestRotation ? (
+              <span className="text-error font-bold">
+                R{weakestRotation.rotation} ({weakestRotation.winPct}%)
+              </span>
+            ) : (
+              <span className="opacity-50">not enough data</span>
+            )}
+          </p>
+          <button className="text-xs text-on-surface-variant/60 font-medium flex items-center gap-0.5">
+            View details <ChevronRight size={10} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatColumn({
+  label,
+  value,
+  trend,
+  valueColor,
+}: {
+  label: string
+  value: string
+  trend: { label: string; direction: 'up' | 'down' | 'flat'; isGood: boolean }
+  valueColor: string
+}) {
+  const trendColor = trend.direction === 'flat'
+    ? 'text-on-surface-variant'
+    : trend.isGood ? 'text-green-400' : 'text-error'
+  const arrow = { up: '↑', down: '↓', flat: '→' }[trend.direction]
+
+  return (
+    <div className="min-w-0">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant truncate">{label}</p>
+      <p className={cn('font-display font-black text-lg leading-tight mt-0.5', valueColor)}>{value}</p>
+      <p className={cn('text-[10px] font-bold mt-0.5 leading-none', trendColor)}>
+        {arrow} {trend.label}
+      </p>
+    </div>
+  )
+}
+
+// ---- Swimlane chart ----
+
+type SwimlanePoint = { label: string; [key: string]: number | string | undefined }
+
+function SwimlaneLine({
+  data,
+  dataKey,
+  color,
+  label,
+  valueLabel,
+  showXAxis = false,
+}: {
+  data: SwimlanePoint[]
+  dataKey: string
+  color: string
+  label: string
+  valueLabel: string
+  showXAxis?: boolean
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <span
+        className="text-[9px] font-bold uppercase tracking-widest shrink-0 w-[60px] text-right leading-tight"
+        style={{ color }}
+      >
+        {label}
+      </span>
+      <div className="flex-1 min-w-0">
+        <ResponsiveContainer width="100%" height={showXAxis ? 64 : 52}>
+          <LineChart data={data} margin={{ top: 6, right: 18, left: 18, bottom: showXAxis ? 2 : 6 }}>
+            <YAxis domain={['auto', 'auto']} hide />
+            <XAxis
+              dataKey="label"
+              hide={!showXAxis}
+              tick={{ fill: 'rgba(228,190,177,0.5)', fontSize: 9 }}
+              axisLine={false}
+              tickLine={false}
+              interval={0}
+            />
+            {data.map(d => (
+              <ReferenceLine
+                key={String(d.label)}
+                x={String(d.label)}
+                stroke="rgba(255,255,255,0.22)"
+                strokeDasharray="2 5"
+                strokeWidth={1}
+              />
+            ))}
+            <Tooltip
+              contentStyle={{ background: '#1d2022', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+              labelStyle={{ color: '#e0e3e5', fontSize: 11 }}
+              itemStyle={{ fontSize: 10, color }}
+              formatter={(value: number) => [`${value}%`, valueLabel]}
+            />
+            <Line
+              dataKey={dataKey}
+              stroke={color}
+              dot={{ r: 3, fill: color, strokeWidth: 0 }}
+              activeDot={{ r: 5, fill: color, strokeWidth: 2, stroke: 'rgba(255,255,255,0.3)' }}
+              strokeWidth={2}
+              connectNulls
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+// ---- Utility functions ----
+
+function getInitials(name: string | null | undefined): string {
+  if (!name) return '?'
+  const words = name.trim().split(/\s+/)
+  if (words.length === 1) return name.slice(0, 3).toUpperCase()
+  return words.map(w => w[0]).join('').slice(0, 3).toUpperCase()
+}
+
+function computeTrend(
+  lastValue: number | null,
+  seasonAvg: number,
+  higherIsBetter: boolean,
+): { label: string; direction: 'up' | 'down' | 'flat'; isGood: boolean } {
+  if (lastValue === null) return { label: '—', direction: 'flat', isGood: true }
+  const diff = lastValue - seasonAvg
+  if (Math.abs(diff) < 1.5) return { label: 'flat', direction: 'flat', isGood: true }
+  if (diff > 0) {
+    return {
+      label: higherIsBetter ? `+${Math.round(diff)}pp` : 'worsening',
+      direction: 'up',
+      isGood: higherIsBetter,
+    }
+  }
+  return {
+    label: higherIsBetter ? `${Math.round(diff)}pp` : 'improving',
+    direction: 'down',
+    isGood: !higherIsBetter,
+  }
+}
+
+function cn(...classes: (string | undefined | false)[]) {
+  return classes.filter(Boolean).join(' ')
+}
+
+// ---- Officiating helpers (unchanged) ----
+
 type OfficialPlayer = { id: string; firstName: string; lastName: string; avatarUrl?: string | null }
 
 function PlayerAvatar({ player }: { player: OfficialPlayer }) {
@@ -303,43 +586,27 @@ function OfficiatingAvatars({ match }: { match: { ref1?: OfficialPlayer | null; 
   )
 }
 
-function KPICard({ icon, label, value, sub, accent }: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  sub: string
-  accent: 'green' | 'red' | 'blue' | 'orange'
-}) {
-  const accentColors = {
-    green: 'text-green-400',
-    red: 'text-error',
-    blue: 'text-secondary-container',
-    orange: 'text-orange',
-  }
-  return (
-    <div className="card p-4">
-      <div className={cn('mb-1', accentColors[accent])}>{icon}</div>
-      <p className="text-xs text-on-surface-variant uppercase tracking-wide font-bold">{label}</p>
-      <p className={cn('font-display font-black text-2xl mt-0.5', accentColors[accent])}>{value}</p>
-      <p className="text-xs text-on-surface-variant mt-0.5">{sub}</p>
-    </div>
-  )
-}
-
-function cn(...classes: (string | undefined | false)[]) {
-  return classes.filter(Boolean).join(' ')
-}
-
 function DashboardSkeleton() {
   return (
-    <div className="p-5 space-y-4 animate-pulse">
+    <div className="p-5 space-y-6 animate-pulse">
       <div className="h-8 bg-surface-high rounded-lg w-32" />
-      <div className="grid grid-cols-2 gap-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="card p-4 h-24" />
-        ))}
+      <div>
+        <div className="h-3 bg-surface-high rounded w-28 mb-3" />
+        <div className="grid grid-cols-2 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card p-4 h-20" />
+          ))}
+        </div>
       </div>
-      <div className="card h-40" />
+      <div>
+        <div className="h-3 bg-surface-high rounded w-28 mb-3" />
+        <div className="flex gap-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="card h-14 w-14 rounded-xl flex-none" />
+          ))}
+        </div>
+      </div>
+      <div className="card h-52" />
     </div>
   )
 }

@@ -491,5 +491,18 @@ export interface DashboardData {
     topWeakness: InsightCard | null
     topAction: InsightCard | null
   } | null
-  winLossTrend: Array<{ id: string; date: string; opponent: string | null; setsWon: number; setsLost: number; result: 'W' | 'L' }>
+  winLossTrend: Array<{
+    id: string
+    date: string
+    opponent: string | null
+    opponentInitials: string | null
+    setsWon: number
+    setsLost: number
+    result: 'W' | 'L'
+    sideoutPct: number | null
+    breakPct: number | null
+    errorRatio: number | null
+  }>
+  seasonPerf: { sideoutPct: number; breakPct: number; errorRatio: number } | null
+  weakestRotation: { rotation: number; winPct: number } | null
 }
