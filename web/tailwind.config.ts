@@ -7,7 +7,7 @@ export default {
       colors: {
         // ── Design tokens ─────────────────────────────────────────────────────
         pitch: {
-          950: '#000000',   // page / body background
+          950: '#101415',   // page / body background
           900: '#070600',   // app shell
           800: '#0F0E0C',   // top bars, nav bars, sticky chrome
           700: '#161412',   // card surfaces
@@ -42,7 +42,7 @@ export default {
         },
 
         // ── Backward-compat aliases (old token names → new values) ────────────
-        background:              '#000000',
+        background:              '#101415',
         surface:                 '#161412',
         'surface-dim':           '#161412',
         'surface-bright':        '#3D3B35',

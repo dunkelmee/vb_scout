@@ -67,7 +67,7 @@ body::after {
   html, body {
     margin: 0;
     padding: 0;
-    background-color: #000000;
+    background-color: #101415;
     background-image:
       radial-gradient(ellipse 70vw 55vh at 12% 18%, rgba(35, 181, 211, 0.08) 0%, transparent 65%),
       radial-gradient(ellipse 55vw 50vh at 88% 78%, rgba(39, 154, 241, 0.06) 0%, transparent 65%);
