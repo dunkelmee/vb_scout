@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, CalendarDays, Dumbbell, Users, Settings } from 'lucide-react'
 import { cn } from './cn'
@@ -19,8 +19,11 @@ const NAV_ITEMS = [
 export function AppShell({ children, hideNav = false }: AppShellProps) {
   const location = useLocation()
   const isLogScreen = location.pathname.includes('/log')
-
   const showNav = !hideNav && !isLogScreen
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">

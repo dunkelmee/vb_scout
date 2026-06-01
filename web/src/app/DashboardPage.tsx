@@ -48,25 +48,31 @@ export function DashboardPage() {
             </h3>
           )}
           {isManager && (
-            <div className="flex justify-between gap-2">
-              <button
-                onClick={() => navigate('/games/new')}
-                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
-              >
-                <CalendarDays size={12} className="text-turq-500" /> Game
-              </button>
-              <button
-                onClick={() => navigate('/players/new')}
-                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
-              >
-                <Users size={12} className="text-turq-500" /> Player
-              </button>
-              <button
-                onClick={() => navigate('/trainings/new')}
-                className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
-              >
-                <Dumbbell size={12} className="text-turq-500" /> Training
-              </button>
+            <div>
+              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold mb-2">Quick add</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => navigate('/games/new')}
+                  className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
+                >
+                  <CalendarDays size={20} className="text-turq-500" />
+                  <span className="text-xs font-bold text-white">Game</span>
+                </button>
+                <button
+                  onClick={() => navigate('/players/new')}
+                  className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
+                >
+                  <Users size={20} className="text-turq-500" />
+                  <span className="text-xs font-bold text-white">Player</span>
+                </button>
+                <button
+                  onClick={() => navigate('/trainings/new')}
+                  className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
+                >
+                  <Dumbbell size={20} className="text-turq-500" />
+                  <span className="text-xs font-bold text-white">Training</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
