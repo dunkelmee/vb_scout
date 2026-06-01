@@ -37,9 +37,9 @@ export function PlayersPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/players/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-turq-500 flex items-center justify-center shadow-[0_4px_16px_rgba(35,181,211,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
-            <Plus size={16} className="text-white" />
+            <Plus size={16} className="text-pitch-950" />
           </button>
         ) : undefined}
       />
@@ -60,7 +60,7 @@ export function PlayersPage() {
               key={player.id}
               className={cn(
                 'card px-4 py-4 flex items-center gap-4',
-                isMe && 'border-orange/20',
+                isMe && 'border-turq-500/20',
               )}
             >
               {/* Avatar with jersey badge */}
@@ -73,7 +73,7 @@ export function PlayersPage() {
                   <p className="font-display font-bold text-base text-on-surface leading-tight">
                     {player.firstName} {player.lastName}
                   </p>
-                  {isMe && <Badge label="You" variant="orange" size="sm" />}
+                  {isMe && <Badge label="You" variant="info" size="sm" />}
                   {player.hasRefereeLicense && isManager && (
                     <ShieldCheck size={12} className="text-secondary-container" />
                   )}
@@ -110,7 +110,7 @@ export function PlayersPage() {
                         deleteMutation.mutate(player.id)
                       }
                     }}
-                    className="p-2 rounded-full hover:bg-white/[0.06] text-error/60"
+                    className="p-2 rounded-full hover:bg-white/[0.06] text-bubb-500/60"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -120,7 +120,7 @@ export function PlayersPage() {
               {!isManager && isMe && (
                 <Link
                   to={`/players/${player.id}`}
-                  className="text-xs text-orange font-bold border border-orange/30 rounded-full px-3 py-1.5 shrink-0"
+                  className="text-xs text-turq-500 font-bold border border-turq-500/30 rounded-full px-3 py-1.5 shrink-0"
                 >
                   Profile
                 </Link>

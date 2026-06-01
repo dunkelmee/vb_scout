@@ -307,7 +307,7 @@ export function GameLogPage() {
               {/* Score + set */}
               <div className="flex flex-col items-center gap-2 shrink-0">
                 <div className="flex items-center gap-2.5 font-display font-black leading-none">
-                  <span className="text-orange" style={{ fontSize: '2.75rem' }}>{store.scoreUs}</span>
+                  <span className="text-turq-500" style={{ fontSize: '2.75rem' }}>{store.scoreUs}</span>
                   <span className="text-white/50 text-2xl">–</span>
                   <span className="text-white" style={{ fontSize: '2.75rem' }}>{store.scoreThem}</span>
                 </div>
@@ -371,7 +371,7 @@ export function GameLogPage() {
                     disabled={store.isCommitting || setWon}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
-                      'border-orange text-orange backdrop-blur-[20px] backdrop-saturate-[180%] bg-orange/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-orange/10',
+                      'border-turq-500 text-turq-500 backdrop-blur-[20px] backdrop-saturate-[180%] bg-turq-500/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-turq-500/10',
                       (store.isCommitting || setWon) && 'opacity-50'
                     )}
                   >
@@ -402,8 +402,8 @@ export function GameLogPage() {
                       className={cn(
                         'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95 backdrop-blur-[20px] backdrop-saturate-[180%] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]',
                         store.pendingScorer === 'us'
-                          ? 'border-green-500 text-green-400 bg-green-900/[0.15] hover:bg-green-900/25'
-                          : 'border-red-500 text-red-400 bg-red-900/[0.15] hover:bg-red-900/25'
+                          ? 'border-turq-500 text-turq-400 bg-turq-500/[0.12] hover:bg-turq-500/20'
+                          : 'border-bubb-500 text-bubb-400 bg-bubb-500/[0.12] hover:bg-bubb-500/20'
                       )}
                     >
                       {store.pendingScorer === 'us' ? '✓ Own point' : '✓ Their play'}
@@ -455,10 +455,10 @@ export function GameLogPage() {
                   disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/[0.06] hover:shadow-[0_2px_12px_rgba(0,0,0,0.25)]'
                 )}
               >
-                <span className={cn('text-on-surface-variant', label === 'End Set' && setWon && 'text-orange')}>{icon}</span>
+                <span className={cn('text-on-surface-variant', label === 'End Set' && setWon && 'text-turq-500')}>{icon}</span>
                 <span className={cn(
                   'text-[10px] font-bold uppercase',
-                  label === 'End Set' && setWon ? 'text-orange' : 'text-on-surface-variant'
+                  label === 'End Set' && setWon ? 'text-turq-500' : 'text-on-surface-variant'
                 )}>{label}</span>
                 {badge !== null && (
                   <span className="text-[9px] text-on-surface-variant/50 font-bold -mt-0.5">{badge}</span>
@@ -628,7 +628,7 @@ export function GameLogPage() {
                   className={cn(
                     'flex-1 py-2.5 rounded-xl border text-sm font-bold uppercase tracking-wide transition-all',
                     newSetServingFirst === side
-                      ? 'border-orange bg-orange/10 text-orange'
+                      ? 'border-turq-500 bg-turq-500/10 text-turq-500'
                       : 'border-outline/20 text-on-surface-variant'
                   )}
                 >
@@ -760,7 +760,7 @@ function SubstitutionForm({
           type="checkbox"
           checked={isLiberoSwap}
           onChange={e => setIsLiberoSwap(e.target.checked)}
-          className="w-4 h-4 accent-orange"
+          className="w-4 h-4 accent-turq-500"
         />
         Libero swap (doesn't count against limit)
       </label>

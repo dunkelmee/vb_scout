@@ -11,20 +11,21 @@ import {
 import { ArrowLeft, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
+import { chartTheme } from '../lib/chartTheme'
 
 // ── Colour helpers ────────────────────────────────────────────────────────────
 
 function perfColor(value: number, target: number, higherBetter: boolean): string {
   const meets = higherBetter ? value >= target : value <= target
-  if (meets) return '#97C459'
+  if (meets) return '#23B5D3'  // turq-500
   const close = higherBetter ? value >= target - 0.05 : value <= target + 0.05
-  return close ? '#EF9F27' : '#E24B4A'
+  return close ? '#279AF1' : '#EA526F'  // bell-500 : bubb-500
 }
 
 function rotationColor(winRate: number): { bg: string; text: string } {
-  if (winRate >= 0.60) return { bg: 'rgba(99,153,34,0.2)', text: '#97C459' }
-  if (winRate >= 0.40) return { bg: 'rgba(186,117,23,0.18)', text: '#EF9F27' }
-  return { bg: 'rgba(226,75,74,0.22)', text: '#E24B4A' }
+  if (winRate >= 0.60) return { bg: 'rgba(35,181,211,0.22)',  text: '#23B5D3' }
+  if (winRate >= 0.40) return { bg: 'rgba(39,154,241,0.15)',  text: '#279AF1' }
+  return                       { bg: 'rgba(234,82,111,0.22)', text: '#EA526F' }
 }
 
 // ── KPI tile ─────────────────────────────────────────────────────────────────
@@ -72,7 +73,7 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-24">
-        <div className="w-5 h-5 border-2 border-orange/30 border-t-orange rounded-full animate-spin" />
+        <div className="w-5 h-5 border-2 border-turq-500/30 border-t-turq-500 rounded-full animate-spin" />
       </div>
     )
   }
@@ -83,30 +84,30 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
     <div>
       <ResponsiveContainer width="100%" height={130}>
         <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
           <XAxis
             dataKey="rally"
-            tick={{ fill: '#5F5E5A', fontSize: 9 }}
+            tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tick={{ fill: '#888780', fontSize: 9 }}
+            tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
             tickLine={false}
             axisLine={false}
             tickFormatter={(v: number) => v > 0 ? `+${v}` : `${v}`}
           />
           <Tooltip
-            contentStyle={{ background: '#1a1d1e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11 }}
+            contentStyle={{ background: chartTheme.tooltip.backgroundColor, border: '1px solid rgba(47,45,40,0.90)', borderRadius: 8, fontSize: 11 }}
             labelFormatter={(v) => `Rally ${v}`}
             formatter={(value: number, name: string) => [
               value > 0 ? `+${value}` : `${value}`,
               name === 'pos' ? 'Lead' : 'Deficit',
             ]}
           />
-          <ReferenceLine y={0} stroke="rgba(255,255,255,0.10)" />
-          <Area dataKey="pos" fill="rgba(99,153,34,0.28)" stroke="#97C459" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-          <Area dataKey="neg" fill="rgba(226,75,74,0.28)" stroke="#E24B4A" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+          <ReferenceLine y={0} stroke={chartTheme.gridColor} />
+          <Area dataKey="pos" fill={chartTheme.turqFill} stroke={chartTheme.turq} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+          <Area dataKey="neg" fill={chartTheme.pinkFill} stroke={chartTheme.pink} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
         </ComposedChart>
       </ResponsiveContainer>
       <div className="flex justify-between text-[11px] text-on-surface-variant/40 mt-1 px-1">
@@ -143,7 +144,7 @@ function SetTableRow({
   )
 }
 
-// ── Analysis section (unchanged) ──────────────────────────────────────────────
+// ── Analysis section ──────────────────────────────────────────────────────────
 
 function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) {
   const [simExpanded, setSimExpanded] = useState(false)
@@ -151,7 +152,7 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
   if (!analysis || analysis.status === 'pending' || analysis.status === 'running') {
     return (
       <div className="card p-6 flex flex-col items-center gap-3">
-        <div className="w-10 h-10 border-2 border-orange/30 border-t-orange rounded-full animate-spin" />
+        <div className="w-10 h-10 border-2 border-turq-500/30 border-t-turq-500 rounded-full animate-spin" />
         <p className="text-sm font-bold text-on-surface">Analysing match data…</p>
         <p className="text-xs text-on-surface-variant">Usually ready within 30 seconds.</p>
       </div>
@@ -170,8 +171,8 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
 
   if (analysis.status === 'error') {
     return (
-      <div className="card p-4 border-error/20">
-        <p className="text-sm text-error">Analysis failed: {analysis.errorMessage || 'Unknown error'}</p>
+      <div className="card p-4 border-bubb-500/20">
+        <p className="text-sm text-bubb-500">Analysis failed: {analysis.errorMessage || 'Unknown error'}</p>
       </div>
     )
   }
@@ -182,9 +183,9 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
 
   return (
     <div className="space-y-4">
-      {strengths.length > 0 && <InsightGroup title="Strengths" cards={strengths} color="green" />}
-      {weaknesses.length > 0 && <InsightGroup title="Areas to Address" cards={weaknesses} color="red" />}
-      {action_items.length > 0 && <InsightGroup title="Coaching Actions" cards={action_items} color="orange" />}
+      {strengths.length > 0 && <InsightGroup title="Strengths" cards={strengths} color="turq" />}
+      {weaknesses.length > 0 && <InsightGroup title="Areas to Address" cards={weaknesses} color="bubb" />}
+      {action_items.length > 0 && <InsightGroup title="Coaching Actions" cards={action_items} color="bell" />}
 
       {simulation_summary && (
         <div className="card p-4">
@@ -207,10 +208,10 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
               {simulation_summary.top_intervention && (
                 <div className="mt-2 p-3 rounded-lg bg-surface-high">
                   <p className="text-xs text-on-surface-variant">Top improvement scenario:</p>
-                  <p className="text-sm font-bold text-orange mt-0.5">
+                  <p className="text-sm font-bold text-turq-500 mt-0.5">
                     {simulation_summary.top_intervention.label}
                   </p>
-                  <p className="text-xs text-green-400">
+                  <p className="text-xs text-turq-400">
                     +{(simulation_summary.top_intervention.win_rate_delta * 100).toFixed(1)}% win rate
                   </p>
                 </div>
@@ -231,10 +232,10 @@ function InsightGroup({
     id: string; title: string; detail: string; current_value: number
     target_value?: number | null; direction: string; impact?: string | null
   }>
-  color: 'green' | 'red' | 'orange'
+  color: 'turq' | 'bubb' | 'bell'
 }) {
-  const borderColor = { green: 'border-green-500/20', red: 'border-error/20', orange: 'border-orange/20' }
-  const textColor   = { green: 'text-green-400', red: 'text-error', orange: 'text-orange' }
+  const borderColor = { turq: 'border-turq-500/20', bubb: 'border-bubb-500/20', bell: 'border-bell-500/20' }
+  const textColor   = { turq: 'text-turq-400',      bubb: 'text-bubb-500',      bell: 'text-bell-400' }
 
   return (
     <div>
@@ -252,7 +253,7 @@ function InsightGroup({
                 )}
               </span>
               {card.impact && (
-                <span className="text-xs font-bold text-green-400">{card.impact}</span>
+                <span className="text-xs font-bold text-turq-400">{card.impact}</span>
               )}
             </div>
           </div>
@@ -333,7 +334,7 @@ export function GameStatsPage() {
         {isManager && isCompleted && sets.length > 0 && (
           <Link
             to={`/games/${matchId}/log`}
-            className="text-xs text-orange font-bold border border-orange/30 rounded-full px-3 py-1.5 shrink-0"
+            className="text-xs text-turq-500 font-bold border border-turq-500/30 rounded-full px-3 py-1.5 shrink-0"
           >
             Log
           </Link>
@@ -345,7 +346,7 @@ export function GameStatsPage() {
         {/* ── Hero ── */}
         {match && (
           <div className="card p-5 relative overflow-hidden">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(255,92,0,0.08)_0%,transparent_65%)]" />
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(35,181,211,0.08)_0%,transparent_65%)]" />
             <div className="relative">
 
               {/* Teams + set scores */}
@@ -354,7 +355,7 @@ export function GameStatsPage() {
                   <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1 truncate">{ourTeam}</p>
                   <p
                     className="font-display font-black text-5xl leading-none"
-                    style={{ color: won ? '#97C459' : '#5F5E5A' }}
+                    style={{ color: won ? '#23B5D3' : '#5F5E5A' }}
                   >
                     {match.setsWonUs}
                   </p>
@@ -367,7 +368,7 @@ export function GameStatsPage() {
                   <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1 truncate">{theirTeam}</p>
                   <p
                     className="font-display font-black text-5xl leading-none"
-                    style={{ color: !won ? '#E24B4A' : '#5F5E5A' }}
+                    style={{ color: !won ? '#EA526F' : '#5F5E5A' }}
                   >
                     {match.setsWonThem}
                   </p>
@@ -380,8 +381,8 @@ export function GameStatsPage() {
                   <span
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
                     style={won
-                      ? { background: 'rgba(99,153,34,0.18)', color: '#97C459' }
-                      : { background: 'rgba(226,75,74,0.18)', color: '#E24B4A' }}
+                      ? { background: 'rgba(35,181,211,0.18)',  color: '#23B5D3' }
+                      : { background: 'rgba(234,82,111,0.18)', color: '#EA526F' }}
                   >
                     {won ? '🏆 Match won' : '✗ Match lost'}
                   </span>
@@ -398,11 +399,11 @@ export function GameStatsPage() {
                         key={s.id}
                         className="rounded-lg px-2.5 py-1.5 text-center"
                         style={setWon
-                          ? { background: 'rgba(99,153,34,0.18)', border: '1px solid rgba(99,153,34,0.25)' }
-                          : { background: 'rgba(226,75,74,0.10)', border: '1px solid rgba(226,75,74,0.15)' }}
+                          ? { background: 'rgba(35,181,211,0.18)',  border: '1px solid rgba(35,181,211,0.25)' }
+                          : { background: 'rgba(234,82,111,0.10)', border: '1px solid rgba(234,82,111,0.15)' }}
                       >
                         <p className="text-[8px] text-on-surface-variant/50 mb-0.5">Set {s.setNumber}</p>
-                        <p className="text-xs font-bold" style={{ color: setWon ? '#97C459' : '#E24B4A' }}>
+                        <p className="text-xs font-bold" style={{ color: setWon ? '#23B5D3' : '#EA526F' }}>
                           {s.scoreUs}–{s.scoreThem}
                         </p>
                       </div>
@@ -488,7 +489,7 @@ export function GameStatsPage() {
                             <th
                               key={s.setId}
                               className="text-center pb-2.5 text-[9px] font-bold uppercase tracking-wide"
-                              style={{ color: sw ? '#97C459' : '#E24B4A' }}
+                              style={{ color: sw ? '#23B5D3' : '#EA526F' }}
                             >
                               S{s.setNumber} {sw ? 'W' : 'L'}
                             </th>
@@ -501,7 +502,7 @@ export function GameStatsPage() {
                         label="Score"
                         sets={stats.perSetStats}
                         getValue={s => `${s.scoreUs}–${s.scoreThem}`}
-                        getColor={s => s.scoreUs > s.scoreThem ? '#97C459' : '#E24B4A'}
+                        getColor={s => s.scoreUs > s.scoreThem ? '#23B5D3' : '#EA526F'}
                       />
                       <SetTableRow
                         label="Rallies"
@@ -544,7 +545,7 @@ export function GameStatsPage() {
                       className={cn(
                         'px-3 py-1 rounded-full text-xs font-bold transition-all',
                         isActive
-                          ? 'bg-orange text-white shadow-[0_2px_8px_rgba(255,92,0,0.35)]'
+                          ? 'bg-turq-500 text-pitch-950 shadow-[0_2px_8px_rgba(35,181,211,0.35)]'
                           : 'bg-white/[0.06] text-on-surface-variant hover:bg-white/[0.09]'
                       )}
                     >
@@ -562,11 +563,11 @@ export function GameStatsPage() {
               {/* Legend */}
               <div className="flex gap-4 mt-3 text-[11px] text-on-surface-variant/50">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#97C459' }} />
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#23B5D3' }} />
                   Leading
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#E24B4A' }} />
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#EA526F' }} />
                   Trailing
                 </span>
               </div>

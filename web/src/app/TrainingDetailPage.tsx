@@ -109,8 +109,8 @@ export function TrainingDetailPage() {
                 className={cn(
                   'flex-1 py-4 rounded-xl border-2 font-display font-bold text-sm uppercase tracking-wide transition-all flex items-center justify-center gap-2',
                   myAttendance?.status === 'coming'
-                    ? 'border-green-500 bg-green-900/20 text-green-400'
-                    : 'border-outline/20 text-on-surface-variant hover:border-green-500/40'
+                    ? 'border-turq-500 bg-turq-500/10 text-turq-400'
+                    : 'border-outline/20 text-on-surface-variant hover:border-turq-500/40'
                 )}
               >
                 <Check size={16} /> Coming
@@ -168,7 +168,7 @@ export function TrainingDetailPage() {
 
             {coming.length > 0 && (
               <div className="mb-4">
-                <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-2">Coming ({coming.length})</p>
+                <p className="text-xs font-bold text-turq-400 uppercase tracking-wide mb-2">Coming ({coming.length})</p>
                 <AttendanceList attendance={coming} onRsvpChange={(playerId, status) => rsvpMutation.mutate({ playerId, status })} />
               </div>
             )}

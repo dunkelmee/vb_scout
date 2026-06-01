@@ -35,8 +35,8 @@ export function AcceptInvitePage() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-5 bg-background">
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#ff5c00] to-[#ff8c00] flex items-center justify-center shadow-[0_4px_20px_rgba(255,92,0,0.4)]">
-          <span className="text-white font-display font-black text-2xl">VB</span>
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-turq-500 to-bell-500 flex items-center justify-center shadow-[0_4px_20px_rgba(35,181,211,0.4)]">
+          <span className="text-pitch-950 font-display font-black text-2xl">VB</span>
         </div>
         <h1 className="font-display font-black text-2xl text-on-surface">Join your team</h1>
       </div>

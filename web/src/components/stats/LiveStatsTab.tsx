@@ -13,7 +13,6 @@ interface LiveStatsTabProps {
   rallies: Rally[]
   scoreUs: number
   scoreThem: number
-  /** Player ID of the setter — used to correctly attribute rallies to rotations */
   setterPlayerId?: string | null
   teamName?: string
   opponentName?: string
@@ -44,12 +43,11 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
       rotated: r.rotated,
       rallyIndex: r.rallyIndex,
     })),
-    6,                          // rolling window
-    setterPlayerId ?? undefined // setter player ID for correct rotation attribution
+    6,
+    setterPlayerId ?? undefined
   )
 
-  // Point breakdown: own positive play vs gifted from opponent errors
-  const ourPositivePoints = rallies.filter(r => r.pointType === 'us_positive').length
+  const ourPositivePoints  = rallies.filter(r => r.pointType === 'us_positive').length
   const usPointsFromErrors = rallies.filter(r => r.pointType === 'them_error').length
   const theirPositivePoints = rallies.filter(r => r.pointType === 'them_positive').length
   const themPointsFromErrors = rallies.filter(r => r.pointType === 'us_error').length
@@ -75,7 +73,7 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
       {/* TUS Card */}
       <div className="card p-4">
         <div className="mb-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+          <p className="text-xs font-bold uppercase tracking-wide text-ghost-300">
             Timeout Urgency
             {tusResult.building && <span className="ml-2 font-normal normal-case opacity-60">(building…)</span>}
           </p>
@@ -88,10 +86,9 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
           animated={tusResult.tus >= 0.76}
         />
 
-        {/* Breakdown toggle */}
         <button
           onClick={() => setTusExpanded(!tusExpanded)}
-          className="flex items-center gap-1 text-xs font-bold uppercase text-on-surface-variant"
+          className="flex items-center gap-1 text-xs font-bold uppercase text-ghost-300"
         >
           Breakdown {tusExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
         </button>
@@ -99,15 +96,15 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
         {tusExpanded && (
           <div className="mt-3 space-y-2">
             {[
-              { label: 'Momentum (30%)', value: tusResult.momentum, weight: 0.30 },
-              { label: 'Error ratio (25%)', value: tusResult.error, weight: 0.25 },
-              { label: 'Lead/deficit (25%)', value: tusResult.leadDeficit, weight: 0.25 },
-              { label: 'Positive play (20%)', value: tusResult.positive, weight: 0.20 },
+              { label: 'Momentum (30%)',      value: tusResult.momentum,    weight: 0.30 },
+              { label: 'Error ratio (25%)',   value: tusResult.error,       weight: 0.25 },
+              { label: 'Lead/deficit (25%)',  value: tusResult.leadDeficit, weight: 0.25 },
+              { label: 'Positive play (20%)', value: tusResult.positive,    weight: 0.20 },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div className="flex justify-between text-xs mb-1">
-                  <span className="text-on-surface-variant">{label}</span>
-                  <span className="text-on-surface font-bold">{(value * 100).toFixed(0)}%</span>
+                  <span className="text-ghost-300">{label}</span>
+                  <span className="text-ghost-100 font-bold">{(value * 100).toFixed(0)}%</span>
                 </div>
                 <ProgressBar value={value} color="orange" height="sm" />
               </div>
@@ -121,10 +118,10 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
 
       {/* Rotation stats */}
       <div className="card p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-3">Rotation Statistics</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ghost-300 mb-3">Rotation Statistics</p>
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-on-surface-variant">
+            <tr className="text-ghost-400">
               <th className="text-left py-1 font-bold uppercase tracking-wide">Rot</th>
               <th className="text-center py-1 font-bold">W</th>
               <th className="text-center py-1 font-bold">L</th>
@@ -134,14 +131,14 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
           </thead>
           <tbody>
             {stats.rotationStats.map(rot => (
-              <tr key={rot.rotation} className="border-t border-outline/10">
-                <td className="py-2 font-bold text-on-surface-variant">P{rot.rotation}</td>
-                <td className="text-center py-2 font-bold text-green-400">{rot.wins}</td>
-                <td className="text-center py-2 font-bold text-error/70">{rot.losses}</td>
-                <td className="text-right py-2 text-on-surface">
+              <tr key={rot.rotation} className="border-t border-pitch-400/30">
+                <td className="py-2 font-bold text-ghost-300">P{rot.rotation}</td>
+                <td className="text-center py-2 font-bold text-turq-400">{rot.wins}</td>
+                <td className="text-center py-2 font-bold text-bubb-500/70">{rot.losses}</td>
+                <td className="text-right py-2 text-ghost-100">
                   {rot.serveRate > 0 ? `${(rot.serveRate * 100).toFixed(0)}%` : '–'}
                 </td>
-                <td className="text-right py-2 text-on-surface">
+                <td className="text-right py-2 text-ghost-100">
                   {rot.receiveRate > 0 ? `${(rot.receiveRate * 100).toFixed(0)}%` : '–'}
                 </td>
               </tr>
@@ -153,12 +150,14 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
       {/* Error ratio */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Error Ratio</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ghost-300">Error Ratio</p>
           <span className={cn(
             'text-xs font-bold uppercase px-2 py-0.5 rounded-full',
-            stats.errorRatioCumulative >= 0.40 ? 'bg-error/15 text-error' :
-            stats.errorRatioCumulative >= 0.28 ? 'bg-amber-500/15 text-amber-400' :
-            'bg-green-500/15 text-green-400'
+            stats.errorRatioCumulative >= 0.40
+              ? 'bg-bubb-500/15 text-bubb-500'
+              : stats.errorRatioCumulative >= 0.28
+                ? 'bg-bell-500/15 text-bell-400'
+                : 'bg-turq-500/15 text-turq-400'
           )}>
             {stats.errorRatioCumulative >= 0.40 ? 'High' : stats.errorRatioCumulative >= 0.28 ? 'Mixed' : 'Low'}
           </span>
@@ -167,24 +166,24 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
         <div className="space-y-2">
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-on-surface-variant">Rolling {Math.min(6, stats.totalRallies)}</span>
-              <span className="font-bold text-on-surface">{stats.errorRatioRolling.toFixed(2)}</span>
+              <span className="text-ghost-300">Rolling {Math.min(6, stats.totalRallies)}</span>
+              <span className="font-bold text-ghost-100">{stats.errorRatioRolling.toFixed(2)}</span>
             </div>
             <ProgressBar value={stats.errorRatioRolling} color={stats.errorRatioRolling >= 0.4 ? 'red' : 'orange'} height="sm" />
           </div>
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-on-surface-variant">Full match</span>
-              <span className="font-bold text-on-surface">{stats.errorRatioCumulative.toFixed(2)}</span>
+              <span className="text-ghost-300">Full match</span>
+              <span className="font-bold text-ghost-100">{stats.errorRatioCumulative.toFixed(2)}</span>
             </div>
             <ProgressBar value={stats.errorRatioCumulative} color={stats.errorRatioCumulative >= 0.4 ? 'red' : 'amber'} height="sm" />
           </div>
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-on-surface-variant">Error clustering</span>
+              <span className="text-ghost-300">Error clustering</span>
               <span className={cn(
                 'font-bold',
-                stats.clusteringIndex >= 0.5 ? 'text-orange' : 'text-on-surface'
+                stats.clusteringIndex >= 0.5 ? 'text-turq-500' : 'text-ghost-100'
               )}>
                 {stats.clusteringIndex === -1 ? 'N/A' : stats.clusteringIndex.toFixed(2)}
               </span>
@@ -193,7 +192,7 @@ export function LiveStatsTab({ rallies, scoreUs, scoreThem, setterPlayerId, team
               <ProgressBar value={stats.clusteringIndex} color={stats.clusteringIndex >= 0.5 ? 'orange' : 'green'} height="sm" />
             )}
             {stats.clusteringIndex >= 0.5 && (
-              <p className="text-xs text-orange mt-1">{stats.clusteringLabel}</p>
+              <p className="text-xs text-turq-500 mt-1">{stats.clusteringLabel}</p>
             )}
           </div>
         </div>

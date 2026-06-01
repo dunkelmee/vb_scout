@@ -24,14 +24,12 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
-      {/* Main content */}
       <main className={cn('flex-1 overflow-y-auto', showNav && 'pb-[72px]')}>
         {children}
       </main>
 
-      {/* Bottom navigation */}
       {showNav && (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 h-[72px] flex items-end pb-2 px-2 bg-surface-container/95 backdrop-blur-sm border-t border-outline/10">
+        <nav className="fixed bottom-0 left-0 right-0 z-30 h-[72px] flex items-end pb-2 px-2 bg-pitch-800/95 backdrop-blur-sm border-t border-pitch-400/40">
           <div className="w-full flex justify-around items-center max-w-lg mx-auto">
             {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
               <NavLink
@@ -40,9 +38,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                 className={({ isActive }) =>
                   cn(
                     'flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all min-w-[56px]',
-                    isActive
-                      ? 'text-orange'
-                      : 'text-on-surface-variant hover:text-on-surface'
+                    isActive ? 'text-turq-500' : 'text-ghost-400 hover:text-ghost-300'
                   )
                 }
               >
@@ -50,11 +46,11 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                   <>
                     <Icon
                       size={22}
-                      className={cn(isActive && 'drop-shadow-[0_0_6px_rgba(255,92,0,0.6)]')}
+                      className={cn(isActive && 'drop-shadow-[0_0_6px_rgba(35,181,211,0.60)]')}
                     />
                     <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
                     {isActive && (
-                      <span className="absolute bottom-2 w-1 h-1 rounded-full bg-orange" />
+                      <span className="absolute bottom-2 w-1 h-1 rounded-full bg-turq-500" />
                     )}
                   </>
                 )}
@@ -67,7 +63,6 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
   )
 }
 
-// Page header for inner pages
 interface PageHeaderProps {
   title: string
   subtitle?: string
@@ -82,9 +77,9 @@ export function PageHeader({ title, subtitle, right, className }: PageHeaderProp
       <div className="flex items-start justify-between gap-4">
         <div>
           {subtitle && (
-            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-0.5">{subtitle}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-turq-500 mb-0.5">{subtitle}</p>
           )}
-          <h1 className="font-display font-bold text-headline-lg-mobile text-on-surface">{title}</h1>
+          <h1 className="font-display font-bold text-headline-lg-mobile text-ghost-100">{title}</h1>
         </div>
         {right && <div className="shrink-0 mt-0.5">{right}</div>}
       </div>

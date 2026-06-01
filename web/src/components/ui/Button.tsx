@@ -18,14 +18,14 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const base = 'inline-flex items-center justify-center font-display font-bold uppercase tracking-wide rounded-full transition-all duration-150 active:scale-95 select-none focus:outline-none focus:ring-2 focus:ring-orange/50'
+  const base = 'inline-flex items-center justify-center font-display font-bold uppercase tracking-wide rounded-full transition-all duration-150 active:scale-95 select-none focus:outline-none focus:ring-2 focus:ring-turq-500/50'
 
   const variants = {
-    primary: 'bg-gradient-to-r from-[#ff5c00] to-[#ff8c00] text-white shadow-[0_4px_20px_rgba(255,92,0,0.4),inset_0_1px_0_rgba(255,255,255,0.22)] hover:shadow-[0_6px_28px_rgba(255,92,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22)] disabled:opacity-50',
-    secondary: 'backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.06] border border-white/[0.14] text-secondary-container shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-white/[0.09] disabled:opacity-50',
-    ghost: 'text-on-surface hover:bg-white/[0.06] disabled:opacity-50',
-    danger: 'backdrop-blur-[20px] backdrop-saturate-[180%] bg-[rgba(147,0,10,0.55)] border border-red-900/40 text-error shadow-[0_4px_20px_rgba(147,0,10,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-error/25 disabled:opacity-50',
-    outline: 'backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] border border-white/[0.14] text-on-surface shadow-[0_4px_16px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:border-orange/50 hover:text-orange disabled:opacity-50',
+    primary:   'bg-gradient-to-r from-turq-500 to-bell-500 text-pitch-950 shadow-[0_4px_20px_rgba(35,181,211,0.35),inset_0_1px_0_rgba(255,255,255,0.18)] hover:shadow-[0_6px_28px_rgba(35,181,211,0.50),inset_0_1px_0_rgba(255,255,255,0.18)] disabled:opacity-50',
+    secondary: 'backdrop-blur-[20px] backdrop-saturate-[180%] bg-pitch-700/60 border border-pitch-400/90 text-ghost-300 shadow-[0_4px_20px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-pitch-600/60 disabled:opacity-50',
+    ghost:     'text-ghost-200 hover:bg-pitch-600/40 disabled:opacity-50',
+    danger:    'backdrop-blur-[20px] backdrop-saturate-[180%] bg-bubb-700/50 border border-bubb-500/40 text-bubb-400 shadow-[0_4px_20px_rgba(168,40,72,0.30),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-bubb-500/25 disabled:opacity-50',
+    outline:   'backdrop-blur-[20px] backdrop-saturate-[180%] bg-pitch-700/40 border border-pitch-400/90 text-ghost-200 shadow-[0_4px_16px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.06)] hover:border-turq-500/50 hover:text-turq-500 disabled:opacity-50',
   }
 
   const sizes = {

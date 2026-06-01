@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  ComposedChart, Area, Line, ReferenceLine,
+  ComposedChart, Area, ReferenceLine,
   XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip,
 } from 'recharts'
 import { X, BarChart2 } from 'lucide-react'
@@ -10,6 +10,7 @@ import { computeLiveStats } from '../lib/statistics'
 import { DonutChart } from './ui/DonutChart'
 import { Button } from './ui/Button'
 import { cn } from './ui/cn'
+import { chartTheme } from '../lib/chartTheme'
 
 interface SetSummaryOverlayProps {
   matchId: string
@@ -26,17 +27,20 @@ interface SetSummaryOverlayProps {
   onViewStats: () => void
 }
 
+// §2.2 KPI colour: turq-500 = on target, bell-500 = watch, bubb-500 = poor
 function statColor(value: number, higherIsBetter: boolean): string {
   const v = higherIsBetter ? value : 1 - value
-  if (v >= 0.60) return '#97C459'
-  if (v >= 0.40) return '#EF9F27'
-  return '#E24B4A'
+  if (v >= 0.60) return '#23B5D3'  // turq-500
+  if (v >= 0.40) return '#279AF1'  // bell-500
+  return '#EA526F'                  // bubb-500
 }
 
+// §2.4 Rotation grid colours
 function rotationColor(winRate: number): { bg: string; text: string } {
-  if (winRate >= 0.60) return { bg: 'rgba(99,153,34,0.2)', text: '#97C459' }
-  if (winRate >= 0.40) return { bg: 'rgba(186,117,23,0.18)', text: '#EF9F27' }
-  return { bg: 'rgba(226,75,74,0.22)', text: '#E24B4A' }
+  if (winRate >= 0.70) return { bg: 'rgba(35,181,211,0.22)',  text: '#23B5D3' }
+  if (winRate >= 0.55) return { bg: 'rgba(39,154,241,0.15)',  text: '#5BB4F5' }
+  if (winRate >= 0.40) return { bg: 'rgba(234,82,111,0.12)',  text: '#F07A90' }
+  return                           { bg: 'rgba(234,82,111,0.22)',  text: '#EA526F' }
 }
 
 function StatTile({
@@ -58,7 +62,7 @@ function StatTile({
     const improved = higherIsBetter ? value > prevValue : value < prevValue
     const arrow = value > prevValue ? '↑' : '↓'
     delta = (
-      <span className={cn('text-[10px] font-bold', improved ? 'text-green-400' : 'text-error')}>
+      <span className={cn('text-[10px] font-bold', improved ? 'text-turq-400' : 'text-bubb-500')}>
         vs {(prevValue * 100).toFixed(0)}% last {arrow}
       </span>
     )
@@ -66,7 +70,7 @@ function StatTile({
 
   return (
     <div className="card p-3">
-      <div className="text-[10px] text-on-surface-variant uppercase tracking-wide font-bold mb-1">{label}</div>
+      <div className="text-[10px] text-ghost-300 uppercase tracking-wide font-bold mb-1">{label}</div>
       <div className="text-xl font-bold leading-none" style={{ color }}>{pct}</div>
       {delta && <div className="mt-1">{delta}</div>}
     </div>
@@ -89,7 +93,6 @@ export function SetSummaryOverlay({
 }: SetSummaryOverlayProps) {
   const won = scoreUs > scoreThem
 
-  // Find the previous completed set for comparison stats
   const previousSet = sets.find(s => s.setNumber === setNumber - 1 && s.status === 'completed')
 
   const { data: prevSetData } = useQuery({
@@ -98,7 +101,6 @@ export function SetSummaryOverlay({
     enabled: !!previousSet,
   })
 
-  // Stats for this set
   const stats = useMemo(() => computeLiveStats(
     rallies.map(r => ({
       scorer: r.scorer as 'us' | 'them',
@@ -114,7 +116,6 @@ export function SetSummaryOverlay({
     setterPlayerId ?? undefined
   ), [rallies, setterPlayerId])
 
-  // Stats for previous set
   const prevStats = useMemo(() => {
     if (!prevSetData?.rallies?.length) return null
     return computeLiveStats(
@@ -133,7 +134,6 @@ export function SetSummaryOverlay({
     )
   }, [prevSetData, setterPlayerId])
 
-  // Score differential chart data (starts at 0-0)
   const chartData = useMemo(() => {
     const pts: { rally: number; pos: number; neg: number }[] = [
       { rally: 0, pos: 0, neg: 0 },
@@ -145,30 +145,28 @@ export function SetSummaryOverlay({
     return pts
   }, [rallies])
 
-  // Point origin breakdown
   const ourPos   = rallies.filter(r => r.pointType === 'us_positive').length
   const ourErr   = rallies.filter(r => r.pointType === 'them_error').length
   const themPos  = rallies.filter(r => r.pointType === 'them_positive').length
   const themErr  = rallies.filter(r => r.pointType === 'us_error').length
 
-  // Derive overall set wins from completed sets + current set
-  const completed = sets.filter(s => s.status === 'completed')
+  const completed   = sets.filter(s => s.status === 'completed')
   const setsWonUs   = completed.filter(s => s.scoreUs > s.scoreThem).length + (scoreUs > scoreThem ? 1 : 0)
   const setsWonThem = completed.filter(s => s.scoreThem > s.scoreUs).length  + (scoreThem > scoreUs ? 1 : 0)
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-pitch-950 flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-3 border-b border-outline/10 shrink-0">
+      <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-3 border-b border-pitch-400/40 shrink-0">
         <button
           onClick={onSetupNextSet}
-          className="p-2 -ml-2 rounded-full hover:bg-white/[0.06] transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-pitch-600/40 transition-colors"
         >
-          <X size={18} className="text-on-surface" />
+          <X size={18} className="text-ghost-100" />
         </button>
         <div className="flex-1">
-          <p className="text-xs text-on-surface-variant">Set {setNumber}</p>
-          <h1 className="font-display font-bold text-base text-on-surface leading-tight">Set summary</h1>
+          <p className="text-xs text-ghost-300">Set {setNumber}</p>
+          <h1 className="font-display font-bold text-base text-ghost-100 leading-tight">Set summary</h1>
         </div>
       </div>
 
@@ -177,24 +175,24 @@ export function SetSummaryOverlay({
 
         {/* Score hero */}
         <div className="card p-5 relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(255,92,0,0.10)_0%,transparent_70%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(35,181,211,0.10)_0%,transparent_70%)]" />
           <div className="relative">
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1 text-center">
-                <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1">{teamName}</p>
+                <p className="text-[11px] text-ghost-300 uppercase tracking-wide mb-1">{teamName}</p>
                 <p
                   className="font-display font-black leading-none"
-                  style={{ fontSize: '3rem', color: won ? '#97C459' : '#5F5E5A' }}
+                  style={{ fontSize: '3rem', color: won ? '#23B5D3' : '#4A4A5A' }}
                 >
                   {scoreUs}
                 </p>
               </div>
-              <span className="text-2xl font-light text-on-surface-variant/40">–</span>
+              <span className="text-2xl font-light text-ghost-400/40">–</span>
               <div className="flex-1 text-center">
-                <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1">{opponentName}</p>
+                <p className="text-[11px] text-ghost-300 uppercase tracking-wide mb-1">{opponentName}</p>
                 <p
                   className="font-display font-black leading-none"
-                  style={{ fontSize: '3rem', color: won ? '#5F5E5A' : '#E24B4A' }}
+                  style={{ fontSize: '3rem', color: won ? '#4A4A5A' : '#EA526F' }}
                 >
                   {scoreThem}
                 </p>
@@ -207,8 +205,8 @@ export function SetSummaryOverlay({
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
                 style={
                   won
-                    ? { background: 'rgba(99,153,34,0.18)', color: '#97C459' }
-                    : { background: 'rgba(163,45,45,0.18)', color: '#E24B4A' }
+                    ? { background: 'rgba(35,181,211,0.18)',  color: '#23B5D3' }
+                    : { background: 'rgba(234,82,111,0.18)',  color: '#EA526F' }
                 }
               >
                 {won ? '✓ Set won' : '✗ Set lost'}
@@ -234,11 +232,11 @@ export function SetSummaryOverlay({
                     key={n}
                     className={cn(
                       'w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all',
-                      isCurrent && 'ring-2 ring-orange ring-offset-1 ring-offset-[#0b0f10]'
+                      isCurrent && 'ring-2 ring-turq-500 ring-offset-1 ring-offset-pitch-950'
                     )}
                     style={{
-                      background: usWon ? 'rgba(99,153,34,0.2)' : themWon ? 'rgba(163,45,45,0.2)' : '#272a2c',
-                      color:     usWon ? '#97C459'              : themWon ? '#E24B4A'              : '#5F5E5A',
+                      background: usWon ? 'rgba(35,181,211,0.20)' : themWon ? 'rgba(234,82,111,0.20)' : '#252320',
+                      color:      usWon ? '#23B5D3'               : themWon ? '#EA526F'               : '#4A4A5A',
                     }}
                   >
                     {n}
@@ -246,21 +244,21 @@ export function SetSummaryOverlay({
                 )
               })}
             </div>
-            <p className="text-center text-[11px] text-on-surface-variant/50 mt-2">
+            <p className="text-center text-[11px] text-ghost-400/60 mt-2">
               {teamInitials} leads {setsWonUs}–{setsWonThem} · {rallies.length} rallies
             </p>
           </div>
         </div>
 
         {/* Point origin donuts */}
-        <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Point origin</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Point origin</p>
         <div className="grid grid-cols-2 gap-3">
           <DonutChart teamName={teamName}     ownPoints={ourPos}  opponentErrors={ourErr}  variant="us" />
           <DonutChart teamName={opponentName} ownPoints={themPos} opponentErrors={themErr} variant="them" />
         </div>
 
         {/* Key stats */}
-        <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">This set</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">This set</p>
         <div className="grid grid-cols-2 gap-3">
           <StatTile label="Sideout %"    value={stats.sideoutPct}           prevValue={prevStats?.sideoutPct}           higherIsBetter />
           <StatTile label="Break %"      value={stats.breakPct}             prevValue={prevStats?.breakPct}             higherIsBetter />
@@ -268,43 +266,41 @@ export function SetSummaryOverlay({
           <StatTile label="Positive play" value={stats.positivePlayPct}    prevValue={prevStats?.positivePlayPct}      higherIsBetter />
         </div>
 
-        {/* Score timeline */}
-        <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Score timeline</p>
+        {/* Score timeline — §2.9 */}
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Score timeline</p>
         <div className="card p-3">
           <ResponsiveContainer width="100%" height={140}>
             <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
               <XAxis
                 dataKey="rally"
-                tick={{ fill: '#5F5E5A', fontSize: 9 }}
+                tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                tick={{ fill: '#888780', fontSize: 9 }}
+                tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v: number) => v > 0 ? `+${v}` : `${v}`}
               />
               <Tooltip
-                contentStyle={{ background: '#1a1d1e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: chartTheme.tooltip.backgroundColor, border: '1px solid rgba(47,45,40,0.90)', borderRadius: 8, fontSize: 11 }}
                 labelFormatter={(v) => `Rally ${v}`}
                 formatter={(value: number, name: string) => [
                   value > 0 ? `+${value}` : `${value}`,
                   name === 'pos' ? 'Lead' : 'Deficit',
                 ]}
               />
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.10)" />
-              {/* Green fill + line above zero */}
-              <Area dataKey="pos" fill="rgba(99,153,34,0.28)"  stroke="#97C459" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-              {/* Red fill + line below zero */}
-              <Area dataKey="neg" fill="rgba(226,75,74,0.28)"  stroke="#E24B4A" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+              <ReferenceLine y={0} stroke={chartTheme.gridColor} />
+              <Area dataKey="pos" fill={chartTheme.turqFill} stroke={chartTheme.turq} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+              <Area dataKey="neg" fill={chartTheme.pinkFill} stroke={chartTheme.pink} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Rotation performance */}
-        <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Rotation performance</p>
+        {/* Rotation performance — §2.4 */}
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Rotation performance</p>
         <div className="card p-4">
           <div className="grid grid-cols-6 gap-2">
             {stats.rotationStats.map(rot => {
@@ -313,11 +309,11 @@ export function SetSummaryOverlay({
               const { bg, text } = rotationColor(winRate)
               return (
                 <div key={rot.rotation} className="rounded-xl p-2 text-center" style={{ background: bg }}>
-                  <p className="text-[9px] text-on-surface-variant/60 mb-1">R{rot.rotation}</p>
+                  <p className="text-[9px] text-ghost-400/60 mb-1">R{rot.rotation}</p>
                   <p className="text-xs font-bold leading-none" style={{ color: text }}>
                     {total > 0 ? `${Math.round(winRate * 100)}%` : '–'}
                   </p>
-                  <p className="text-[8px] text-on-surface-variant/40 mt-1">{total}R</p>
+                  <p className="text-[8px] text-ghost-400/40 mt-1">{total}R</p>
                 </div>
               )
             })}
@@ -327,7 +323,7 @@ export function SetSummaryOverlay({
       </div>
 
       {/* Bottom actions */}
-      <div className="shrink-0 px-4 py-4 border-t border-outline/10 space-y-2 bg-background">
+      <div className="shrink-0 px-4 py-4 border-t border-pitch-400/40 space-y-2 bg-pitch-950">
         <Button fullWidth onClick={onSetupNextSet}>
           Set up Set {setNumber + 1}
         </Button>

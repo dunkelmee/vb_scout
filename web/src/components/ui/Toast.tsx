@@ -40,8 +40,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             key={toast.id}
             className={cn(
               'flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg backdrop-blur-sm text-sm font-body animate-slide-up',
-              toast.type === 'success' && 'bg-green-900/90 text-green-300 border border-green-700/30',
-              toast.type === 'error' && 'bg-red-900/90 text-red-300 border border-red-700/30',
+              toast.type === 'success' && 'bg-turq-500/15 text-turq-300 border border-turq-500/30',
+              toast.type === 'error' && 'bg-bubb-500/15 text-bubb-300 border border-bubb-500/30',
               toast.type === 'info' && 'bg-surface-highest/90 text-on-surface border border-outline/20',
             )}
           >

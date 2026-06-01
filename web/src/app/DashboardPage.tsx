@@ -11,6 +11,7 @@ import {
 import { ChevronRight, MapPin, CalendarDays, Users, Dumbbell } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { useNavigate } from 'react-router-dom'
+import { chartTheme } from '../lib/chartTheme'
 
 export function DashboardPage() {
   const { isManager } = useRole()
@@ -42,7 +43,7 @@ export function DashboardPage() {
         {/* Season name + quick actions */}
         <div>
           {data?.activeSeason && (
-            <h3 className="font-display font-bold text-sm uppercase tracking-wide text-orange mb-3">
+            <h3 className="font-display font-bold text-sm uppercase tracking-wide text-turq-500 mb-3">
               {data.activeSeason.name}
             </h3>
           )}
@@ -52,19 +53,19 @@ export function DashboardPage() {
                 onClick={() => navigate('/games/new')}
                 className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
               >
-                <CalendarDays size={12} className="text-orange" /> Game
+                <CalendarDays size={12} className="text-turq-500" /> Game
               </button>
               <button
                 onClick={() => navigate('/players/new')}
                 className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
               >
-                <Users size={12} className="text-orange" /> Player
+                <Users size={12} className="text-turq-500" /> Player
               </button>
               <button
                 onClick={() => navigate('/trainings/new')}
                 className="flex flex-1 items-center justify-center gap-1.5 px-3 py-1.5 card !rounded-full text-xs font-bold text-white active:scale-95 transition-transform"
               >
-                <Dumbbell size={12} className="text-orange" /> Training
+                <Dumbbell size={12} className="text-turq-500" /> Training
               </button>
             </div>
           )}
@@ -90,7 +91,7 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant">Upcoming</h3>
-              <Link to="/games" className="text-xs text-orange font-bold uppercase tracking-wide flex items-center gap-1">
+              <Link to="/games" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1">
                 All <ChevronRight size={12} />
               </Link>
             </div>
@@ -101,7 +102,7 @@ export function DashboardPage() {
                   to={`/games/${match.id}/stats`}
                   className="card p-4 transition-colors"
                 >
-                  <p className="text-xs text-orange font-bold uppercase tracking-wide mb-1">
+                  <p className="text-xs text-turq-500 font-bold uppercase tracking-wide mb-1">
                     {match.matchType === 'playing' ? 'Playing' : 'Officiating'}
                   </p>
                   <p className="font-display font-bold text-base text-on-surface truncate">
@@ -131,7 +132,7 @@ export function DashboardPage() {
               <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant">
                 Trainings
               </h3>
-              <Link to="/trainings" className="text-xs text-orange font-bold uppercase tracking-wide flex items-center gap-1">
+              <Link to="/trainings" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1">
                 All <ChevronRight size={12} />
               </Link>
             </div>
@@ -172,25 +173,25 @@ export function DashboardPage() {
               </p>
               {data.recentAnalysis.topStrength && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Strength" variant="green" />
+                  <Badge label="Strength" variant="win" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topStrength.title}</p>
                 </div>
               )}
               {data.recentAnalysis.topWeakness && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Weakness" variant="red" />
+                  <Badge label="Weakness" variant="loss" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topWeakness.title}</p>
                 </div>
               )}
               {data.recentAnalysis.topAction && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Action" variant="orange" />
+                  <Badge label="Action" variant="info" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topAction.title}</p>
                 </div>
               )}
               <Link
                 to={`/games/${data.recentAnalysis.matchId}/stats`}
-                className="text-xs text-orange font-bold uppercase tracking-wide flex items-center gap-1"
+                className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1"
               >
                 View full analysis <ChevronRight size={12} />
               </Link>
@@ -239,7 +240,7 @@ function SeasonSnapshot({
         </div>
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Sideout %</p>
-          <p className="font-display font-black text-2xl text-orange">
+          <p className="font-display font-black text-2xl text-turq-500">
             {seasonPerf ? `${seasonPerf.sideoutPct}%` : '—'}
           </p>
         </div>
@@ -274,13 +275,13 @@ function SeasonResults({ matches }: { matches: DashboardData['winLossTrend'] }) 
                 className={cn(
                   'flex-none flex flex-col items-center gap-0.5 rounded-sm px-2.5 py-2 min-w-[52px] active:scale-95 transition-transform',
                   won
-                    ? 'bg-green-500/15 border border-green-500/30'
-                    : 'bg-error/15 border border-error/30',
+                    ? 'bg-turq-500/15 border border-turq-500/30'
+                    : 'bg-bubb-500/15 border border-bubb-500/30',
                 )}
               >
                 <span className={cn(
                   'font-display font-black text-sm leading-tight',
-                  won ? 'text-green-400' : 'text-error',
+                  won ? 'text-turq-400' : 'text-bubb-500',
                 )}>
                   {m.setsWon}–{m.setsLost}
                 </span>
@@ -344,7 +345,7 @@ function SeasonPerformance({
           <span className="font-display font-bold text-xs uppercase tracking-widest text-on-surface">
             Trends across {trend.length} {trend.length === 1 ? 'match' : 'matches'}
           </span>
-          <button className="text-xs text-orange font-bold uppercase tracking-wide flex items-center gap-0.5">
+          <button className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-0.5">
             Full view <ChevronRight size={11} />
           </button>
         </div>
@@ -354,13 +355,13 @@ function SeasonPerformance({
             label="Error Ratio"
             value={seasonPerf.errorRatio.toFixed(2)}
             trend={errorTrend}
-            valueColor="text-error"
+            valueColor="text-bubb-500"
           />
           <StatColumn
             label="Sideout"
             value={`${seasonPerf.sideoutPct}%`}
             trend={sideoutTrend}
-            valueColor="text-orange"
+            valueColor="text-turq-500"
           />
           <StatColumn
             label="Break %"
@@ -372,9 +373,9 @@ function SeasonPerformance({
 
         {chartData.length > 1 && (
           <div>
-            <SwimlaneLine data={chartData} dataKey="sideout" color="#00e0ff" label="Sideout %" valueLabel="Sideout" />
-            <SwimlaneLine data={chartData} dataKey="error" color="#ffb4ab" label="Error ratio" valueLabel="Error ratio" />
-            <SwimlaneLine data={chartData} dataKey="break" color="#ff5c00" label="Break %" valueLabel="Break" showXAxis />
+            <SwimlaneLine data={chartData} dataKey="sideout" color={chartTheme.turq}  label="Sideout %" valueLabel="Sideout" />
+            <SwimlaneLine data={chartData} dataKey="error"   color={chartTheme.pink}  label="Error ratio" valueLabel="Error ratio" />
+            <SwimlaneLine data={chartData} dataKey="break"   color={chartTheme.bell}  label="Break %" valueLabel="Break" showXAxis />
           </div>
         )}
 
@@ -382,7 +383,7 @@ function SeasonPerformance({
           <p className="text-xs text-on-surface-variant">
             Weakest rotation:{' '}
             {weakestRotation ? (
-              <span className="text-error font-bold">
+              <span className="text-bubb-500 font-bold">
                 R{weakestRotation.rotation} ({weakestRotation.winPct}%)
               </span>
             ) : (
@@ -411,7 +412,7 @@ function StatColumn({
 }) {
   const trendColor = trend.direction === 'flat'
     ? 'text-on-surface-variant'
-    : trend.isGood ? 'text-green-400' : 'text-error'
+    : trend.isGood ? 'text-turq-400' : 'text-bubb-500'
   const arrow = { up: '↑', down: '↓', flat: '→' }[trend.direction]
 
   return (
@@ -529,13 +530,13 @@ function cn(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-// ---- Officiating helpers (unchanged) ----
+// ---- Officiating helpers ----
 
 type OfficialPlayer = { id: string; firstName: string; lastName: string; avatarUrl?: string | null }
 
 function PlayerAvatar({ player }: { player: OfficialPlayer }) {
   const initials = `${player.firstName[0]}${player.lastName[0]}`.toUpperCase()
-  const palette = ['bg-orange/80', 'bg-blue-500/80', 'bg-green-500/80', 'bg-purple-500/80']
+  const palette = ['bg-turq-500/80', 'bg-bell-500/80', 'bg-bubb-400/80', 'bg-bell-400/80']
   const color = palette[(player.firstName.charCodeAt(0) + player.lastName.charCodeAt(0)) % palette.length]
   const title = `${player.firstName} ${player.lastName}`
   if (player.avatarUrl) {
@@ -553,7 +554,7 @@ function PlayerAvatar({ player }: { player: OfficialPlayer }) {
   }
   return (
     <div title={title}
-      className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-white font-bold text-[9px] ring-1 ring-surface`}>
+      className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-pitch-950 font-bold text-[9px] ring-1 ring-surface`}>
       {initials}
     </div>
   )

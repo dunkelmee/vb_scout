@@ -12,8 +12,8 @@ import { Plus, MapPin, ChevronRight, Trash2, Edit3 } from 'lucide-react'
 import type { BadgeVariant } from '../components/ui/Badge'
 
 const FOCUS_VARIANTS: Record<string, BadgeVariant> = {
-  Serve: 'orange', Reception: 'blue', Attack: 'red', Block: 'teal',
-  Defence: 'green', Rotation: 'amber', Fitness: 'neutral', 'Set piece': 'purple',
+  Serve: 'orange', Reception: 'blue', Attack: 'loss', Block: 'teal',
+  Defence: 'win', Rotation: 'amber', Fitness: 'neutral', 'Set piece': 'purple',
 }
 
 export function TrainingsPage() {
@@ -44,9 +44,9 @@ export function TrainingsPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/trainings/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-turq-500 flex items-center justify-center shadow-[0_4px_16px_rgba(35,181,211,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
-            <Plus size={16} className="text-white" />
+            <Plus size={16} className="text-pitch-950" />
           </button>
         ) : undefined}
       />
@@ -57,7 +57,7 @@ export function TrainingsPage() {
         {upcoming.length > 0 && (
           <section>
             <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-3 flex items-center gap-2">
-              <span className="w-1 h-4 rounded-full bg-orange inline-block" />
+              <span className="w-1 h-4 rounded-full bg-turq-500 inline-block" />
               Upcoming
             </h3>
             <div className="space-y-3">
@@ -106,7 +106,7 @@ export function TrainingsPage() {
             {isManager && (
               <Link
                 to="/trainings/new"
-                className="text-orange font-bold text-sm border border-orange/30 rounded-full px-4 py-2"
+                className="text-turq-500 font-bold text-sm border border-turq-500/30 rounded-full px-4 py-2"
               >
                 Schedule first session
               </Link>
@@ -138,7 +138,7 @@ function TrainingCard({
       </p>
 
       <Link to={`/trainings/${session.id}`}>
-        <h3 className="font-display font-bold text-base text-on-surface hover:text-orange transition-colors">
+        <h3 className="font-display font-bold text-base text-on-surface hover:text-turq-500 transition-colors">
           {session.title}
         </h3>
       </Link>
@@ -166,9 +166,9 @@ function TrainingCard({
       {/* Attendance */}
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-outline/10">
         <p className="text-xs text-on-surface-variant">
-          {counts.coming > 0 && <span className="text-green-400 font-bold">{counts.coming} coming</span>}
+          {counts.coming > 0 && <span className="text-turq-400 font-bold">{counts.coming} coming</span>}
           {counts.coming > 0 && counts.not_coming > 0 && ' · '}
-          {counts.not_coming > 0 && <span className="text-error/70 font-bold">{counts.not_coming} not coming</span>}
+          {counts.not_coming > 0 && <span className="text-bubb-500/70 font-bold">{counts.not_coming} not coming</span>}
           {(counts.coming > 0 || counts.not_coming > 0) && counts.pending > 0 && ' · '}
           {counts.pending > 0 && <span>{counts.pending} pending</span>}
         </p>
@@ -179,7 +179,7 @@ function TrainingCard({
               <button onClick={onEdit} className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant">
                 <Edit3 size={14} />
               </button>
-              <button onClick={onDelete} className="p-1.5 rounded hover:bg-white/[0.06] text-error/60">
+              <button onClick={onDelete} className="p-1.5 rounded hover:bg-white/[0.06] text-bubb-500/60">
                 <Trash2 size={14} />
               </button>
             </>

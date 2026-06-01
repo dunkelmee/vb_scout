@@ -50,9 +50,9 @@ export function GamesPage() {
         right={isManager ? (
           <button
             onClick={() => navigate('/games/new')}
-            className="w-9 h-9 rounded-full bg-orange flex items-center justify-center shadow-[0_4px_16px_rgba(255,92,0,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
+            className="w-9 h-9 rounded-full bg-turq-500 flex items-center justify-center shadow-[0_4px_16px_rgba(35,181,211,0.35),inset_0_1px_0_rgba(255,255,255,0.22)] active:scale-95 transition-transform"
           >
-            <Plus size={16} className="text-white" />
+            <Plus size={16} className="text-pitch-950" />
           </button>
         ) : undefined}
       />
@@ -69,7 +69,7 @@ export function GamesPage() {
         {upcoming.length > 0 && (
           <section>
             <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-3 flex items-center gap-2">
-              <span className="w-1 h-4 rounded-full bg-orange inline-block" />
+              <span className="w-1 h-4 rounded-full bg-turq-500 inline-block" />
               Upcoming
             </h3>
             <div className="space-y-3">
@@ -120,7 +120,7 @@ export function GamesPage() {
             {isManager && (
               <button
                 onClick={() => navigate('/games/new')}
-                className="text-orange font-bold text-sm border border-orange/30 rounded-full px-4 py-2"
+                className="text-turq-500 font-bold text-sm border border-turq-500/30 rounded-full px-4 py-2"
               >
                 Create first game
               </button>
@@ -157,8 +157,8 @@ function MatchCard({
               {format(match.date)}
             </span>
             {isLive && (
-              <span className="flex items-center gap-1 text-xs text-orange font-bold animate-pulse-slow">
-                <Radio size={10} className="text-orange" /> LIVE
+              <span className="flex items-center gap-1 text-xs text-turq-500 font-bold animate-pulse-slow">
+                <Radio size={10} className="text-turq-500" /> LIVE
               </span>
             )}
           </div>
@@ -176,7 +176,7 @@ function MatchCard({
         {isCompleted && (
           <Badge
             label={won ? 'W' : 'L'}
-            variant={won ? 'green' : 'red'}
+            variant={won ? 'win' : 'loss'}
             size="md"
           />
         )}
@@ -184,7 +184,7 @@ function MatchCard({
           <div className={cn(
             'flex items-center gap-1 px-2 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wide shrink-0',
             isPlaying
-              ? 'border-orange/30 text-orange/80 bg-orange/5'
+              ? 'border-turq-500/30 text-turq-500/80 bg-turq-500/5'
               : 'border-secondary-container/30 text-secondary-container/80 bg-secondary-container/5'
           )}>
             {isPlaying ? <Swords size={11} /> : <Gavel size={11} />}
@@ -202,7 +202,7 @@ function MatchCard({
               className={cn(
                 'text-xs font-bold px-2 py-0.5 rounded',
                 set.scoreUs > set.scoreThem
-                  ? 'bg-orange/15 text-orange'
+                  ? 'bg-turq-500/15 text-turq-500'
                   : 'bg-surface-highest text-on-surface-variant'
               )}
             >
@@ -221,7 +221,7 @@ function MatchCard({
           {canLog && (
             <button
               onClick={() => navigate(`/games/${match.id}/log`)}
-              className="flex items-center gap-1.5 text-xs font-bold uppercase text-orange hover:text-orange/80 transition-colors px-2 py-1.5"
+              className="flex items-center gap-1.5 text-xs font-bold uppercase text-turq-500 hover:text-turq-500/80 transition-colors px-2 py-1.5"
             >
               <Radio size={12} /> Log
             </button>
@@ -243,7 +243,7 @@ function MatchCard({
           </button>
           <button
             onClick={onDelete}
-            className="flex items-center gap-1.5 text-xs font-bold uppercase text-error/70 hover:text-error transition-colors px-2 py-1.5 ml-auto"
+            className="flex items-center gap-1.5 text-xs font-bold uppercase text-bubb-500/70 hover:text-bubb-500 transition-colors px-2 py-1.5 ml-auto"
           >
             <Trash2 size={12} />
           </button>
@@ -254,7 +254,7 @@ function MatchCard({
         <div className="pt-2 border-t border-outline/10">
           <Link
             to={`/games/${match.id}/stats`}
-            className="flex items-center gap-1.5 text-xs font-bold uppercase text-orange hover:text-orange/80 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-bold uppercase text-turq-500 hover:text-turq-500/80 transition-colors"
           >
             <BarChart2 size={12} /> View stats
           </Link>

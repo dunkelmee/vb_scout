@@ -2,17 +2,17 @@ import React from 'react'
 import type { TUSColor } from '../../lib/tus'
 
 const STROKE: Record<TUSColor, string> = {
-  green: '#4ade80',
-  amber: '#fbbf24',
-  orange: '#FF5C00',
-  red: '#f87171',
+  green:  '#23B5D3',  // turq-500 — calm
+  amber:  '#279AF1',  // bell-500 — watch
+  orange: '#F07A90',  // bubb-400 — consider
+  red:    '#EA526F',  // bubb-500 — call now
 }
 
 const ZONES: [number, number, TUSColor][] = [
-  [0, 0.30, 'green'],
+  [0,    0.30, 'green'],
   [0.30, 0.55, 'amber'],
   [0.55, 0.75, 'orange'],
-  [0.75, 1.0, 'red'],
+  [0.75, 1.0,  'red'],
 ]
 
 interface SemiGaugeProps {
@@ -23,9 +23,8 @@ interface SemiGaugeProps {
 }
 
 export function SemiGauge({ value, color, label, animated = false }: SemiGaugeProps) {
-  // Semicircle: center (100, 115), radius 80, clockwise via top (sweep-flag=1)
   const cx = 100, cy = 115, r = 80
-  const C = Math.PI * r  // ~251.33
+  const C = Math.PI * r
 
   function pt(t: number, radius = r): [number, number] {
     const a = Math.PI + t * Math.PI
@@ -44,9 +43,7 @@ export function SemiGauge({ value, color, label, animated = false }: SemiGaugePr
 
   return (
     <div className="flex justify-center">
-      {/* viewBox trims the blank space above the arc (arc top ~y=28, give 8px buffer → start at y=20) */}
       <svg viewBox="0 20 200 112" className="w-full max-w-[220px]">
-        {/* Colored zone backgrounds — same strokeWidth as fill so endpoints align flush */}
         {ZONES.map(([t1, t2, zc]) => (
           <path
             key={t1}
@@ -59,7 +56,6 @@ export function SemiGauge({ value, color, label, animated = false }: SemiGaugePr
           />
         ))}
 
-        {/* Active fill arc — butt linecap so both ends are flush with the track */}
         <path
           d="M 20 115 A 80 80 0 0 1 180 115"
           fill="none"
@@ -72,7 +68,6 @@ export function SemiGauge({ value, color, label, animated = false }: SemiGaugePr
           className={animated ? 'animate-pulse-slow' : undefined}
         />
 
-        {/* Value */}
         <text
           x="100"
           y="84"
@@ -86,7 +81,6 @@ export function SemiGauge({ value, color, label, animated = false }: SemiGaugePr
           {value.toFixed(2)}
         </text>
 
-        {/* Label */}
         <text
           x="100"
           y="103"

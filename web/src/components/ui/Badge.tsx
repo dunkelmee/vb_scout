@@ -1,7 +1,9 @@
 import React from 'react'
 import { cn } from './cn'
 
-export type BadgeVariant = 'orange' | 'blue' | 'green' | 'red' | 'amber' | 'neutral' | 'purple' | 'teal'
+export type BadgeVariant =
+  | 'orange' | 'blue' | 'green' | 'red' | 'amber' | 'neutral' | 'purple' | 'teal'
+  | 'win' | 'loss' | 'warn' | 'info' | 'live'
 
 interface BadgeProps {
   label: string
@@ -11,15 +13,22 @@ interface BadgeProps {
 }
 
 export function Badge({ label, variant = 'neutral', size = 'sm', className }: BadgeProps) {
-  const variants = {
-    orange: 'bg-orange/15 text-orange border border-orange/20',
-    blue: 'bg-secondary-container/15 text-secondary-container border border-secondary-container/20',
-    green: 'bg-green-500/15 text-green-400 border border-green-500/20',
-    red: 'bg-error-container/30 text-error border border-error/20',
-    amber: 'bg-amber-500/15 text-amber-400 border border-amber-500/20',
-    neutral: 'bg-surface-high text-on-surface-variant border border-outline/20',
-    purple: 'bg-purple-500/15 text-purple-400 border border-purple-500/20',
-    teal: 'bg-teal-500/15 text-teal-400 border border-teal-500/20',
+  const variants: Record<BadgeVariant, string> = {
+    // semantic variants
+    win:     'bg-turq-500/15  text-turq-500  border border-turq-500/30',
+    loss:    'bg-bubb-500/15  text-bubb-400  border border-bubb-500/30',
+    warn:    'bg-bell-500/12  text-bell-400  border border-bell-500/25',
+    info:    'bg-pitch-500/60 text-ghost-200 border border-pitch-400',
+    live:    'bg-turq-500/15  text-turq-500  border border-turq-500/35',
+    // legacy names → remapped to new palette
+    orange:  'bg-turq-500/15  text-turq-500  border border-turq-500/20',
+    blue:    'bg-bell-500/15  text-bell-400  border border-bell-500/20',
+    green:   'bg-turq-500/15  text-turq-400  border border-turq-500/20',
+    red:     'bg-bubb-500/15  text-bubb-500  border border-bubb-500/20',
+    amber:   'bg-bell-400/12  text-bell-400  border border-bell-400/20',
+    neutral: 'bg-pitch-500/80 text-ghost-300 border border-pitch-400/60',
+    purple:  'bg-bell-500/12  text-bell-500  border border-bell-500/20',
+    teal:    'bg-turq-400/12  text-turq-400  border border-turq-400/20',
   }
 
   const sizes = {
@@ -42,13 +51,13 @@ export function Badge({ label, variant = 'neutral', size = 'sm', className }: Ba
 }
 
 export function PositionBadge({ position }: { position: string }) {
-  const variantMap: Record<string, BadgeProps['variant']> = {
-    Setter: 'purple',
-    Outside: 'blue',
-    Opposite: 'blue',
-    Middle: 'teal',
-    Libero: 'orange',
-    DS: 'neutral',
+  const variantMap: Record<string, BadgeVariant> = {
+    Setter:   'blue',
+    Outside:  'teal',
+    Opposite: 'red',
+    Middle:   'blue',
+    Libero:   'loss',
+    DS:       'neutral',
   }
   return <Badge label={position} variant={variantMap[position] || 'neutral'} />
 }

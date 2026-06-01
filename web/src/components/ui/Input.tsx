@@ -15,7 +15,7 @@ export function Input({ label, error, hint, className, id, ...props }: InputProp
       {label && (
         <label
           htmlFor={inputId}
-          className="text-xs font-bold uppercase tracking-wide text-on-surface-variant"
+          className="text-xs font-bold uppercase tracking-wide text-ghost-300"
         >
           {label}
         </label>
@@ -23,17 +23,17 @@ export function Input({ label, error, hint, className, id, ...props }: InputProp
       <input
         id={inputId}
         className={cn(
-          'bg-surface-high border border-outline/30 rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface/30 focus:outline-none focus:border-orange/60 focus:ring-1 focus:ring-orange/30 transition-colors min-h-[44px]',
-          error && 'border-error/60 focus:border-error focus:ring-error/30',
+          'bg-pitch-600/60 border border-pitch-400 rounded-lg px-4 py-3 text-ghost-100 placeholder:text-ghost-400 focus:outline-none focus:border-turq-500/50 focus:ring-1 focus:ring-turq-500/25 transition-colors min-h-[44px]',
+          error && 'border-bubb-500/60 focus:border-bubb-500 focus:ring-bubb-500/25',
           className
         )}
         {...props}
       />
       {hint && !error && (
-        <p className="text-xs text-on-surface-variant">{hint}</p>
+        <p className="text-xs text-ghost-300">{hint}</p>
       )}
       {error && (
-        <p className="text-xs text-error">{error}</p>
+        <p className="text-xs text-bubb-500">{error}</p>
       )}
     </div>
   )
@@ -49,21 +49,21 @@ export function Textarea({ label, error, className, id, ...props }: TextareaProp
   return (
     <div className="flex flex-col gap-1">
       {label && (
-        <label htmlFor={inputId} className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">
+        <label htmlFor={inputId} className="text-xs font-bold uppercase tracking-wide text-ghost-300">
           {label}
         </label>
       )}
       <textarea
         id={inputId}
         className={cn(
-          'bg-surface-high border border-outline/30 rounded-lg px-4 py-3 text-on-surface placeholder:text-on-surface/30 focus:outline-none focus:border-orange/60 transition-colors resize-none',
-          error && 'border-error/60',
+          'bg-pitch-600/60 border border-pitch-400 rounded-lg px-4 py-3 text-ghost-100 placeholder:text-ghost-400 focus:outline-none focus:border-turq-500/50 transition-colors resize-none',
+          error && 'border-bubb-500/60',
           className
         )}
         rows={3}
         {...props}
       />
-      {error && <p className="text-xs text-error">{error}</p>}
+      {error && <p className="text-xs text-bubb-500">{error}</p>}
     </div>
   )
 }
