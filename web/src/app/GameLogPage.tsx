@@ -276,59 +276,77 @@ export function GameLogPage() {
       <div className="sticky top-0 z-20">
         {/* Hero match header */}
         <div className="relative overflow-hidden">
-          {/* Background image */}
+          {/* Gradient background */}
           <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: 'url(/live_logging_header.png)', opacity: 1 }}
+            className="absolute inset-0"
+            style={{
+              background: [
+                'radial-gradient(ellipse at 85% 0%,   rgba(234,82,111,0.80) 0%, transparent 45%)',
+                'radial-gradient(ellipse at 10% 100%, rgba(35,181,211,0.70)  0%, transparent 50%)',
+                'radial-gradient(ellipse at 50% 50%,  rgba(39,154,241,0.20)  0%, transparent 60%)',
+                '#070600',
+              ].join(', '),
+            }}
           />
-          {/* Dark overlay for text contrast */}
-          <div className="absolute inset-0 bg-black/35" />
+          {/* Grain overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              opacity: 0.45,
+              backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E\")",
+              backgroundSize: '160px 160px',
+              mixBlendMode: 'overlay',
+            }}
+          />
+          {/* Bottom fade into page background */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
+            style={{ background: 'linear-gradient(to bottom, transparent, #070600)' }}
+          />
 
-          <div className="relative z-10 flex items-center gap-2 px-4 pt-safe-top pt-7 pb-9">
-            <button
-              onClick={() => navigate('/games')}
-              className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
-            >
-              <ArrowLeft size={18} className="text-white" />
-            </button>
+          <div className="relative z-10 flex flex-col px-4 pt-safe-top pt-6 pb-16 gap-4">
+            {/* Top row: back · set label · spacer */}
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/games')}
+                className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+              >
+                <ArrowLeft size={18} className="text-white" />
+              </button>
+              <span className="text-[11px] font-bold uppercase tracking-widest text-white/55">
+                Set {store.currentSetNumber}
+              </span>
+              <div className="w-9" />
+            </div>
 
-            {/* Teams + score row */}
-            <div className="flex-1 flex items-center justify-between gap-2">
-              {/* Home team */}
+            {/* Score row: team name above score, separated by – */}
+            <div className="flex items-end justify-center">
               <div className="flex-1 flex flex-col items-center gap-1">
-                <p className="font-display font-semibold text-lg leading-tight text-white text-center break-words px-1">
+                <span className="text-sm leading-none h-5 flex items-center justify-center">
+                  {store.servingTeam === 'us' ? '🏐' : ''}
+                </span>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-white/80 text-center px-1 leading-tight">
                   {store.teamName}
                 </p>
-                {store.servingTeam === 'us' && (
-                  <span className="text-sm leading-none">🏐</span>
-                )}
-              </div>
-
-              {/* Score + set */}
-              <div className="flex flex-col items-center gap-2 shrink-0">
-                <div className="flex items-center gap-2.5 font-display font-black leading-none">
-                  <span className="text-turq-500" style={{ fontSize: '2.75rem' }}>{store.scoreUs}</span>
-                  <span className="text-white/50 text-2xl">–</span>
-                  <span className="text-white" style={{ fontSize: '2.75rem' }}>{store.scoreThem}</span>
-                </div>
-                <span className="text-[11px] text-white/60 font-bold uppercase tracking-widest">
-                  Set {store.currentSetNumber}
+                <span className="font-display font-black text-turq-500 leading-none" style={{ fontSize: '3.5rem' }}>
+                  {store.scoreUs}
                 </span>
               </div>
 
-              {/* Opponent */}
+              <span className="text-white/30 font-light text-3xl pb-3 px-3">–</span>
+
               <div className="flex-1 flex flex-col items-center gap-1">
-                <p className="font-display font-semibold text-lg leading-tight text-white/80 text-center break-words px-1">
+                <span className="text-sm leading-none h-5 flex items-center justify-center">
+                  {store.servingTeam === 'them' ? '🏐' : ''}
+                </span>
+                <p className="text-[13px] font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
                   {match?.opponent ?? store.opponentInitials}
                 </p>
-                {store.servingTeam === 'them' && (
-                  <span className="text-sm leading-none">🏐</span>
-                )}
+                <span className="font-display font-black text-white leading-none" style={{ fontSize: '3.5rem' }}>
+                  {store.scoreThem}
+                </span>
               </div>
             </div>
-
-            {/* Spacer balances the back button */}
-            <div className="shrink-0 w-9" />
           </div>
         </div>
 
