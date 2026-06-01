@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMatchStore } from '../store/matchStore'
@@ -309,7 +309,7 @@ export function GameLogPage() {
             <div className="flex items-center justify-between">
               <button
                 onClick={() => navigate('/games')}
-                className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
+                className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center shrink-0 active:scale-95 transition-transform"
               >
                 <ArrowLeft size={18} className="text-white" />
               </button>
@@ -632,9 +632,9 @@ export function GameLogPage() {
           <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-2 border-b border-outline/10 shrink-0">
             <button
               onClick={() => setShowNewSetSetup(false)}
-              className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]"
+              className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform"
             >
-              <ArrowLeft size={18} className="text-on-surface" />
+              <ArrowLeft size={18} className="text-on-surface-variant" />
             </button>
             <div className="flex-1">
               <h1 className="font-display font-bold text-base text-on-surface">

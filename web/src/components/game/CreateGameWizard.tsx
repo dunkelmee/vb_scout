@@ -122,8 +122,8 @@ export function CreateGameWizard() {
     <div className="min-h-dvh bg-background flex flex-col">
       {/* Header */}
       <div className="px-5 pt-safe-top pt-4 pb-4 flex items-center gap-3 border-b border-outline/10">
-        <button onClick={prev} className="p-2 -ml-2 rounded-full hover:bg-surface-high transition-colors">
-          <ArrowLeft size={20} className="text-on-surface" />
+        <button onClick={prev} className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+          <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <div className="flex-1">
           <h1 className="font-display font-bold text-base text-on-surface">

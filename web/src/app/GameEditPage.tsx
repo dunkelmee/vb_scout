@@ -126,9 +126,9 @@ export function GameEditPage() {
       <div className="px-5 pt-safe-top pt-4 pb-4 flex items-center gap-3 border-b border-outline/10 sticky top-0 bg-background z-10">
         <button
           onClick={() => navigate('/games')}
-          className="p-2 -ml-2 rounded-full hover:bg-white/[0.06] transition-colors"
+          className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform"
         >
-          <ArrowLeft size={20} className="text-on-surface" />
+          <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <div className="flex-1">
           <h1 className="font-display font-bold text-base text-on-surface">Edit game</h1>

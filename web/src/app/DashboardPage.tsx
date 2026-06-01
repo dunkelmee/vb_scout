@@ -49,7 +49,7 @@ export function DashboardPage() {
           )}
           {isManager && (
             <div>
-              <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold mb-2">Quick add</p>
+              <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">Quick add</h3>
               <div className="flex gap-2">
                 <button
                   onClick={() => navigate('/games/new')}

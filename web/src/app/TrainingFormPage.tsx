@@ -70,8 +70,8 @@ export function TrainingFormPage() {
     <div className="min-h-dvh bg-background flex flex-col">
       {/* Header */}
       <div className="px-4 pt-safe-top pt-4 pb-3 flex items-center gap-2 border-b border-outline/10">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
-          <ArrowLeft size={18} className="text-on-surface" />
+        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+          <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <h1 className="font-display font-bold text-base text-on-surface">
           {isEdit ? 'Edit Training' : 'New Training Session'}

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { gamesApi, setsApi, MatchStats, MatchAnalysis, GameSet } from '../lib/api'
+import { DonutChart } from '../components/ui/DonutChart'
 import { useMatchAnalysis } from '../hooks/useMatchAnalysis'
 import { useRole } from '../hooks/useRole'
 import {
@@ -298,6 +299,25 @@ export function GameStatsPage() {
   const isCompleted = match?.status === 'completed'
   const sets = match?.sets ?? []
 
+  // Fetch all sets to aggregate point-origin counts for donut charts
+  const setQueries = useQueries({
+    queries: sets.map(s => ({
+      queryKey: ['set', s.id],
+      queryFn: () => setsApi.get(matchId!, s.id),
+      enabled: !!matchId && isCompleted,
+    })),
+  })
+
+  const pointCounts = useMemo(() => {
+    const allRallies = setQueries.flatMap(q => q.data?.rallies ?? [])
+    return {
+      ourPos:  allRallies.filter(r => r.pointType === 'us_positive').length,
+      ourErr:  allRallies.filter(r => r.pointType === 'them_error').length,
+      themPos: allRallies.filter(r => r.pointType === 'them_positive').length,
+      themErr: allRallies.filter(r => r.pointType === 'us_error').length,
+    }
+  }, [setQueries])
+
   // Default active set for timeline: first set
   const activeTimelineSetId = timelineSetId ?? sets[0]?.id ?? null
   const activeTimelineSet = sets.find(s => s.id === activeTimelineSetId) ?? sets[0] ?? null
@@ -330,8 +350,8 @@ export function GameStatsPage() {
 
       {/* ── Header ── */}
       <div className="px-4 pt-safe-top pt-4 pb-2 flex items-center gap-2 border-b border-outline/10 sticky top-0 bg-background z-10">
-        <Link to="/games" className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
-          <ArrowLeft size={18} className="text-on-surface" />
+        <Link to="/games" className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform">
+          <ArrowLeft size={18} className="text-on-surface-variant" />
         </Link>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-on-surface-variant">
@@ -434,6 +454,16 @@ export function GameStatsPage() {
               )}
             </div>
           </div>
+        )}
+
+        {isCompleted && (pointCounts.ourPos + pointCounts.ourErr + pointCounts.themPos + pointCounts.themErr) > 0 && (
+          <>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Point origin</p>
+            <div className="grid grid-cols-2 gap-3">
+              <DonutChart teamName={ourTeam}   ownPoints={pointCounts.ourPos}  opponentErrors={pointCounts.ourErr}  variant="us" />
+              <DonutChart teamName={theirTeam} ownPoints={pointCounts.themPos} opponentErrors={pointCounts.themErr} variant="them" />
+            </div>
+          </>
         )}
 
         {stats && isCompleted && (
