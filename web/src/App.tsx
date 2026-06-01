@@ -21,6 +21,7 @@ import { TrainingFormPage } from './app/TrainingFormPage'
 import { PlayersPage } from './app/PlayersPage'
 import { PlayerFormPage } from './app/PlayerFormPage'
 import { SettingsPage } from './app/SettingsPage'
+import { SeasonPerformancePage } from './app/SeasonPerformancePage'
 import { CreateGameWizard } from './components/game/CreateGameWizard'
 
 function AppLayout({ children }: { children: React.ReactNode }) {
@@ -94,6 +95,9 @@ function AppWithSeasonLoader() {
           </RequireAuth>
         } />
         <Route path="/players/:id" element={<AppLayout><PlayerFormPage /></AppLayout>} />
+
+        {/* Season performance detail */}
+        <Route path="/season-performance" element={<AppLayout><SeasonPerformancePage /></AppLayout>} />
 
         {/* Settings */}
         <Route path="/settings" element={<AppLayout><SettingsPage /></AppLayout>} />

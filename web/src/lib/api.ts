@@ -223,6 +223,11 @@ export const dashboardApi = {
   get: () => api.get<DashboardData>('/api/dashboard'),
 }
 
+// Season performance detail
+export const seasonPerfApi = {
+  get: () => api.get<SeasonPerformanceData>('/api/season-performance'),
+}
+
 // Team settings
 export const teamApi = {
   get: () => api.get<{ id: string; name: string; initials: string | null }>('/api/team'),
@@ -471,6 +476,32 @@ export interface TrainingPriority {
   label: string
   note?: string | null
   status: string
+}
+
+export interface SeasonPerformanceData {
+  seasonName: string | null
+  matchCount: number
+  record: { wins: number; losses: number }
+  setsRecord: { wins: number; losses: number }
+  pointsUs: number
+  pointsThem: number
+  matches: Array<{
+    id: string
+    opponent: string | null
+    opponentInitials: string | null
+    date: string
+    result: 'W' | 'L'
+    setsWon: number
+    setsLost: number
+    pointsUs: number
+    pointsThem: number
+    sideoutPct: number
+    breakPct: number
+    positivePlayPct: number
+    errorRatio: number
+    errorClustering: number | null
+    rotations: Array<{ rotation: number; winPct: number | null }>
+  }>
 }
 
 export interface DashboardData {

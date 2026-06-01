@@ -345,9 +345,9 @@ function SeasonPerformance({
           <span className="font-display font-bold text-xs uppercase tracking-widest text-on-surface">
             Trends across {trend.length} {trend.length === 1 ? 'match' : 'matches'}
           </span>
-          <button className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-0.5">
+          <Link to="/season-performance" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-0.5">
             Full view <ChevronRight size={11} />
-          </button>
+          </Link>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-4">

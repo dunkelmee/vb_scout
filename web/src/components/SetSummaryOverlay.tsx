@@ -308,7 +308,7 @@ export function SetSummaryOverlay({
               const winRate = total > 0 ? rot.wins / total : 0
               const { bg, text } = rotationColor(winRate)
               return (
-                <div key={rot.rotation} className="rounded-xl p-2 text-center" style={{ background: bg }}>
+                <div key={rot.rotation} className="rounded-sm p-2 text-center" style={{ background: bg }}>
                   <p className="text-[9px] text-ghost-400/60 mb-1">R{rot.rotation}</p>
                   <p className="text-xs font-bold leading-none" style={{ color: text }}>
                     {total > 0 ? `${Math.round(winRate * 100)}%` : '–'}
