@@ -1,253 +1,149 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { gamesApi, MatchStats, MatchAnalysis } from '../lib/api'
+import { gamesApi, setsApi, MatchStats, MatchAnalysis, GameSet } from '../lib/api'
 import { useMatchAnalysis } from '../hooks/useMatchAnalysis'
 import { useRole } from '../hooks/useRole'
-import { PageHeader } from '../components/ui/AppShell'
-import { Tabs } from '../components/ui/Tabs'
-import { Badge } from '../components/ui/Badge'
-import { ProgressBar } from '../components/ui/ProgressBar'
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  CartesianGrid, ReferenceLine, BarChart, Bar
+  ComposedChart, Area, ReferenceLine,
+  XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip,
 } from 'recharts'
-import { ArrowLeft, TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Download } from 'lucide-react'
+import { ArrowLeft, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
 
-const SET_TABS_BASE = [{ id: 'all', label: 'All' }]
+// ── Colour helpers ────────────────────────────────────────────────────────────
 
-export function GameStatsPage() {
-  const { id: matchId } = useParams<{ id: string }>()
-  const { isManager } = useRole()
-  const [activeSet, setActiveSet] = useState('all')
-  const [simExpanded, setSimExpanded] = useState(false)
+function perfColor(value: number, target: number, higherBetter: boolean): string {
+  const meets = higherBetter ? value >= target : value <= target
+  if (meets) return '#97C459'
+  const close = higherBetter ? value >= target - 0.05 : value <= target + 0.05
+  return close ? '#EF9F27' : '#E24B4A'
+}
 
-  const { data: match } = useQuery({
-    queryKey: ['game', matchId],
-    queryFn: () => gamesApi.get(matchId!),
-    enabled: !!matchId,
-  })
+function rotationColor(winRate: number): { bg: string; text: string } {
+  if (winRate >= 0.60) return { bg: 'rgba(99,153,34,0.2)', text: '#97C459' }
+  if (winRate >= 0.40) return { bg: 'rgba(186,117,23,0.18)', text: '#EF9F27' }
+  return { bg: 'rgba(226,75,74,0.22)', text: '#E24B4A' }
+}
 
-  const { data: stats } = useQuery<MatchStats>({
-    queryKey: ['stats', matchId, activeSet],
-    queryFn: () => gamesApi.stats(matchId!, activeSet !== 'all' ? activeSet : undefined),
-    enabled: !!matchId,
-  })
+// ── KPI tile ─────────────────────────────────────────────────────────────────
 
-  const { data: analysis } = useMatchAnalysis(matchId)
-
-  const setTabs = [
-    ...SET_TABS_BASE,
-    ...(match?.sets?.map(s => ({ id: s.id, label: `Set ${s.setNumber}` })) || []),
-  ]
-
-  const isCompleted = match?.status === 'completed'
-
+function KpiTile({ label, display, color, barValue, sub }: {
+  label: string
+  display: string
+  color: string
+  barValue: number  // 0-1 for bar width
+  sub?: string
+}) {
   return (
-    <div className="min-h-dvh bg-background">
-      {/* Header */}
-      <div className="px-4 pt-safe-top pt-4 pb-2 flex items-center gap-2 border-b border-outline/10">
-        <Link to="/games" className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
-          <ArrowLeft size={18} className="text-on-surface" />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-on-surface-variant">
-            {format(match?.date || '')}
-          </p>
-          <h1 className="font-display font-bold text-base text-on-surface truncate">
-            {match?.matchType === 'playing'
-              ? `vs ${match.opponent || 'TBD'}`
-              : `${match?.homeTeam || '?'} vs ${match?.guestTeam || '?'}`}
-          </h1>
-        </div>
-        {isManager && isCompleted && match?.sets?.[0] && (
-          <Link
-            to={`/games/${matchId}/log`}
-            className="text-xs text-orange font-bold border border-orange/30 rounded-full px-3 py-1.5"
-          >
-            Log
-          </Link>
-        )}
-      </div>
-
-      {/* Set filter */}
-      {setTabs.length > 1 && (
-        <div className="px-4 py-3 border-b border-outline/10">
-          <Tabs tabs={setTabs} activeTab={activeSet} onChange={setActiveSet} variant="pill" />
-        </div>
-      )}
-
-      <div className="px-4 py-4 pb-6 space-y-4">
-        {/* Match summary */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="font-display font-bold text-lg text-on-surface">
-                {match?.setsWonUs ?? 0}–{match?.setsWonThem ?? 0}
-              </p>
-              <p className="text-xs text-on-surface-variant">Sets</p>
-            </div>
-            {match?.status === 'completed' && (
-              <Badge
-                label={match.setsWonUs > match.setsWonThem ? 'Win' : 'Loss'}
-                variant={match.setsWonUs > match.setsWonThem ? 'green' : 'red'}
-                size="md"
-              />
-            )}
-          </div>
-
-          {/* Set scores */}
-          {match?.sets && match.sets.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              {match.sets.map(s => (
-                <div
-                  key={s.id}
-                  className={cn(
-                    'px-3 py-1.5 rounded-lg text-xs font-bold',
-                    s.scoreUs > s.scoreThem ? 'bg-orange/15 text-orange' : 'bg-surface-highest text-on-surface-variant'
-                  )}
-                >
-                  {s.scoreUs}–{s.scoreThem}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Stats (only if we have data) */}
-        {stats && (
-          <>
-            {/* Point quality */}
-            <div className="card p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-3">Point Quality</p>
-              <div className="flex items-center gap-2 mb-3">
-                <Badge
-                  label={stats.pointQuality.benchmark}
-                  variant={stats.pointQuality.benchmark === 'Assertive' ? 'green' : stats.pointQuality.benchmark === 'Balanced' ? 'amber' : 'red'}
-                  size="md"
-                />
-              </div>
-              {[
-                { label: 'Positive play %', value: stats.pointQuality.positivePlayPct },
-                { label: 'Sideout quality', value: stats.pointQuality.sideoutQuality },
-                { label: 'Break quality', value: stats.pointQuality.breakQuality },
-              ].map(({ label, value }) => (
-                <div key={label} className="mb-2">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-on-surface-variant">{label}</span>
-                    <span className="font-bold text-on-surface">{(value * 100).toFixed(1)}%</span>
-                  </div>
-                  <ProgressBar
-                    value={value}
-                    color={value >= 0.55 ? 'green' : value >= 0.40 ? 'amber' : 'red'}
-                    height="sm"
-                  />
-                </div>
-              ))}
-            </div>
-
-            {/* Rotation stats table */}
-            <div className="card p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-3">Rotation Statistics</p>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="text-on-surface-variant border-b border-outline/10">
-                    <th className="text-left py-1.5 font-bold">Rot</th>
-                    <th className="text-center py-1.5">W</th>
-                    <th className="text-center py-1.5">L</th>
-                    <th className="text-right py-1.5">Break%</th>
-                    <th className="text-right py-1.5">SO%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.rotationStats.map(rot => (
-                    <tr key={rot.rotation} className="border-t border-outline/10">
-                      <td className="py-2 font-bold text-on-surface-variant">R{rot.rotation}</td>
-                      <td className="text-center py-2 text-green-400 font-bold">{rot.wins}</td>
-                      <td className="text-center py-2 text-error/70 font-bold">{rot.losses}</td>
-                      <td className="text-right py-2 text-on-surface">{(rot.breakPct * 100).toFixed(0)}%</td>
-                      <td className="text-right py-2 text-on-surface">{(rot.sideoutPct * 100).toFixed(0)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Error pressure */}
-            <div className="card p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-3">Error Pressure</p>
-              <div className="space-y-3">
-                <StatRow label="Sideout %" value={`${(stats.overall.sideoutPct * 100).toFixed(1)}%`} />
-                <StatRow label="Break %" value={`${(stats.overall.breakPct * 100).toFixed(1)}%`} />
-                <StatRow label="Error ratio" value={stats.overall.errorRatio.toFixed(3)} />
-                <StatRow
-                  label="Error clustering"
-                  value={stats.errorClustering === -1 ? 'N/A' : stats.errorClustering.toFixed(2)}
-                  highlight={stats.errorClustering >= 0.5 ? 'orange' : undefined}
-                />
-              </div>
-            </div>
-
-            {/* Score timeline */}
-            {stats.tusTimeline.length > 3 && (
-              <div className="card p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-3">Score Timeline</p>
-                <ResponsiveContainer width="100%" height={120}>
-                  <LineChart data={stats.tusTimeline} margin={{ left: -20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                    <XAxis dataKey="rallyIndex" tick={{ fill: '#e0e3e5', fontSize: 9 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#e0e3e5', fontSize: 9 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: '#1d2022', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', fontSize: 11 }}
-                    />
-                    <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-                    <Line
-                      type="monotone"
-                      dataKey="scoreUs"
-                      name="Us"
-                      stroke="#ff5c00"
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="scoreThem"
-                      name="Them"
-                      stroke="rgba(255,255,255,0.3)"
-                      dot={false}
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Analysis section */}
-        {isCompleted && (
-          <div className="mt-2">
-            <h2 className="font-display font-bold text-base text-on-surface mb-3">AI Analysis</h2>
-            <AnalysisSection analysis={analysis} />
-          </div>
-        )}
+    <div className="card p-3">
+      <p className="text-[10px] text-on-surface-variant uppercase tracking-wide font-bold mb-1">{label}</p>
+      <p className="text-xl font-bold leading-none" style={{ color }}>{display}</p>
+      {sub && <p className="text-[10px] text-on-surface-variant/40 mt-1 leading-tight">{sub}</p>}
+      <div className="h-0.5 bg-white/[0.05] rounded-full mt-2">
+        <div
+          className="h-0.5 rounded-full"
+          style={{ width: `${Math.min(100, Math.max(0, barValue * 100))}%`, background: color }}
+        />
       </div>
     </div>
   )
 }
 
-function StatRow({ label, value, highlight }: { label: string; value: string; highlight?: string }) {
+// ── Per-set score timeline ────────────────────────────────────────────────────
+
+function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
+  const { data: setData, isLoading } = useQuery({
+    queryKey: ['set', set.id],
+    queryFn: () => setsApi.get(matchId, set.id),
+  })
+
+  const chartData = useMemo(() => {
+    const rallies = setData?.rallies ?? []
+    const pts: { rally: number; pos: number; neg: number }[] = [{ rally: 0, pos: 0, neg: 0 }]
+    rallies.forEach(r => {
+      const diff = r.scoreUs - r.scoreThem
+      pts.push({ rally: r.rallyIndex + 1, pos: Math.max(0, diff), neg: Math.min(0, diff) })
+    })
+    return pts
+  }, [setData])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-24">
+        <div className="w-5 h-5 border-2 border-orange/30 border-t-orange rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!setData?.rallies?.length) return null
+
   return (
-    <div className="flex justify-between items-center">
-      <span className="text-sm text-on-surface-variant">{label}</span>
-      <span className={cn('font-bold text-sm', highlight === 'orange' ? 'text-orange' : 'text-on-surface')}>
-        {value}
-      </span>
+    <div>
+      <ResponsiveContainer width="100%" height={130}>
+        <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+          <XAxis
+            dataKey="rally"
+            tick={{ fill: '#5F5E5A', fontSize: 9 }}
+            tickLine={false}
+            axisLine={false}
+          />
+          <YAxis
+            tick={{ fill: '#888780', fontSize: 9 }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(v: number) => v > 0 ? `+${v}` : `${v}`}
+          />
+          <Tooltip
+            contentStyle={{ background: '#1a1d1e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, fontSize: 11 }}
+            labelFormatter={(v) => `Rally ${v}`}
+            formatter={(value: number, name: string) => [
+              value > 0 ? `+${value}` : `${value}`,
+              name === 'pos' ? 'Lead' : 'Deficit',
+            ]}
+          />
+          <ReferenceLine y={0} stroke="rgba(255,255,255,0.10)" />
+          <Area dataKey="pos" fill="rgba(99,153,34,0.28)" stroke="#97C459" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+          <Area dataKey="neg" fill="rgba(226,75,74,0.28)" stroke="#E24B4A" strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+      <div className="flex justify-between text-[11px] text-on-surface-variant/40 mt-1 px-1">
+        <span>Final: {setData.scoreUs}–{setData.scoreThem}</span>
+        <span>{setData.rallies.length} rallies</span>
+      </div>
     </div>
   )
 }
+
+// ── Set comparison table row ──────────────────────────────────────────────────
+
+function SetTableRow({
+  label,
+  sets,
+  getValue,
+  getColor,
+}: {
+  label: string
+  sets: MatchStats['perSetStats']
+  getValue: (s: MatchStats['perSetStats'][0]) => string
+  getColor?: (s: MatchStats['perSetStats'][0]) => string
+}) {
+  return (
+    <tr className="border-t border-outline/10">
+      <td className="py-2 text-[10px] text-on-surface-variant/50 uppercase tracking-wide font-bold">{label}</td>
+      {sets.map(s => (
+        <td key={s.setId} className="text-center py-2 text-xs font-bold"
+          style={{ color: getColor ? getColor(s) : '#E0E3E5' }}>
+          {getValue(s)}
+        </td>
+      ))}
+    </tr>
+  )
+}
+
+// ── Analysis section (unchanged) ──────────────────────────────────────────────
 
 function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) {
   const [simExpanded, setSimExpanded] = useState(false)
@@ -256,7 +152,7 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
     return (
       <div className="card p-6 flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-2 border-orange/30 border-t-orange rounded-full animate-spin" />
-        <p className="text-sm font-bold text-on-surface">Analysing match data...</p>
+        <p className="text-sm font-bold text-on-surface">Analysing match data…</p>
         <p className="text-xs text-on-surface-variant">Usually ready within 30 seconds.</p>
       </div>
     )
@@ -280,30 +176,16 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
     )
   }
 
-  if (analysis.status !== 'ready' || !analysis.insights) {
-    return null
-  }
+  if (analysis.status !== 'ready' || !analysis.insights) return null
 
   const { strengths = [], weaknesses = [], action_items = [], simulation_summary } = analysis.insights
 
   return (
     <div className="space-y-4">
-      {/* Strengths */}
-      {strengths.length > 0 && (
-        <InsightGroup title="Strengths" cards={strengths} color="green" />
-      )}
+      {strengths.length > 0 && <InsightGroup title="Strengths" cards={strengths} color="green" />}
+      {weaknesses.length > 0 && <InsightGroup title="Areas to Address" cards={weaknesses} color="red" />}
+      {action_items.length > 0 && <InsightGroup title="Coaching Actions" cards={action_items} color="orange" />}
 
-      {/* Weaknesses */}
-      {weaknesses.length > 0 && (
-        <InsightGroup title="Areas to Address" cards={weaknesses} color="red" />
-      )}
-
-      {/* Action items */}
-      {action_items.length > 0 && (
-        <InsightGroup title="Coaching Actions" cards={action_items} color="orange" />
-      )}
-
-      {/* Simulation summary */}
       {simulation_summary && (
         <div className="card p-4">
           <button
@@ -316,10 +198,12 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
 
           {simExpanded && (
             <div className="mt-3 space-y-2">
-              <StatRow
-                label="Baseline win probability"
-                value={`${(simulation_summary.baseline_win_pct * 100).toFixed(1)}%`}
-              />
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-on-surface-variant">Baseline win probability</span>
+                <span className="font-bold text-sm text-on-surface">
+                  {(simulation_summary.baseline_win_pct * 100).toFixed(1)}%
+                </span>
+              </div>
               {simulation_summary.top_intervention && (
                 <div className="mt-2 p-3 rounded-lg bg-surface-high">
                   <p className="text-xs text-on-surface-variant">Top improvement scenario:</p>
@@ -350,7 +234,7 @@ function InsightGroup({
   color: 'green' | 'red' | 'orange'
 }) {
   const borderColor = { green: 'border-green-500/20', red: 'border-error/20', orange: 'border-orange/20' }
-  const textColor = { green: 'text-green-400', red: 'text-error', orange: 'text-orange' }
+  const textColor   = { green: 'text-green-400', red: 'text-error', orange: 'text-orange' }
 
   return (
     <div>
@@ -363,7 +247,7 @@ function InsightGroup({
             <div className="flex items-center justify-between mt-2 flex-wrap gap-1">
               <span className="text-xs text-on-surface-variant">
                 Current: <span className="font-bold text-on-surface">{(card.current_value * 100).toFixed(1)}%</span>
-                {card.target_value !== null && card.target_value !== undefined && (
+                {card.target_value != null && (
                   <> → Target: <span className="font-bold text-on-surface">{(card.target_value * 100).toFixed(1)}%</span></>
                 )}
               </span>
@@ -373,6 +257,360 @@ function InsightGroup({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export function GameStatsPage() {
+  const { id: matchId } = useParams<{ id: string }>()
+  const { isManager } = useRole()
+  const [timelineSetId, setTimelineSetId] = useState<string | null>(null)
+
+  const { data: match } = useQuery({
+    queryKey: ['game', matchId],
+    queryFn: () => gamesApi.get(matchId!),
+    enabled: !!matchId,
+  })
+
+  const { data: stats } = useQuery<MatchStats>({
+    queryKey: ['stats', matchId],
+    queryFn: () => gamesApi.stats(matchId!),
+    enabled: !!matchId,
+  })
+
+  const { data: analysis } = useMatchAnalysis(matchId)
+
+  const isCompleted = match?.status === 'completed'
+  const sets = match?.sets ?? []
+
+  // Default active set for timeline: first set
+  const activeTimelineSetId = timelineSetId ?? sets[0]?.id ?? null
+  const activeTimelineSet = sets.find(s => s.id === activeTimelineSetId) ?? sets[0] ?? null
+
+  // Opponent name for hero
+  const ourTeam = match?.matchType === 'playing'
+    ? (match.team?.name || 'Us')
+    : (match?.homeTeam || 'Home')
+  const theirTeam = match?.matchType === 'playing'
+    ? (match?.opponent || 'Opponent')
+    : (match?.guestTeam || 'Guest')
+
+  const won = (match?.setsWonUs ?? 0) > (match?.setsWonThem ?? 0)
+
+  // KPI colours
+  const kpiSideout  = stats ? perfColor(stats.overall.sideoutPct, 0.55, true)  : '#888'
+  const kpiBreak    = stats ? perfColor(stats.overall.breakPct, 0.45, true)    : '#888'
+  const kpiError    = stats ? perfColor(stats.overall.errorRatio, 0.30, false) : '#888'
+  const kpiPosPlay  = stats ? perfColor(stats.pointQuality.positivePlayPct, 0.60, true) : '#888'
+  const pointsRatio = stats && stats.overall.pointsThem > 0
+    ? stats.overall.pointsUs / stats.overall.pointsThem
+    : 1
+  const kpiRatio    = stats ? perfColor(pointsRatio, 1.0, true) : '#888'
+  const kpiCluster  = stats && stats.errorClustering >= 0
+    ? perfColor(stats.errorClustering, 0.50, false)
+    : '#888'
+
+  return (
+    <div className="min-h-dvh bg-background">
+
+      {/* ── Header ── */}
+      <div className="px-4 pt-safe-top pt-4 pb-2 flex items-center gap-2 border-b border-outline/10 sticky top-0 bg-background z-10">
+        <Link to="/games" className="p-2 -ml-2 rounded-full hover:bg-white/[0.06]">
+          <ArrowLeft size={18} className="text-on-surface" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-on-surface-variant">
+            {format(match?.date || '')}
+            {match?.location ? ` · ${match.location}` : ''}
+          </p>
+          <h1 className="font-display font-bold text-base text-on-surface truncate">
+            Match summary
+          </h1>
+        </div>
+        {isManager && isCompleted && sets.length > 0 && (
+          <Link
+            to={`/games/${matchId}/log`}
+            className="text-xs text-orange font-bold border border-orange/30 rounded-full px-3 py-1.5 shrink-0"
+          >
+            Log
+          </Link>
+        )}
+      </div>
+
+      <div className="px-4 py-4 pb-8 space-y-4">
+
+        {/* ── Hero ── */}
+        {match && (
+          <div className="card p-5 relative overflow-hidden">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-10%,rgba(255,92,0,0.08)_0%,transparent_65%)]" />
+            <div className="relative">
+
+              {/* Teams + set scores */}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 text-center">
+                  <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1 truncate">{ourTeam}</p>
+                  <p
+                    className="font-display font-black text-5xl leading-none"
+                    style={{ color: won ? '#97C459' : '#5F5E5A' }}
+                  >
+                    {match.setsWonUs}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center shrink-0">
+                  <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wide">Sets</p>
+                  <p className="text-2xl font-light text-on-surface-variant/30">–</p>
+                </div>
+                <div className="flex-1 text-center">
+                  <p className="text-[11px] text-on-surface-variant uppercase tracking-wide mb-1 truncate">{theirTeam}</p>
+                  <p
+                    className="font-display font-black text-5xl leading-none"
+                    style={{ color: !won ? '#E24B4A' : '#5F5E5A' }}
+                  >
+                    {match.setsWonThem}
+                  </p>
+                </div>
+              </div>
+
+              {/* Result badge */}
+              {isCompleted && (
+                <div className="flex justify-center mt-3">
+                  <span
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
+                    style={won
+                      ? { background: 'rgba(99,153,34,0.18)', color: '#97C459' }
+                      : { background: 'rgba(226,75,74,0.18)', color: '#E24B4A' }}
+                  >
+                    {won ? '🏆 Match won' : '✗ Match lost'}
+                  </span>
+                </div>
+              )}
+
+              {/* Per-set score pills */}
+              {sets.length > 0 && (
+                <div className="flex gap-2 flex-wrap justify-center mt-3">
+                  {sets.map(s => {
+                    const setWon = s.scoreUs > s.scoreThem
+                    return (
+                      <div
+                        key={s.id}
+                        className="rounded-lg px-2.5 py-1.5 text-center"
+                        style={setWon
+                          ? { background: 'rgba(99,153,34,0.18)', border: '1px solid rgba(99,153,34,0.25)' }
+                          : { background: 'rgba(226,75,74,0.10)', border: '1px solid rgba(226,75,74,0.15)' }}
+                      >
+                        <p className="text-[8px] text-on-surface-variant/50 mb-0.5">Set {s.setNumber}</p>
+                        <p className="text-xs font-bold" style={{ color: setWon ? '#97C459' : '#E24B4A' }}>
+                          {s.scoreUs}–{s.scoreThem}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Meta row */}
+              {stats && (
+                <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-outline/10 text-[11px] text-on-surface-variant/40">
+                  <span className="flex items-center gap-1">
+                    <Hash size={10} />
+                    {stats.overall.totalRallies} rallies
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {stats && isCompleted && (
+          <>
+            {/* ── Key metrics ── */}
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Key metrics</p>
+            <div className="grid grid-cols-2 gap-3">
+              <KpiTile
+                label="Sideout %"
+                display={`${(stats.overall.sideoutPct * 100).toFixed(1)}%`}
+                color={kpiSideout}
+                barValue={stats.overall.sideoutPct}
+                sub={`target ≥55%${stats.overall.sideoutPct >= 0.55 ? ' ✓' : ''}`}
+              />
+              <KpiTile
+                label="Break %"
+                display={`${(stats.overall.breakPct * 100).toFixed(1)}%`}
+                color={kpiBreak}
+                barValue={stats.overall.breakPct}
+                sub={`target ≥45%${stats.overall.breakPct >= 0.45 ? ' ✓' : ''}`}
+              />
+              <KpiTile
+                label="Error ratio"
+                display={stats.overall.errorRatio.toFixed(2)}
+                color={kpiError}
+                barValue={Math.min(1, stats.overall.errorRatio)}
+                sub={`target ≤0.30${stats.overall.errorRatio <= 0.30 ? ' ✓' : ''}`}
+              />
+              <KpiTile
+                label="Positive play"
+                display={`${(stats.pointQuality.positivePlayPct * 100).toFixed(1)}%`}
+                color={kpiPosPlay}
+                barValue={stats.pointQuality.positivePlayPct}
+                sub={`target ≥60%${stats.pointQuality.positivePlayPct >= 0.60 ? ' ✓' : ''}`}
+              />
+              <KpiTile
+                label="Points ratio"
+                display={pointsRatio.toFixed(2)}
+                color={kpiRatio}
+                barValue={Math.min(1, pointsRatio / 1.5)}
+                sub={`${stats.overall.pointsUs} scored · ${stats.overall.pointsThem} conceded`}
+              />
+              <KpiTile
+                label="Error clustering"
+                display={stats.errorClustering < 0 ? 'N/A' : stats.errorClustering.toFixed(2)}
+                color={kpiCluster}
+                barValue={stats.errorClustering < 0 ? 0 : Math.min(1, stats.errorClustering)}
+                sub={stats.errorClustering < 0 ? 'Insufficient data' : stats.errorClustering >= 0.5 ? 'Clustered errors' : 'Mild clustering'}
+              />
+            </div>
+
+            {/* ── Set comparison ── */}
+            {stats.perSetStats.length > 0 && (
+              <>
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Set comparison</p>
+                <div className="card p-4 overflow-x-auto">
+                  <table className="w-full text-xs min-w-[220px]">
+                    <thead>
+                      <tr>
+                        <th className="text-left pb-2.5 text-[9px] font-bold text-on-surface-variant/30 uppercase tracking-wide" />
+                        {stats.perSetStats.map(s => {
+                          const sw = s.scoreUs > s.scoreThem
+                          return (
+                            <th
+                              key={s.setId}
+                              className="text-center pb-2.5 text-[9px] font-bold uppercase tracking-wide"
+                              style={{ color: sw ? '#97C459' : '#E24B4A' }}
+                            >
+                              S{s.setNumber} {sw ? 'W' : 'L'}
+                            </th>
+                          )
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <SetTableRow
+                        label="Score"
+                        sets={stats.perSetStats}
+                        getValue={s => `${s.scoreUs}–${s.scoreThem}`}
+                        getColor={s => s.scoreUs > s.scoreThem ? '#97C459' : '#E24B4A'}
+                      />
+                      <SetTableRow
+                        label="Rallies"
+                        sets={stats.perSetStats}
+                        getValue={s => `${s.stats.totalRallies}`}
+                      />
+                      <SetTableRow
+                        label="Sideout"
+                        sets={stats.perSetStats}
+                        getValue={s => `${(s.stats.sideoutPct * 100).toFixed(0)}%`}
+                        getColor={s => perfColor(s.stats.sideoutPct, 0.55, true)}
+                      />
+                      <SetTableRow
+                        label="Break %"
+                        sets={stats.perSetStats}
+                        getValue={s => `${(s.stats.breakPct * 100).toFixed(0)}%`}
+                        getColor={s => perfColor(s.stats.breakPct, 0.45, true)}
+                      />
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── Score timeline with set selector ── */}
+        {isCompleted && sets.length > 0 && matchId && (
+          <>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Score timeline</p>
+            <div className="card p-4">
+              {/* Set pills */}
+              <div className="flex gap-2 flex-wrap mb-4">
+                {sets.map(s => {
+                  const isActive = activeTimelineSetId === s.id
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => setTimelineSetId(s.id)}
+                      className={cn(
+                        'px-3 py-1 rounded-full text-xs font-bold transition-all',
+                        isActive
+                          ? 'bg-orange text-white shadow-[0_2px_8px_rgba(255,92,0,0.35)]'
+                          : 'bg-white/[0.06] text-on-surface-variant hover:bg-white/[0.09]'
+                      )}
+                    >
+                      S{s.setNumber}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Chart */}
+              {activeTimelineSet && (
+                <SetScoreTimeline matchId={matchId} set={activeTimelineSet} />
+              )}
+
+              {/* Legend */}
+              <div className="flex gap-4 mt-3 text-[11px] text-on-surface-variant/50">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#97C459' }} />
+                  Leading
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#E24B4A' }} />
+                  Trailing
+                </span>
+              </div>
+            </div>
+          </>
+        )}
+
+        {stats && (
+          <>
+            {/* ── Rotation performance ── */}
+            {stats.rotationStats.length > 0 && (
+              <>
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Rotation performance</p>
+                <div className="card p-4">
+                  <div className="grid grid-cols-6 gap-2">
+                    {stats.rotationStats.map(rot => {
+                      const total = rot.wins + rot.losses
+                      const winRate = total > 0 ? rot.wins / total : 0
+                      const { bg, text } = rotationColor(winRate)
+                      return (
+                        <div key={rot.rotation} className="rounded-xl p-2 text-center" style={{ background: bg }}>
+                          <p className="text-[9px] text-on-surface-variant/60 mb-1">R{rot.rotation}</p>
+                          <p className="text-xs font-bold leading-none" style={{ color: text }}>
+                            {total > 0 ? `${Math.round(winRate * 100)}%` : '–'}
+                          </p>
+                          <p className="text-[8px] text-on-surface-variant/40 mt-1">{total}R</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {/* ── AI insights ── */}
+        {isCompleted && (
+          <>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Match insights</p>
+            <AnalysisSection analysis={analysis} />
+          </>
+        )}
+
       </div>
     </div>
   )
