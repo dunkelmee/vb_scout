@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GameSet, ralliesApi } from '../../lib/api'
 import { cn } from '../ui/cn'
 import { Clock, RotateCw } from 'lucide-react'
-import { useMatchStore } from '../../store/matchStore'
 
 interface TimelineTabProps {
   set: GameSet
@@ -17,7 +16,6 @@ type TimelineEntry =
 
 export function TimelineTab({ set, matchId }: TimelineTabProps) {
   const qc = useQueryClient()
-  const store = useMatchStore()
 
   const entries: TimelineEntry[] = []
 
@@ -73,15 +71,6 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
         <p className="text-center text-ghost-300 text-sm py-8">No events yet.</p>
       )}
 
-      {store.scoreUs > 0 || store.scoreThem > 0 ? (
-        <div className="mb-4 flex justify-center">
-          <div className="px-6 py-3 rounded-xl" style={{ background: 'linear-gradient(135deg, #23B5D3, #279AF1)' }}>
-            <span className="font-display font-black text-2xl text-pitch-950">
-              {store.scoreUs} – {store.scoreThem}
-            </span>
-          </div>
-        </div>
-      ) : null}
 
       <div className="relative">
         <div className="absolute left-[7px] top-0 bottom-0 w-px bg-pitch-400/30" />

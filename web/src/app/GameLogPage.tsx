@@ -300,11 +300,11 @@ export function GameLogPage() {
           />
           {/* Bottom fade into page background */}
           <div
-            className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
+            className="absolute bottom-0 left-0 right-0 h-10 pointer-events-none"
             style={{ background: 'linear-gradient(to bottom, transparent, #070600)' }}
           />
 
-          <div className="relative z-10 flex flex-col px-4 pt-safe-top pt-6 pb-16 gap-4">
+          <div className="relative z-10 flex flex-col px-4 pt-safe-top pt-4 pb-6 gap-2">
             {/* Top row: back · set label · spacer */}
             <div className="flex items-center justify-between">
               <button
@@ -321,28 +321,28 @@ export function GameLogPage() {
 
             {/* Score row: team name above score, separated by – */}
             <div className="flex items-end justify-center">
-              <div className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-sm leading-none h-5 flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center gap-0.5">
+                <span className="text-xs leading-none h-4 flex items-center justify-center">
                   {store.servingTeam === 'us' ? '🏐' : ''}
                 </span>
-                <p className="text-[13px] font-bold uppercase tracking-wide text-white/80 text-center px-1 leading-tight">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-white/80 text-center px-1 leading-tight">
                   {store.teamName}
                 </p>
-                <span className="font-display font-black text-turq-500 leading-none" style={{ fontSize: '3.5rem' }}>
+                <span className="font-display font-black text-turq-500 leading-none" style={{ fontSize: '2.75rem' }}>
                   {store.scoreUs}
                 </span>
               </div>
 
-              <span className="text-white/30 font-light text-3xl pb-3 px-3">–</span>
+              <span className="text-white/30 font-light text-2xl pb-2 px-3">–</span>
 
-              <div className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-sm leading-none h-5 flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center gap-0.5">
+                <span className="text-xs leading-none h-4 flex items-center justify-center">
                   {store.servingTeam === 'them' ? '🏐' : ''}
                 </span>
-                <p className="text-[13px] font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
                   {match?.opponent ?? store.opponentInitials}
                 </p>
-                <span className="font-display font-black text-white leading-none" style={{ fontSize: '3.5rem' }}>
+                <span className="font-display font-black text-white leading-none" style={{ fontSize: '2.75rem' }}>
                   {store.scoreThem}
                 </span>
               </div>
@@ -350,9 +350,18 @@ export function GameLogPage() {
           </div>
         </div>
 
-        {/* Tab bar — solid background prevents court bleed-through on small devices */}
-        <div className="bg-surface-container">
+        {/* Tab bar — glass morphism */}
+        <div
+          className="relative"
+          style={{
+            background: 'rgba(14,13,10,0.72)',
+            backdropFilter: 'blur(20px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+          }}
+        >
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(35,181,211,0.45) 35%, rgba(234,82,111,0.35) 65%, transparent 100%)' }} />
           <Tabs tabs={LOG_TABS} activeTab={activeTab} onChange={setActiveTab} />
+          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.10) 50%, transparent 100%)' }} />
         </div>
         <OfflineBanner pendingCount={pendingCount} isOnline={isOnline} />
       </div>
@@ -378,9 +387,9 @@ export function GameLogPage() {
           {/* Scoring controls
                The inner slot has a fixed min-height equal to the taller "awaiting_type" state
                so the court never shifts when the step changes. */}
-          <div className="shrink-0 px-4 pt-3 pb-1 flex flex-col gap-2">
+          <div className="shrink-0 px-4 pt-2 pb-1 flex flex-col gap-2">
             {/* Fixed-height slot — both states rendered inside it */}
-            <div className="min-h-[140px] flex flex-col justify-center">
+            <div className="min-h-[120px] flex flex-col justify-center">
               {store.scoringStep === 'idle' ? (
                 /* Step 1: Who scored? */
                 <div className="flex gap-3">
@@ -457,7 +466,7 @@ export function GameLogPage() {
           </div>
 
           {/* Bottom action icons — pinned to bottom */}
-          <div className="shrink-0 flex justify-around items-center px-4 py-3 border-t border-outline/10">
+          <div className="shrink-0 flex justify-around items-center px-4 py-2 border-t border-outline/10">
             {[
               { icon: <RefreshCw size={18} />, label: 'Lineup', badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
               { icon: <ChevronDown size={18} />, label: 'Sub', badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
