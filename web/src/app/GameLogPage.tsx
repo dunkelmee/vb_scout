@@ -286,7 +286,7 @@ export function GameLogPage() {
 
           <div className="relative z-10 flex items-center gap-2 px-4 pt-safe-top pt-7 pb-9">
             <button
-              onClick={() => navigate(`/games/${matchId}/stats`)}
+              onClick={() => navigate('/games')}
               className="shrink-0 p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
             >
               <ArrowLeft size={18} className="text-white" />

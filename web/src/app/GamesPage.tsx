@@ -226,8 +226,7 @@ function MatchCard({
               <Radio size={12} /> Log
             </button>
           )}
-          {/* Stats only relevant for matches we play, not ones we officiate */}
-          {isPlaying && (
+          {isPlaying && match.status === 'completed' && (
             <Link
               to={`/games/${match.id}/stats`}
               className="flex items-center gap-1.5 text-xs font-bold uppercase text-on-surface-variant hover:text-on-surface transition-colors px-2 py-1.5"

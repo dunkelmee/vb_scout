@@ -342,7 +342,7 @@ export function GameStatsPage() {
             Match summary
           </h1>
         </div>
-        {isManager && isCompleted && sets.length > 0 && (
+        {isManager && !isCompleted && sets.length > 0 && (
           <Link
             to={`/games/${matchId}/log`}
             className="text-xs text-turq-500 font-bold border border-turq-500/30 rounded-full px-3 py-1.5 shrink-0"
