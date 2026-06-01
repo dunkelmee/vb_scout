@@ -101,6 +101,14 @@ export function SetSummaryOverlay({
     enabled: !!previousSet,
   })
 
+  const currentSet = sets.find(s => s.setNumber === setNumber)
+  const { data: currentSetData } = useQuery({
+    queryKey: ['set', currentSet?.id],
+    queryFn: () => setsApi.get(matchId, currentSet!.id),
+    enabled: !!currentSet,
+  })
+  const timeouts = currentSetData?.timeouts ?? []
+
   const stats = useMemo(() => computeLiveStats(
     rallies.map(r => ({
       scorer: r.scorer as 'us' | 'them',
@@ -293,6 +301,15 @@ export function SetSummaryOverlay({
                 ]}
               />
               <ReferenceLine y={0} stroke={chartTheme.gridColor} />
+              {timeouts.map(t => (
+                <ReferenceLine
+                  key={t.id}
+                  x={t.rallyIndex + 1}
+                  stroke={t.calledBy === 'us' ? 'rgba(35,181,211,0.55)' : 'rgba(234,82,111,0.55)'}
+                  strokeDasharray="4 3"
+                  strokeWidth={1.5}
+                />
+              ))}
               <Area dataKey="pos" fill={chartTheme.turqFill} stroke={chartTheme.turq} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
               <Area dataKey="neg" fill={chartTheme.pinkFill} stroke={chartTheme.pink} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
             </ComposedChart>
