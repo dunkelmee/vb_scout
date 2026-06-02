@@ -19,6 +19,7 @@ router.get('/', async (req: Request, res: Response) => {
         ...(status && { status: status as string }),
       },
       include: {
+        team: { select: { name: true, initials: true } },
         matchPlayers: { include: { player: { select: { id: true, firstName: true, lastName: true, jersey: true } } } },
         sets: { select: { id: true, setNumber: true, scoreUs: true, scoreThem: true, status: true } },
       },
