@@ -45,12 +45,12 @@ export function PlayersPage() {
       />
 
       {isLoading && (
-        <div className="px-5 space-y-2 animate-pulse">
+        <div className="px-5 md:px-8 grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 animate-pulse">
           {[...Array(5)].map((_, i) => <div key={i} className="card h-16" />)}
         </div>
       )}
 
-      <div className="px-5 space-y-2 pb-6">
+      <div className="px-5 md:px-8 grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 pb-6">
         {players.map(player => {
           const isMe = player.userId === user?.id || player.id === myPlayerId
           const canViewFull = isManager || isMe

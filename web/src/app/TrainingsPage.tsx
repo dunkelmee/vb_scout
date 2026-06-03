@@ -51,9 +51,9 @@ export function TrainingsPage() {
         ) : undefined}
       />
 
-      {isLoading && <div className="px-5 space-y-3 animate-pulse">{[...Array(3)].map((_, i) => <div key={i} className="card h-28" />)}</div>}
+      {isLoading && <div className="px-5 md:px-8 space-y-3 animate-pulse">{[...Array(3)].map((_, i) => <div key={i} className="card h-28" />)}</div>}
 
-      <div className="px-5 space-y-5 pb-6">
+      <div className="px-5 md:px-8 space-y-5 pb-6">
         {upcoming.length > 0 && (
           <section>
             <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-3 flex items-center gap-2">

@@ -304,7 +304,7 @@ export function GameLogPage() {
             style={{ background: 'linear-gradient(to bottom, transparent, #070600)' }}
           />
 
-          <div className="relative z-10 flex flex-col px-4 pt-safe-top pt-4 pb-6 gap-2">
+          <div className="relative z-10 flex flex-col px-4 pt-safe-top pt-4 pb-6 md:pb-10 gap-2">
             {/* Top row: back · set label · spacer */}
             <div className="flex items-center justify-between">
               <button
@@ -313,7 +313,7 @@ export function GameLogPage() {
               >
                 <ArrowLeft size={18} className="text-white" />
               </button>
-              <span className="text-[11px] font-bold uppercase tracking-widest text-white/55">
+              <span className="text-[11px] md:text-sm font-bold uppercase tracking-widest text-white/55">
                 Set {store.currentSetNumber}
               </span>
               <div className="w-9" />
@@ -325,24 +325,24 @@ export function GameLogPage() {
                 <span className="text-xs leading-none h-4 flex items-center justify-center">
                   {store.servingTeam === 'us' ? '🏐' : ''}
                 </span>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-white/80 text-center px-1 leading-tight">
+                <p className="text-[11px] md:text-base font-bold uppercase tracking-wide text-white/80 text-center px-1 leading-tight">
                   {store.teamName}
                 </p>
-                <span className="font-display font-black text-turq-500 leading-none" style={{ fontSize: '2.75rem' }}>
+                <span className="font-display font-black text-turq-500 leading-none text-[2.75rem] md:text-[4rem]">
                   {store.scoreUs}
                 </span>
               </div>
 
-              <span className="text-white/30 font-light text-2xl pb-2 px-3">–</span>
+              <span className="text-white/30 font-light text-2xl md:text-4xl pb-2 px-3">–</span>
 
               <div className="flex-1 flex flex-col items-center gap-0.5">
                 <span className="text-xs leading-none h-4 flex items-center justify-center">
                   {store.servingTeam === 'them' ? '🏐' : ''}
                 </span>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
+                <p className="text-[11px] md:text-base font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
                   {match?.opponent ?? store.opponentInitials}
                 </p>
-                <span className="font-display font-black text-white leading-none" style={{ fontSize: '2.75rem' }}>
+                <span className="font-display font-black text-white leading-none text-[2.75rem] md:text-[4rem]">
                   {store.scoreThem}
                 </span>
               </div>
@@ -372,8 +372,8 @@ export function GameLogPage() {
       {/* Content — log + tactics use full-height no-scroll layout; stats + timeline scroll */}
       {activeTab === 'log' ? (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Court — grows to fill all available space */}
-          <div className="flex-1 min-h-0 px-3 pt-3 flex flex-col">
+          {/* Court — grows to fill available space, capped on tablet */}
+          <div className="flex-1 min-h-0 px-3 pt-3 flex flex-col md:max-h-[50vh]">
             <CourtView
               lineup={store.lineup}
               players={players}

@@ -1,17 +1,16 @@
-import React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { dashboardApi, DashboardData, BASE } from '../lib/api'
+import { Link, useNavigate } from 'react-router-dom'
+import { dashboardApi, DashboardData } from '../lib/api'
 import { useRole } from '../hooks/useRole'
 import { Badge } from '../components/ui/Badge'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine,
   ResponsiveContainer,
 } from 'recharts'
-import { ChevronRight, MapPin, CalendarDays, Users, Dumbbell } from 'lucide-react'
+import { ChevronRight, CalendarDays, Users, Dumbbell } from 'lucide-react'
 import { format } from '../lib/dateUtils'
-import { useNavigate } from 'react-router-dom'
 import { chartTheme } from '../lib/chartTheme'
+import { MatchCard } from '../components/game/MatchCard'
 
 export function DashboardPage() {
   const { isManager } = useRole()
@@ -32,14 +31,14 @@ export function DashboardPage() {
   return (
     <div className="min-h-dvh bg-background">
       {/* Header */}
-      <div className="px-5 pt-safe-top pt-5 pb-2 flex items-center justify-between">
+      <div className="px-5 md:px-8 pt-safe-top pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
           <span className="font-harabara text-2xl tracking-wide text-on-surface">courtside</span>
         </div>
       </div>
 
-      <div className="px-5 space-y-6 pb-6">
+      <div className="px-5 md:px-8 space-y-6 pb-6">
         {/* Season name + quick actions */}
         <div>
           {data?.activeSeason && (
@@ -101,31 +100,15 @@ export function DashboardPage() {
                 All <ChevronRight size={12} />
               </Link>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
               {data!.upcomingGames.map(match => (
-                <Link
+                <MatchCard
                   key={match.id}
-                  to={`/games/${match.id}/stats`}
-                  className="card p-4 transition-colors"
-                >
-                  <p className="text-xs text-turq-500 font-bold uppercase tracking-wide mb-1">
-                    {match.matchType === 'playing' ? 'Playing' : 'Officiating'}
-                  </p>
-                  <p className="font-display font-bold text-base text-on-surface truncate">
-                    {match.matchType === 'playing'
-                      ? match.opponent || 'TBD'
-                      : `${match.homeTeam || '?'} vs ${match.guestTeam || '?'}`}
-                  </p>
-                  <p className="text-xs text-on-surface-variant mt-1">{format(match.date)}</p>
-                  {match.location && (
-                    <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-                      <MapPin size={10} /> {match.location}
-                    </p>
-                  )}
-                  {match.matchType === 'officiating' && (
-                    <OfficiatingAvatars match={match} />
-                  )}
-                </Link>
+                  match={match}
+                  onCardClick={match.matchType === 'playing'
+                    ? () => navigate(`/games/${match.id}/stats`)
+                    : undefined}
+                />
               ))}
             </div>
           </div>
@@ -227,7 +210,7 @@ function SeasonSnapshot({
       <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
         Season Snapshot
       </h3>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Matches</p>
           <p className="font-display font-black text-2xl text-on-surface">
@@ -269,8 +252,8 @@ function SeasonResults({ matches }: { matches: DashboardData['winLossTrend'] }) 
       <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
         Season Results
       </h3>
-      <div className="-mx-5 px-5 overflow-x-auto">
-        <div className="flex gap-2 pb-1 w-max">
+      <div className="-mx-5 px-5 overflow-x-auto md:mx-0 md:px-0 md:overflow-visible">
+        <div className="flex gap-2 pb-1 w-max md:w-auto md:flex-wrap md:pb-0">
           {matches.map(m => {
             const won = m.result === 'W'
             const initials = m.opponentInitials || getInitials(m.opponent)
@@ -536,66 +519,9 @@ function cn(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-// ---- Officiating helpers ----
-
-type OfficialPlayer = { id: string; firstName: string; lastName: string; avatarUrl?: string | null }
-
-function PlayerAvatar({ player }: { player: OfficialPlayer }) {
-  const initials = `${player.firstName[0]}${player.lastName[0]}`.toUpperCase()
-  const palette = ['bg-turq-500/80', 'bg-bell-500/80', 'bg-bubb-400/80', 'bg-bell-400/80']
-  const color = palette[(player.firstName.charCodeAt(0) + player.lastName.charCodeAt(0)) % palette.length]
-  const title = `${player.firstName} ${player.lastName}`
-  if (player.avatarUrl) {
-    const src = player.avatarUrl.startsWith('http')
-      ? player.avatarUrl
-      : `${BASE}${player.avatarUrl}`
-    return (
-      <img
-        src={src}
-        alt={title}
-        title={title}
-        className="w-6 h-6 rounded-full object-cover ring-1 ring-surface"
-      />
-    )
-  }
-  return (
-    <div title={title}
-      className={`w-6 h-6 ${color} rounded-full flex items-center justify-center text-pitch-950 font-bold text-[9px] ring-1 ring-surface`}>
-      {initials}
-    </div>
-  )
-}
-
-function OfficialGroup({ label, p1, p2 }: { label: string; p1?: OfficialPlayer | null; p2?: OfficialPlayer | null }) {
-  if (!p1 && !p2) return null
-  const names = [p1, p2].filter(Boolean).map(p => p!.firstName).join(' · ')
-  return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-[9px] text-on-surface-variant/60 font-bold uppercase tracking-wide">{label}</span>
-      <div className="flex -space-x-1.5">
-        {p1 && <PlayerAvatar player={p1} />}
-        {p2 && <PlayerAvatar player={p2} />}
-      </div>
-      <span className="text-[10px] text-on-surface-variant leading-tight">{names}</span>
-    </div>
-  )
-}
-
-function OfficiatingAvatars({ match }: { match: { ref1?: OfficialPlayer | null; ref2?: OfficialPlayer | null; scorer1?: OfficialPlayer | null; scorer2?: OfficialPlayer | null } }) {
-  const hasRefs = !!(match.ref1 || match.ref2)
-  const hasScorers = !!(match.scorer1 || match.scorer2)
-  if (!hasRefs && !hasScorers) return null
-  return (
-    <div className="grid grid-cols-2 gap-3 mt-2">
-      <OfficialGroup label="Refs" p1={match.ref1} p2={match.ref2} />
-      <OfficialGroup label="Scorers" p1={match.scorer1} p2={match.scorer2} />
-    </div>
-  )
-}
-
 function DashboardSkeleton() {
   return (
-    <div className="p-5 space-y-6 animate-pulse">
+    <div className="px-5 md:px-8 py-5 space-y-6 animate-pulse">
       <div className="h-8 bg-surface-high rounded-lg w-32" />
       <div>
         <div className="h-3 bg-surface-high rounded w-28 mb-3" />

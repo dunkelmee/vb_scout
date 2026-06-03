@@ -83,8 +83,9 @@ export function GameEditPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['game', id] })
       qc.invalidateQueries({ queryKey: ['games'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
       showToast('Game updated', 'success')
-      navigate('/games')
+      navigate(-1)
     },
     onError: () => showToast('Failed to update game', 'error'),
   })
@@ -123,9 +124,9 @@ export function GameEditPage() {
   return (
     <div className="min-h-dvh bg-background flex flex-col">
       {/* Header */}
-      <div className="px-5 pt-safe-top pt-4 pb-4 flex items-center gap-3 border-b border-outline/10 sticky top-0 bg-background z-10">
+      <div className="px-5 md:px-8 pt-safe-top pt-4 pb-4 flex items-center gap-3 border-b border-outline/10 sticky top-0 bg-background z-10">
         <button
-          onClick={() => navigate('/games')}
+          onClick={() => navigate(-1)}
           className="w-9 h-9 rounded-full bg-surface-high flex items-center justify-center shrink-0 active:scale-95 transition-transform"
         >
           <ArrowLeft size={18} className="text-on-surface-variant" />
@@ -139,7 +140,8 @@ export function GameEditPage() {
       </div>
 
       {/* Form */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto">
+      <div className="px-5 md:px-8 py-5 space-y-4 md:max-w-2xl md:mx-auto">
         {isPlaying ? (
           <>
             <Input
@@ -230,10 +232,11 @@ export function GameEditPage() {
           </div>
         )}
       </div>
+      </div>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-outline/10 flex gap-3">
-        <Button variant="outline" onClick={() => navigate('/games')} className="flex-1">
+      <div className="px-5 md:px-8 py-4 border-t border-outline/10 flex gap-3">
+        <Button variant="outline" onClick={() => navigate(-1)} className="flex-1">
           Cancel
         </Button>
         <Button

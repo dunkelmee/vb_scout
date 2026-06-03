@@ -22,6 +22,10 @@ router.get('/', async (req: Request, res: Response) => {
         team: { select: { name: true, initials: true } },
         matchPlayers: { include: { player: { select: { id: true, firstName: true, lastName: true, jersey: true } } } },
         sets: { select: { id: true, setNumber: true, scoreUs: true, scoreThem: true, status: true } },
+        ref1: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        ref2: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        scorer1: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
+        scorer2: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } },
       },
       orderBy: { date: 'desc' },
     })
