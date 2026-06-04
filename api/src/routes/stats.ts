@@ -8,7 +8,8 @@ const router = Router()
 // GET /api/dashboard — dashboard KPIs + upcoming games + trainings
 router.get('/dashboard', async (req: Request, res: Response) => {
   try {
-    const teamId = req.user!.teamId!
+    const teamId = req.user!.teamId
+    if (!teamId) return res.json({ wins: 0, losses: 0, totalMatches: 0, winRate: 0, setsWon: 0, setsLost: 0, pointsUs: 0, pointsThem: 0, upcomingGames: [], recentTrainings: [], activeSeason: null })
     const now = new Date()
 
     // Active season
@@ -182,7 +183,8 @@ router.get('/dashboard', async (req: Request, res: Response) => {
 // GET /api/season-performance — per-match detail data for the season performance detail view
 router.get('/season-performance', async (req: Request, res: Response) => {
   try {
-    const teamId = req.user!.teamId!
+    const teamId = req.user!.teamId
+    if (!teamId) return res.json([])
 
     const activeSeason = await prisma.season.findFirst({
       where: { teamId, isActive: true },

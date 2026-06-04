@@ -116,14 +116,19 @@ router.get('/:id', async (req: Request, res: Response) => {
   }
 })
 
-// PATCH /api/players/:id
-router.patch('/:id', requireManager, async (req: Request, res: Response) => {
+// PATCH /api/players/:id — managers can edit anyone; players can edit their own record
+router.patch('/:id', async (req: Request, res: Response) => {
   const { id } = req.params
   const { firstName, lastName, birthday, heightM, jersey, positions, isLibero, hasRefereeLicense } = req.body
+  const isManager = req.user!.role === 'manager' || req.user!.role === 'superadmin'
 
   try {
     const existing = await prisma.player.findFirst({ where: { id, teamId: req.user!.teamId! } })
     if (!existing) return res.status(404).json({ error: 'Player not found' })
+
+    if (!isManager && existing.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
 
     const player = await prisma.player.update({
       where: { id },
@@ -145,13 +150,13 @@ router.patch('/:id', requireManager, async (req: Request, res: Response) => {
   }
 })
 
-// POST /api/players/:id/photo — upload or replace player photo (manager only)
+// POST /api/players/:id/photo — managers can upload for anyone; players can upload for their own record
 router.post(
   '/:id/photo',
-  requireManager,
   upload.single('photo'),
   async (req: Request, res: Response) => {
     const { id } = req.params
+    const isManager = req.user!.role === 'manager' || req.user!.role === 'superadmin'
 
     if (!req.file) {
       return res.status(400).json({ error: 'No valid image file provided (jpeg/png/webp, max 5 MB)' })
@@ -160,9 +165,13 @@ router.post(
     try {
       const existing = await prisma.player.findFirst({ where: { id, teamId: req.user!.teamId! } })
       if (!existing) {
-        // Clean up the uploaded file if player not found
         fs.unlink(req.file.path, () => {})
         return res.status(404).json({ error: 'Player not found' })
+      }
+
+      if (!isManager && existing.userId !== req.user!.id) {
+        fs.unlink(req.file.path, () => {})
+        return res.status(403).json({ error: 'Access denied' })
       }
 
       // Store the public URL path (served by Express static middleware)
@@ -181,12 +190,17 @@ router.post(
   }
 )
 
-// DELETE /api/players/:id/photo — remove player photo (manager only)
-router.delete('/:id/photo', requireManager, async (req: Request, res: Response) => {
+// DELETE /api/players/:id/photo — managers can remove for anyone; players can remove their own
+router.delete('/:id/photo', async (req: Request, res: Response) => {
   const { id } = req.params
+  const isManager = req.user!.role === 'manager' || req.user!.role === 'superadmin'
   try {
     const existing = await prisma.player.findFirst({ where: { id, teamId: req.user!.teamId! } })
     if (!existing) return res.status(404).json({ error: 'Player not found' })
+
+    if (!isManager && existing.userId !== req.user!.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
 
     // Delete file from disk if it exists
     const filePath = path.join(UPLOADS_DIR, `${id}.jpg`)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { playersApi, authApi } from '../lib/api'
+import { playersApi } from '../lib/api'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ChipGroup } from '../components/ui/Select'
@@ -28,7 +28,6 @@ export function PlayerFormPage() {
   const [positions, setPositions]           = useState<string[]>([])
   const [isLibero, setIsLibero]             = useState(false)
   const [hasRefereeLicense, setHasRef]      = useState(false)
-  const [sendInvite, setSendInvite]         = useState(false)
 
   // Local preview of a newly-chosen photo (before save)
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null)
@@ -98,10 +97,6 @@ export function PlayerFormPage() {
         heightM: heightM ? parseFloat(heightM) : undefined,
         positions, isLibero, hasRefereeLicense,
       })
-      if (sendInvite) {
-        await authApi.invite(p.id)
-        showToast('Invite token generated', 'success')
-      }
       // Upload pending photo using the newly-created player's ID
       if (pendingPhoto) {
         await playersApi.uploadPhoto(p.id, pendingPhoto)
@@ -256,17 +251,6 @@ export function PlayerFormPage() {
           Has referee license
         </label>
 
-        {!isEdit && (
-          <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
-            <input
-              type="checkbox"
-              checked={sendInvite}
-              onChange={e => setSendInvite(e.target.checked)}
-              className="w-4 h-4 accent-orange"
-            />
-            Invite to app (generate invite token)
-          </label>
-        )}
 
         <div className="flex gap-3 pt-2">
           <Button variant="outline" type="button" onClick={() => navigate(-1)} className="flex-1">

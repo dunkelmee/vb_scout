@@ -18,3 +18,12 @@ export function ManagerOnly({ children }: { children: React.ReactNode }) {
   if (!isManager) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
+
+// Route guard for superadmin-only routes
+export function SuperAdminOnly({ children }: { children: React.ReactNode }) {
+  const { isSuperAdmin } = useRole()
+  const user = useAuthStore(s => s.user)
+  if (!user) return <Navigate to="/auth/login" replace />
+  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />
+  return <>{children}</>
+}

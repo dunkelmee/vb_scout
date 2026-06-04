@@ -1,36 +1,100 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutGrid, CalendarDays, Dumbbell, Users, Settings } from 'lucide-react'
+import { LayoutGrid, CalendarDays, Dumbbell, Users, Settings, Shield, type LucideIcon } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { cn } from './cn'
+import { useRole } from '../../hooks/useRole'
+import { usePullToRefresh } from '../../hooks/usePullToRefresh'
 
 interface AppShellProps {
   children: React.ReactNode
   hideNav?: boolean
 }
 
-const NAV_ITEMS = [
-  { to: '/dashboard', icon: LayoutGrid, label: 'Home' },
-  { to: '/games', icon: CalendarDays, label: 'Games' },
-  { to: '/trainings', icon: Dumbbell, label: 'Trainings' },
-  { to: '/players', icon: Users, label: 'Players' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+const MANAGER_NAV = [
+  { to: '/dashboard',  icon: LayoutGrid,  label: 'Home' },
+  { to: '/games',      icon: CalendarDays, label: 'Games' },
+  { to: '/trainings',  icon: Dumbbell,     label: 'Trainings' },
+  { to: '/players',    icon: Users,        label: 'Players' },
+  { to: '/settings',   icon: Settings,     label: 'Settings' },
+]
+
+const PLAYER_NAV = [
+  { to: '/dashboard',  icon: LayoutGrid,  label: 'Home' },
+  { to: '/games',      icon: CalendarDays, label: 'Games' },
+  { to: '/trainings',  icon: Dumbbell,     label: 'Trainings' },
+  { to: '/settings',   icon: Settings,     label: 'Settings' },
+]
+
+const SUPERADMIN_NAV = [
+  { to: '/dashboard',    icon: LayoutGrid, label: 'Home' },
+  { to: '/admin/teams',  icon: Shield,     label: 'Teams' },
+  { to: '/settings',     icon: Settings,   label: 'Settings' },
 ]
 
 export function AppShell({ children, hideNav = false }: AppShellProps) {
   const location = useLocation()
+  const { isSuperAdmin, isManager } = useRole()
   const isLogScreen = location.pathname.includes('/log')
   const showNav = !hideNav && !isLogScreen
 
+  const NAV_ITEMS: { to: string; icon: LucideIcon; label: string }[] = isSuperAdmin ? SUPERADMIN_NAV : isManager ? MANAGER_NAV : PLAYER_NAV
+
+  const mainRef = useRef<HTMLElement>(null)
+  const qc = useQueryClient()
+  const onRefresh = useCallback(() => qc.invalidateQueries(), [qc])
+  const { pullY, refreshing, threshold } = usePullToRefresh(mainRef, onRefresh)
+
+  const spinnerProgress = Math.min(pullY / threshold, 1)
+  const showIndicator = pullY > 0 || refreshing
+
   useEffect(() => {
-    window.scrollTo(0, 0)
+    if (mainRef.current) mainRef.current.scrollTo(0, 0)
   }, [location.pathname])
 
   return (
     <div className="flex flex-col min-h-dvh bg-background">
-      <main className={cn(
-        'flex-1 overflow-y-auto',
-        showNav && 'pb-[72px] md:pb-0 md:ml-[72px]',
-      )}>
+      {/* Pull-to-refresh indicator */}
+      {showIndicator && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center pointer-events-none"
+          style={{ height: Math.max(pullY, refreshing ? 44 : 0), transition: refreshing ? 'height 0.2s' : 'none' }}
+        >
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{
+              background: 'rgba(22,20,18,0.90)',
+              border: '1px solid rgba(247,247,255,0.12)',
+              backdropFilter: 'blur(12px)',
+              opacity: refreshing ? 1 : spinnerProgress,
+              transform: `scale(${0.6 + spinnerProgress * 0.4})`,
+            }}
+          >
+            <svg
+              width="16" height="16" viewBox="0 0 16 16"
+              style={{
+                animation: refreshing ? 'ptr-spin 0.8s linear infinite' : 'none',
+                transform: refreshing ? undefined : `rotate(${spinnerProgress * 270}deg)`,
+              }}
+            >
+              <circle cx="8" cy="8" r="6" fill="none" stroke="#23B5D3" strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray={refreshing ? '20 18' : `${spinnerProgress * 38} 38`}
+              />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes ptr-spin { to { transform: rotate(360deg); } }`}</style>
+
+      <main
+        ref={mainRef}
+        className={cn(
+          'flex-1 overflow-y-auto',
+          showNav && 'pb-[72px] md:pb-0 md:ml-[72px]',
+        )}
+      >
         {children}
       </main>
 

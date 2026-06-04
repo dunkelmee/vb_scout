@@ -1,15 +1,17 @@
 import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { RequireAuth, ManagerOnly } from './router/index'
+import { RequireAuth, ManagerOnly, SuperAdminOnly } from './router/index'
 import { AppShell } from './components/ui/AppShell'
 import { ToastProvider } from './components/ui/Toast'
 import { useSeasonStore } from './store/seasonStore'
 import { useAuthStore } from './store/authStore'
+import { useTeamSeasonStore } from './store/teamSeasonStore'
 
 // Pages
 import { LoginPage } from './app/auth/LoginPage'
 import { RegisterPage } from './app/auth/RegisterPage'
 import { AcceptInvitePage } from './app/auth/AcceptInvitePage'
+import { OnboardingPage } from './app/OnboardingPage'
 import { DashboardPage } from './app/DashboardPage'
 import { GamesPage } from './app/GamesPage'
 import { GameLogPage } from './app/GameLogPage'
@@ -23,6 +25,7 @@ import { PlayerFormPage } from './app/PlayerFormPage'
 import { SettingsPage } from './app/SettingsPage'
 import { SeasonPerformancePage } from './app/SeasonPerformancePage'
 import { CreateGameWizard } from './components/game/CreateGameWizard'
+import { AdminTeamsPage } from './app/admin/AdminTeamsPage'
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -34,10 +37,17 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 function AppWithSeasonLoader() {
   const user = useAuthStore(s => s.user)
-  const loadSeasons = useSeasonStore(s => s.loadSeasons)
+  const loadSeasons  = useSeasonStore(s => s.loadSeasons)
+  const loadTeams    = useTeamSeasonStore(s => s.loadTeams)
+  const clearTeams   = useTeamSeasonStore(s => s.clear)
 
   useEffect(() => {
-    if (user) loadSeasons()
+    if (user) {
+      loadSeasons()
+      loadTeams()
+    } else {
+      clearTeams()
+    }
   }, [user?.id])
 
   return (
@@ -50,6 +60,16 @@ function AppWithSeasonLoader() {
 
         {/* Root redirect */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+        {/* Onboarding — protected but no shell */}
+        <Route path="/onboarding" element={<RequireAuth><OnboardingPage /></RequireAuth>} />
+
+        {/* Admin routes — superadmin only */}
+        <Route path="/admin/teams" element={
+          <RequireAuth>
+            <SuperAdminOnly><AppShell><AdminTeamsPage /></AppShell></SuperAdminOnly>
+          </RequireAuth>
+        } />
 
         {/* Protected routes */}
         <Route path="/dashboard" element={<AppLayout><DashboardPage /></AppLayout>} />
@@ -87,8 +107,12 @@ function AppWithSeasonLoader() {
           </RequireAuth>
         } />
 
-        {/* Players */}
-        <Route path="/players" element={<AppLayout><PlayersPage /></AppLayout>} />
+        {/* Players — list is manager-only; :id is accessible to the player themselves via Settings */}
+        <Route path="/players" element={
+          <RequireAuth>
+            <ManagerOnly><AppShell><PlayersPage /></AppShell></ManagerOnly>
+          </RequireAuth>
+        } />
         <Route path="/players/new" element={
           <RequireAuth>
             <ManagerOnly><PlayerFormPage /></ManagerOnly>

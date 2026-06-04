@@ -7,7 +7,7 @@ const router = Router()
 // GET /api/team — return current team name and initials
 router.get('/', async (req: Request, res: Response) => {
   const teamId = req.user?.teamId
-  if (!teamId) return res.status(401).json({ error: 'No team' })
+  if (!teamId) return res.status(400).json({ error: 'No team' })
 
   try {
     const team = await prisma.team.findUnique({
@@ -24,7 +24,7 @@ router.get('/', async (req: Request, res: Response) => {
 // PATCH /api/team — update team name and/or initials (manager only)
 router.patch('/', requireManager, async (req: Request, res: Response) => {
   const teamId = req.user?.teamId
-  if (!teamId) return res.status(401).json({ error: 'No team' })
+  if (!teamId) return res.status(400).json({ error: 'No team' })
 
   const { name, initials } = req.body as { name?: string; initials?: string }
   if (!name && initials === undefined) {

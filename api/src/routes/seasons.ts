@@ -8,8 +8,9 @@ const router = Router()
 // GET /api/seasons — list all seasons (manager only)
 router.get('/', requireManager, async (req: Request, res: Response) => {
   try {
+    if (!req.user!.teamId) return res.json([])
     const seasons = await prisma.season.findMany({
-      where: { teamId: req.user!.teamId! },
+      where: { teamId: req.user!.teamId },
       orderBy: { startDate: 'desc' },
     })
     res.json(seasons)
@@ -21,8 +22,9 @@ router.get('/', requireManager, async (req: Request, res: Response) => {
 // GET /api/seasons/active — get active season
 router.get('/active', async (req: Request, res: Response) => {
   try {
+    if (!req.user!.teamId) return res.json(null)
     const season = await prisma.season.findFirst({
-      where: { teamId: req.user!.teamId!, isActive: true },
+      where: { teamId: req.user!.teamId, isActive: true },
     })
     res.json(season || null)
   } catch {

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardApi, DashboardData } from '../lib/api'
 import { useRole } from '../hooks/useRole'
+import { DashboardHeader } from '../components/ui/DashboardHeader'
 import { Badge } from '../components/ui/Badge'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine,
@@ -30,13 +31,7 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-dvh bg-background">
-      {/* Header */}
-      <div className="px-5 md:px-8 pt-safe-top pt-5 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
-          <span className="font-harabara text-2xl tracking-wide text-on-surface">courtside</span>
-        </div>
-      </div>
+      <DashboardHeader />
 
       <div className="px-5 md:px-8 space-y-6 pb-6">
         {/* Season name + quick actions */}

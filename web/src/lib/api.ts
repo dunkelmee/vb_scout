@@ -2,10 +2,6 @@
 
 export const BASE = import.meta.env.VITE_API_URL || ''
 
-/**
- * Read the access token from Zustand's persisted localStorage state.
- * This avoids a circular dependency (authStore imports api, api can't import authStore).
- */
 function getPersistedToken(): string | null {
   try {
     const raw = localStorage.getItem('vbscout-auth')
@@ -17,11 +13,8 @@ function getPersistedToken(): string | null {
   }
 }
 
-/** Clear the persisted auth state on unrecoverable 401 (e.g. refresh failed). */
 function clearPersistedAuth() {
-  try {
-    localStorage.removeItem('vbscout-auth')
-  } catch {}
+  try { localStorage.removeItem('vbscout-auth') } catch {}
 }
 
 let _isRefreshing = false
@@ -38,7 +31,6 @@ async function tryRefresh(): Promise<string | null> {
     .then(async res => {
       if (!res.ok) { clearPersistedAuth(); return null }
       const data = await res.json() as { accessToken: string }
-      // Patch the persisted store so subsequent reads get the new token
       try {
         const raw = localStorage.getItem('vbscout-auth')
         if (raw) {
@@ -64,13 +56,8 @@ async function request<T>(
   _retry = true,
 ): Promise<T> {
   const token = explicitToken ?? getPersistedToken()
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
 
   const res = await fetch(`${BASE}${path}`, {
     method,
@@ -79,16 +66,10 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   })
 
-  // On 401, attempt one token refresh then retry
   if (res.status === 401 && _retry && path !== '/api/auth/login' && path !== '/api/auth/refresh') {
     const newToken = await tryRefresh()
-    if (newToken) {
-      return request<T>(method, path, body, newToken, false)
-    }
-    // Refresh failed — redirect to login
-    if (typeof window !== 'undefined') {
-      window.location.href = '/auth/login'
-    }
+    if (newToken) return request<T>(method, path, body, newToken, false)
+    if (typeof window !== 'undefined') window.location.href = '/auth/login'
     throw new Error('Session expired')
   }
 
@@ -101,30 +82,80 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(path: string, token?: string) => request<T>('GET', path, undefined, token),
-  post: <T>(path: string, body: unknown, token?: string) => request<T>('POST', path, body, token),
-  patch: <T>(path: string, body: unknown, token?: string) => request<T>('PATCH', path, body, token),
-  delete: <T>(path: string, token?: string) => request<T>('DELETE', path, undefined, token),
+  get:    <T>(path: string, token?: string)              => request<T>('GET',    path, undefined, token),
+  post:   <T>(path: string, body: unknown, token?: string) => request<T>('POST',   path, body, token),
+  patch:  <T>(path: string, body: unknown, token?: string) => request<T>('PATCH',  path, body, token),
+  delete: <T>(path: string, token?: string)              => request<T>('DELETE', path, undefined, token),
 }
 
-// Auth
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
 export const authApi = {
-  login: (email: string, password: string) =>
-    api.post<{ user: AppUser; accessToken: string }>('/api/auth/login', { email, password }),
-  register: (email: string, password: string, teamName: string) =>
-    api.post<{ user: AppUser; accessToken: string }>('/api/auth/register', { email, password, teamName }),
-  logout: () => api.post('/api/auth/logout', {}),
-  refresh: () => api.post<{ accessToken: string }>('/api/auth/refresh', {}),
-  acceptInvite: (token: string, email: string, password: string) =>
-    api.post<{ user: AppUser; accessToken: string }>('/api/auth/accept-invite', { token, email, password }),
-  invite: (playerId: string) =>
-    api.post<{ inviteToken: string }>(`/api/auth/invite/${playerId}`, {}),
+  login:    (email: string, password: string) =>
+    api.post<AuthResponse>('/api/auth/login', { email, password }),
+  register: (data: RegisterData) =>
+    api.post<AuthResponse & { isFirstLogin: boolean }>('/api/auth/register', data),
+  logout:   () => api.post('/api/auth/logout', {}),
+  refresh:  () => api.post<{ accessToken: string }>('/api/auth/refresh', {}),
+  me:       () => api.get<AppUser>('/api/auth/me'),
+  patchMe:  (data: { onboardingDone?: boolean; firstName?: string; lastName?: string }) =>
+    api.patch<AppUser>('/api/auth/me', data),
+  uploadAvatar: (file: File) => {
+    const form = new FormData()
+    form.append('photo', file)
+    const token = (JSON.parse(localStorage.getItem('vbscout-auth') || '{}') as { state?: { token?: string } })?.state?.token
+    return fetch(`${BASE}/api/auth/me/photo`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
+      body: form,
+    }).then(async r => {
+      if (!r.ok) throw new Error((await r.json()).error || 'Upload failed')
+      return r.json() as Promise<{ avatarUrl: string }>
+    })
+  },
+  deleteAvatar: () => api.delete<{ avatarUrl: null }>('/api/auth/me/photo'),
+  myTeams:  () => api.get<TeamMembership[]>('/api/auth/me/teams'),
+  switchTeam: (teamId: string) =>
+    api.post<{ accessToken: string; teamId: string; role: string; playerId?: string }>('/api/auth/switch-team', { teamId }),
+  joinTeam: (inviteCode: string) =>
+    api.post<{ team: { id: string; name: string; initials: string | null }; role: string }>('/api/auth/teams/join', { inviteCode }),
 }
 
-// Players
+// ── Invite codes ──────────────────────────────────────────────────────────────
+
+export const invitesApi = {
+  create: (data: { role: 'manager' | 'player'; teamId?: string; maxUses?: number; boundEmail?: string }) =>
+    api.post<InviteCreateResponse>('/api/invites', data),
+  list: () => api.get<InviteCodeSummary[]>('/api/invites'),
+  revoke: (id: string) => api.delete(`/api/invites/${id}`),
+  resend: (id: string) => api.post<{ emailSent: boolean }>(`/api/invites/${id}/resend`, {}),
+  validate: (code: string) =>
+    fetch(`${BASE}/api/invites/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    }).then(async r => {
+      const data = await r.json()
+      return data as InviteValidateResponse
+    }),
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────────
+
+export const adminApi = {
+  teams:       () => api.get<AdminTeam[]>('/api/admin/teams'),
+  createTeam:  (name: string) => api.post<{ id: string; name: string }>('/api/admin/teams', { name }),
+  deleteTeam:  (id: string) => api.delete(`/api/admin/teams/${id}`),
+  users:       () => api.get<AdminUser[]>('/api/admin/users'),
+  invites:     () => api.get<AdminInvite[]>('/api/admin/invites'),
+}
+
+// ── Players ───────────────────────────────────────────────────────────────────
+
 export const playersApi = {
   list: () => api.get<Player[]>('/api/players'),
-  get: (id: string) => api.get<Player>(`/api/players/${id}`),
+  get:  (id: string) => api.get<Player>(`/api/players/${id}`),
   create: (data: Partial<Player>) => api.post<Player>('/api/players', data),
   update: (id: string, data: Partial<Player>) => api.patch<Player>(`/api/players/${id}`, data),
   delete: (id: string) => api.delete(`/api/players/${id}`),
@@ -147,108 +178,219 @@ export const playersApi = {
   deletePhoto: (id: string) => api.delete<Player>(`/api/players/${id}/photo`),
 }
 
-// Seasons
+// ── Seasons ───────────────────────────────────────────────────────────────────
+
 export const seasonsApi = {
-  list: () => api.get<Season[]>('/api/seasons'),
+  list:   () => api.get<Season[]>('/api/seasons'),
   active: () => api.get<Season | null>('/api/seasons/active'),
-  get: (id: string) => api.get<Season>(`/api/seasons/${id}`),
+  get:    (id: string) => api.get<Season>(`/api/seasons/${id}`),
   create: (data: Partial<Season>) => api.post<Season>('/api/seasons', data),
   update: (id: string, data: Partial<Season>) => api.patch<Season>(`/api/seasons/${id}`, data),
   delete: (id: string) => api.delete(`/api/seasons/${id}`),
 }
 
-// Games
+// ── Games ─────────────────────────────────────────────────────────────────────
+
 export const gamesApi = {
   list: (params?: Record<string, string>) => {
     const qs = params ? '?' + new URLSearchParams(params).toString() : ''
     return api.get<Match[]>(`/api/games${qs}`)
   },
-  get: (id: string) => api.get<Match>(`/api/games/${id}`),
-  create: (data: Partial<Match>) => api.post<Match>('/api/games', data),
-  update: (id: string, data: Partial<Match>) => api.patch<Match>(`/api/games/${id}`, data),
-  delete: (id: string) => api.delete(`/api/games/${id}`),
-  stats: (id: string, setId?: string) => {
+  get:      (id: string) => api.get<Match>(`/api/games/${id}`),
+  create:   (data: Partial<Match>) => api.post<Match>('/api/games', data),
+  update:   (id: string, data: Partial<Match>) => api.patch<Match>(`/api/games/${id}`, data),
+  delete:   (id: string) => api.delete(`/api/games/${id}`),
+  stats:    (id: string, setId?: string) => {
     const qs = setId ? `?setId=${setId}` : ''
     return api.get<MatchStats>(`/api/games/${id}/stats${qs}`)
   },
   analysis: (id: string) => api.get<MatchAnalysis>(`/api/games/${id}/analysis`),
 }
 
-// Sets
+// ── Sets ──────────────────────────────────────────────────────────────────────
+
 export const setsApi = {
   create: (matchId: string, data: { startingLineup: unknown; servingFirst?: string }) =>
     api.post<GameSet>(`/api/games/${matchId}/sets`, data),
-  get: (matchId: string, setId: string) => api.get<GameSet>(`/api/games/${matchId}/sets/${setId}`),
+  get:    (matchId: string, setId: string) => api.get<GameSet>(`/api/games/${matchId}/sets/${setId}`),
   update: (matchId: string, setId: string, data: Partial<GameSet>) =>
     api.patch<GameSet>(`/api/games/${matchId}/sets/${setId}`, data),
 }
 
-// Rallies
+// ── Rallies ───────────────────────────────────────────────────────────────────
+
 export const ralliesApi = {
-  list: (setId: string) => api.get<Rally[]>(`/api/sets/${setId}/rallies`),
-  add: (setId: string, data: { scorer: string; pointType: string }) =>
+  list:     (setId: string) => api.get<Rally[]>(`/api/sets/${setId}/rallies`),
+  add:      (setId: string, data: { scorer: string; pointType: string }) =>
     api.post<Rally>(`/api/sets/${setId}/rallies`, data),
   undoLast: (setId: string) => api.delete<{ restoredRally: Rally | null }>(`/api/sets/${setId}/rallies/last`),
 }
 
-// Substitutions & Timeouts
+// ── Substitutions & Timeouts ──────────────────────────────────────────────────
+
 export const subsApi = {
   list: (setId: string) => api.get<Substitution[]>(`/api/sets/${setId}/substitutions`),
-  add: (setId: string, data: { playerOutId?: string; playerInId?: string; isLiberoSwap?: boolean }) =>
+  add:  (setId: string, data: { playerOutId?: string; playerInId?: string; isLiberoSwap?: boolean }) =>
     api.post<Substitution>(`/api/sets/${setId}/substitutions`, data),
 }
 
 export const timeoutsApi = {
   list: (setId: string) => api.get<Timeout[]>(`/api/sets/${setId}/timeouts`),
-  add: (setId: string, calledBy: 'us' | 'them') =>
+  add:  (setId: string, calledBy: 'us' | 'them') =>
     api.post<Timeout>(`/api/sets/${setId}/timeouts`, { calledBy }),
 }
 
-// Trainings
+// ── Trainings ─────────────────────────────────────────────────────────────────
+
 export const trainingsApi = {
-  list: () => api.get<TrainingSession[]>('/api/trainings'),
-  get: (id: string) => api.get<TrainingSession>(`/api/trainings/${id}`),
+  list:   () => api.get<TrainingSession[]>('/api/trainings'),
+  get:    (id: string) => api.get<TrainingSession>(`/api/trainings/${id}`),
   create: (data: Partial<TrainingSession>) => api.post<TrainingSession>('/api/trainings', data),
   update: (id: string, data: Partial<TrainingSession>) =>
     api.patch<TrainingSession>(`/api/trainings/${id}`, data),
   delete: (id: string) => api.delete(`/api/trainings/${id}`),
-  getAttendance: (id: string) =>
-    api.get<TrainingAttendance[]>(`/api/trainings/${id}/attendance`),
+  getAttendance:    (id: string) => api.get<TrainingAttendance[]>(`/api/trainings/${id}/attendance`),
   updateAttendance: (id: string, playerId: string, status: string, note?: string) =>
     api.patch(`/api/trainings/${id}/attendance/${playerId}`, { status, note }),
 }
 
-// Dashboard
-export const dashboardApi = {
-  get: () => api.get<DashboardData>('/api/dashboard'),
-}
+// ── Dashboard & stats ─────────────────────────────────────────────────────────
 
-// Season performance detail
-export const seasonPerfApi = {
-  get: () => api.get<SeasonPerformanceData>('/api/season-performance'),
-}
+export const dashboardApi = { get: () => api.get<DashboardData>('/api/dashboard') }
+export const seasonPerfApi = { get: () => api.get<SeasonPerformanceData>('/api/season-performance') }
 
-// Team settings
+// ── Team ──────────────────────────────────────────────────────────────────────
+
 export const teamApi = {
-  get: () => api.get<{ id: string; name: string; initials: string | null }>('/api/team'),
+  get:    () => api.get<{ id: string; name: string; initials: string | null }>('/api/team'),
   update: (data: { name?: string; initials?: string }) =>
     api.patch<{ id: string; name: string; initials: string | null }>('/api/team', data),
 }
 
-// Training priorities
+// ── Training priorities ───────────────────────────────────────────────────────
+
 export const prioritiesApi = {
-  list: () => api.get<TrainingPriority[]>('/api/training-priorities'),
+  list:   () => api.get<TrainingPriority[]>('/api/training-priorities'),
   update: (id: string, data: { note?: string; status?: string }) =>
     api.patch(`/api/training-priorities/${id}`, data),
 }
 
-// ---- Types ----
+// ═══════════════════════════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export interface AppUser {
   id: string
   email: string
-  role: 'manager' | 'player'
+  role: 'superadmin' | 'manager' | 'player'
   teamId: string | null
   playerId?: string
+  firstName: string
+  lastName: string
+  onboardingDone: boolean
+  avatarUrl?: string | null
+}
+
+export interface AuthResponse {
+  user: AppUser
+  accessToken: string
+}
+
+export interface RegisterData {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  inviteCode: string
+  teamName?: string
+}
+
+export interface TeamMembership {
+  teamId: string
+  teamName: string
+  teamInitials: string | null
+  role: 'manager' | 'player'
+  isDefault: boolean
+  joinedAt: string
+  activeSeason: { id: string; name: string } | null
+}
+
+export interface InviteCreateResponse {
+  code: string
+  expiresAt: string
+  role: string
+  teamId: string | null
+  boundEmail: string | null
+  emailSent: boolean
+}
+
+export interface InviteCodeSummary {
+  id: string
+  role: string
+  teamId: string | null
+  teamName: string | null
+  boundEmail: string | null
+  useCount: number
+  maxUses: number
+  expiresAt: string
+  usedAt: string | null
+  emailSentAt: string | null
+  createdAt: string
+  isExpired: boolean
+  isFullyUsed: boolean
+}
+
+export interface InviteValidateResponse {
+  valid: boolean
+  role?: string
+  teamName?: string | null
+  teamId?: string | null
+  invitedBy?: string
+  reason?: string
+}
+
+export interface AdminTeam {
+  id: string
+  name: string
+  initials: string | null
+  createdAt: string
+  memberCount: number
+  playerCount: number
+  matchCount: number
+  activeSeason: { id: string; name: string } | null
+}
+
+export interface AdminUser {
+  id: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  onboardingDone: boolean
+  createdAt: string
+  teamMemberships: Array<{
+    teamId: string
+    role: string
+    isDefault: boolean
+    team: { name: string }
+  }>
+}
+
+export interface AdminInvite {
+  id: string
+  role: string
+  teamId: string | null
+  teamName: string | null
+  boundEmail: string | null
+  useCount: number
+  maxUses: number
+  expiresAt: string
+  usedAt: string | null
+  emailSentAt: string | null
+  createdAt: string
+  createdBy: string
+  isExpired: boolean
+  isFullyUsed: boolean
 }
 
 export interface Player {
@@ -337,7 +479,6 @@ export interface Rally {
   rotated: boolean
   currentServer: 'us' | 'them'
   loggedAt: string
-  /** True for rallies added while offline that have not yet been synced to the server. */
   isOffline?: boolean
 }
 
@@ -391,36 +532,20 @@ export interface TrainingAttendance {
 export interface MatchStats {
   matchId: string
   overall: {
-    sideoutPct: number
-    breakPct: number
-    errorRatio: number
-    positivePlayPct: number
-    totalRallies: number
-    pointsUs: number
-    pointsThem: number
+    sideoutPct: number; breakPct: number; errorRatio: number
+    positivePlayPct: number; totalRallies: number; pointsUs: number; pointsThem: number
   }
   pointQuality: {
-    positivePlayPct: number
-    errorForcedLossPct: number
-    breakQuality: number
-    sideoutQuality: number
-    benchmark: string
+    positivePlayPct: number; errorForcedLossPct: number
+    breakQuality: number; sideoutQuality: number; benchmark: string
   }
   errorClustering: number
   rotationStats: Array<{
-    rotation: number
-    wins: number
-    losses: number
-    breakPct: number
-    sideoutPct: number
-    netPct: number
-    rallies: number
+    rotation: number; wins: number; losses: number
+    breakPct: number; sideoutPct: number; netPct: number; rallies: number
   }>
   perSetStats: Array<{
-    setId: string
-    setNumber: number
-    scoreUs: number
-    scoreThem: number
+    setId: string; setNumber: number; scoreUs: number; scoreThem: number
     stats: { sideoutPct: number; breakPct: number; totalRallies: number }
   }>
   tusTimeline: Array<{ rallyIndex: number; scoreUs: number; scoreThem: number; scorer: string }>
@@ -432,10 +557,8 @@ export interface MatchAnalysis {
   matchId: string
   nRallies?: number | null
   insights?: {
-    strengths: InsightCard[]
-    weaknesses: InsightCard[]
-    action_items: InsightCard[]
-    simulation_summary?: SimulationSummary | null
+    strengths: InsightCard[]; weaknesses: InsightCard[]
+    action_items: InsightCard[]; simulation_summary?: SimulationSummary | null
   } | null
   errorMessage?: string | null
   updatedAt?: string | null

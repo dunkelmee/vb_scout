@@ -4,8 +4,11 @@ import cors from 'cors'
 import path from 'path'
 
 import { authenticate } from './middleware/auth'
+import { seedSuperAdmin, wipeAllDataIfRequested } from './lib/seed'
 
 import authRouter from './routes/auth'
+import { invitesRouter, validateInviteHandler } from './routes/invites'
+import adminRouter from './routes/admin'
 import playersRouter from './routes/players'
 import seasonsRouter from './routes/seasons'
 import gamesRouter from './routes/games'
@@ -39,19 +42,21 @@ app.use(express.json())
 app.use(cookieParser())
 
 // Serve player photo uploads as public static files
-// (no auth required — URLs are non-guessable UUIDs used as filenames)
 const UPLOADS_DIR = process.env.UPLOADS_DIR || '/app/uploads'
 app.use('/uploads', express.static(path.resolve(UPLOADS_DIR)))
 
 // Health check
 app.get('/health', (_req, res) => res.json({ status: 'ok' }))
 
-// Public routes
+// Public routes — no authentication required
 app.use('/api/auth', authRouter)
+app.post('/api/invites/validate', validateInviteHandler)  // public code validation
 
 // All routes below require authentication
 app.use('/api', authenticate)
 
+app.use('/api/invites', invitesRouter)
+app.use('/api/admin', adminRouter)
 app.use('/api/players', playersRouter)
 app.use('/api/seasons', seasonsRouter)
 app.use('/api/games', gamesRouter)
@@ -64,8 +69,10 @@ app.use('/api/trainings/:id/attendance', attendanceRouter)
 app.use('/api', statsRouter)
 app.use('/api/team', teamRouter)
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`VB Scout API running on port ${PORT}`)
+  await wipeAllDataIfRequested()
+  await seedSuperAdmin()
 })
 
 export default app

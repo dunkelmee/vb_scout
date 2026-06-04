@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 export interface AuthUser {
   id: string
   email: string
-  role: 'manager' | 'player'
+  role: 'superadmin' | 'manager' | 'player'
   teamId: string | null
 }
 

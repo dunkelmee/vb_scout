@@ -32,6 +32,9 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       ANALYSIS_SERVICE_URL: http://analysis:8001
       PORT: 3005
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
     volumes:
       - player_photos:/app/uploads
     depends_on:
@@ -71,6 +74,7 @@ services:
       - "3004:3000"
     environment:
       VITE_API_URL: http://localhost:3005
+      API_UPSTREAM: http://api:3005
     depends_on:
       - api
 
