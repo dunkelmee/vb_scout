@@ -15,4 +15,4 @@ RUN npm run build
 
 EXPOSE 3005
 
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --force-reset && node dist/index.js"]
