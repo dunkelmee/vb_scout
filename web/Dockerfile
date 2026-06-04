@@ -19,4 +19,4 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf.template
 
 EXPOSE 3000
 
-CMD ["/bin/sh", "-c", "envsubst '${API_UPSTREAM}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["/bin/sh", "-c", "export API_UPSTREAM=${API_UPSTREAM:-http://localhost:3005} && envsubst '${API_UPSTREAM}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
