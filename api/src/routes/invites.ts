@@ -104,6 +104,7 @@ invitesRouter.get('/', requireManager, async (req: Request, res: Response) => {
 
     return res.json(invites.map(inv => ({
       id: inv.id,
+      code: inv.code,
       role: inv.role,
       teamId: inv.teamId,
       teamName: inv.team?.name ?? null,

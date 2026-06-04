@@ -378,6 +378,7 @@ export interface AdminUser {
 
 export interface AdminInvite {
   id: string
+  code: string
   role: string
   teamId: string | null
   teamName: string | null

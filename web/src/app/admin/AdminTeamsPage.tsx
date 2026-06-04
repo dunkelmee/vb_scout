@@ -253,8 +253,7 @@ function InviteCodeRow({
   const expired = invite.isExpired || invite.isFullyUsed
 
   const copyCode = () => {
-    // The plaintext code is not stored after creation; show the id as reference
-    navigator.clipboard.writeText(invite.id).catch(() => {})
+    navigator.clipboard.writeText(invite.code).catch(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
