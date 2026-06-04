@@ -22,9 +22,6 @@ invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
 
   const isSuperAdmin = req.user!.role === 'superadmin'
 
-  if (role === 'manager' && isSuperAdmin && !boundEmail) {
-    return res.status(400).json({ error: 'boundEmail is required when creating a manager invite code' })
-  }
   if (role === 'manager' && !isSuperAdmin) {
     return res.status(403).json({ error: 'Only superadmins can create manager invite codes' })
   }
