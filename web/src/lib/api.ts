@@ -125,7 +125,7 @@ export const authApi = {
 // ── Invite codes ──────────────────────────────────────────────────────────────
 
 export const invitesApi = {
-  create: (data: { role: 'manager' | 'player'; teamId?: string; maxUses?: number; boundEmail?: string }) =>
+  create: (data: { role: 'manager' | 'player'; teamId?: string; maxUses?: number; boundEmail?: string; playerId?: string }) =>
     api.post<InviteCreateResponse>('/api/invites', data),
   list: () => api.get<InviteCodeSummary[]>('/api/invites'),
   revoke: (id: string) => api.delete(`/api/invites/${id}`),

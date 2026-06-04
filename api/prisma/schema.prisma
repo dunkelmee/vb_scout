@@ -65,6 +65,7 @@ model InviteCode {
   codeHash    String    @unique @map("code_hash")
   role        String    // manager | player
   teamId      String?   @map("team_id") @db.Uuid
+  playerId    String?   @map("player_id") @db.Uuid
   boundEmail  String?   @map("bound_email")
   createdById String    @map("created_by_id") @db.Uuid
   usedById    String?   @map("used_by_id") @db.Uuid
@@ -75,8 +76,9 @@ model InviteCode {
   emailSentAt DateTime? @map("email_sent_at")
   createdAt   DateTime  @default(now()) @map("created_at")
 
-  team      Team? @relation(fields: [teamId], references: [id], onDelete: SetNull)
-  createdBy User  @relation("CreatedBy", fields: [createdById], references: [id])
+  team      Team?   @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  player    Player? @relation(fields: [playerId], references: [id], onDelete: SetNull)
+  createdBy User    @relation("CreatedBy", fields: [createdById], references: [id])
 
   @@map("invite_codes")
 }
@@ -98,6 +100,7 @@ model Player {
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviteCodes        InviteCode[]
   matchPlayers       MatchPlayer[]
   substitutionsOut   Substitution[]     @relation("SubOut")
   substitutionsIn    Substitution[]     @relation("SubIn")

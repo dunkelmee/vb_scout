@@ -132,6 +132,7 @@ export function PlayersPage() {
 
       {invitePlayer && (
         <InvitePlayerModal
+          playerId={invitePlayer.id}
           playerName={`${invitePlayer.firstName} ${invitePlayer.lastName}`}
           onClose={() => setInvitePlayer(null)}
         />
@@ -140,7 +141,7 @@ export function PlayersPage() {
   )
 }
 
-function InvitePlayerModal({ playerName, onClose }: { playerName: string; onClose: () => void }) {
+function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string; playerName: string; onClose: () => void }) {
   const [boundEmail, setBoundEmail] = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
@@ -152,7 +153,7 @@ function InvitePlayerModal({ playerName, onClose }: { playerName: string; onClos
     setError('')
     setLoading(true)
     try {
-      const res = await invitesApi.create({ role: 'player', boundEmail: boundEmail.trim() || undefined })
+      const res = await invitesApi.create({ role: 'player', playerId, boundEmail: boundEmail.trim() || undefined })
       setResult({ code: res.code, emailSent: res.emailSent })
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create invite')

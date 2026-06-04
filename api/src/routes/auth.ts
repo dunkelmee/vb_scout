@@ -163,14 +163,21 @@ router.post('/register', async (req: Request, res: Response) => {
       })
 
       if (matchedInvite!.role === 'player') {
-        await tx.player.create({
-          data: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            teamId: teamId!,
-            userId: user.id,
-          },
-        })
+        if (matchedInvite!.playerId) {
+          await tx.player.update({
+            where: { id: matchedInvite!.playerId },
+            data: { userId: user.id },
+          })
+        } else {
+          await tx.player.create({
+            data: {
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+              teamId: teamId!,
+              userId: user.id,
+            },
+          })
+        }
       }
 
       await tx.inviteCode.update({

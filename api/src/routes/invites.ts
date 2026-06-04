@@ -9,11 +9,12 @@ export const invitesRouter = Router()
 
 // POST /api/invites — create invite code
 invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
-  const { role, teamId: bodyTeamId, maxUses, boundEmail } = req.body as {
+  const { role, teamId: bodyTeamId, maxUses, boundEmail, playerId } = req.body as {
     role?: string
     teamId?: string
     maxUses?: number
     boundEmail?: string
+    playerId?: string
   }
 
   if (!role || !['manager', 'player'].includes(role)) {
@@ -50,6 +51,7 @@ invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
         codeHash,
         role,
         teamId: resolvedTeamId ?? undefined,
+        playerId: playerId ?? null,
         boundEmail: boundEmail?.toLowerCase() ?? null,
         createdById: req.user!.id,
         expiresAt,
