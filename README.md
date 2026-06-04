@@ -40,9 +40,13 @@ A mobile-optimised volleyball team management and match logging application for 
 
 ### Getting Started as a Manager
 
-1. Open the app at `http://localhost:3004` (or your hosted URL).
-2. Click **Register** and enter your name, email, password, and team name. This creates your account, your team, and an initial active season.
-3. Log in. You land on the **Dashboard**, which shows your team's KPIs, upcoming games and trainings, and recent AI analysis highlights.
+Registration is invite-code gated. You need a manager invite code from the superadmin before you can create an account.
+
+1. Obtain a manager invite code from the superadmin.
+2. Open the app at `http://localhost:3004` (or your hosted URL) and click **Register**.
+3. Enter your name, email, password, invite code, and (for manager codes without a pre-assigned team) a team name. This creates your account, your team, and an initial active season.
+4. On first login you are guided through a brief **Onboarding** flow to finish setting up your profile.
+5. You land on the **Dashboard**, which shows your team's KPIs, upcoming games and trainings, and recent AI analysis highlights.
 
 ---
 
@@ -78,9 +82,9 @@ Navigate to **Players** in the bottom nav.
 3. Save. The player is added to your roster with a *pending* invite status.
 
 **Inviting a player to log in**
-1. Open the player's profile.
-2. Tap **Send Invite**. The app generates a one-time invite link valid for 7 days.
-3. Share the link with the player. When they follow it they set their email and password and their account is linked to their profile.
+1. Go to **Settings → Invite Codes** and tap **+ New Invite**.
+2. Set the role to *player*, optionally bind the code to the player's email address, and select the player profile to link. The app generates a 7-day invite code.
+3. Share the code with the player. They register at the **Register** screen using the code; their new account is automatically linked to their player profile.
 
 **Editing or deleting a player**
 - Open the player profile and tap **Edit** to update any field.
@@ -241,10 +245,11 @@ A manager can update the note on a priority or dismiss it from the active list.
 
 ### Player Guide
 
-When a manager sends you an invite link:
-1. Follow the link to the **Accept Invite** page.
-2. Enter your email and choose a password.
-3. Log in.
+When a manager sends you an invite code:
+1. Open the app and tap **Register**.
+2. Enter your name, email, password, and the invite code you received.
+3. Tap **Register** — your account is created and linked to your player profile automatically.
+4. Log in. If it is your first login you will be taken through a short onboarding flow.
 
 As a player, you can:
 - View your own profile (name, positions, jersey, height).
@@ -305,6 +310,8 @@ volleyball_scout/
 │   ├── src/
 │   │   ├── routes/             # One file per resource
 │   │   │   ├── auth.ts
+│   │   │   ├── invites.ts      # Invite code management
+│   │   │   ├── admin.ts        # Superadmin-only team/user management
 │   │   │   ├── players.ts
 │   │   │   ├── games.ts
 │   │   │   ├── seasons.ts
@@ -317,8 +324,11 @@ volleyball_scout/
 │   │   │   ├── attendance.ts
 │   │   │   └── stats.ts
 │   │   ├── lib/
-│   │   │   └── rotation.ts     # Shared rotation logic (mirrored in web/)
-│   │   └── middleware/         # Auth, error handling
+│   │   │   ├── rotation.ts     # Shared rotation logic (mirrored in web/)
+│   │   │   ├── email.ts        # Resend email helpers (invite, welcome)
+│   │   │   ├── inviteCode.ts   # Code generation and bcrypt verification
+│   │   │   └── seed.ts         # Superadmin seeding on startup
+│   │   └── middleware/         # Auth, role guards, superadmin guard
 │   └── prisma/
 │       └── schema.prisma       # Full data model
 │
@@ -326,6 +336,7 @@ volleyball_scout/
 │   └── src/
 │       ├── app/                # Page components
 │       │   ├── DashboardPage.tsx
+│       │   ├── OnboardingPage.tsx  # First-login setup flow
 │       │   ├── GamesPage.tsx
 │       │   ├── GameLogPage.tsx
 │       │   ├── GameStatsPage.tsx
@@ -336,9 +347,11 @@ volleyball_scout/
 │       │   ├── TrainingDetailPage.tsx
 │       │   ├── TrainingFormPage.tsx
 │       │   ├── SettingsPage.tsx
-│       │   ├── LoginPage.tsx
-│       │   ├── RegisterPage.tsx
-│       │   └── AcceptInvitePage.tsx
+│       │   ├── admin/
+│       │   │   └── AdminTeamsPage.tsx  # Superadmin team management
+│       │   └── auth/
+│       │       ├── LoginPage.tsx
+│       │       └── RegisterPage.tsx
 │       └── lib/
 │           ├── rotation.ts     # Shared rotation logic (mirrored in api/)
 │           └── tus.ts          # Client-side TUS computation
@@ -380,6 +393,9 @@ cp .env.example .env
 |---|---|---|
 | `POSTGRES_PASSWORD` | **Yes** | Password for the `vbuser` database account |
 | `JWT_SECRET` | **Yes** | Secret used to sign JWTs — generate with `openssl rand -base64 32` |
+| `SUPERADMIN_EMAIL` | **Yes** | Email address seeded for the superadmin account |
+| `SUPERADMIN_PASSWORD` | **Yes** | Password seeded for the superadmin account |
+| `RESEND_API_KEY` | Recommended | API key for [Resend](https://resend.com) — used to send invite and welcome emails. If omitted, emails are skipped silently. |
 
 All other variables are set automatically by `docker-compose.yml` and do not need manual configuration unless you are running services outside Docker:
 
@@ -389,7 +405,8 @@ All other variables are set automatically by `docker-compose.yml` and do not nee
 | `ANALYSIS_SERVICE_URL` | `http://analysis:8001` | API → analysis service URL |
 | `PORT` | `3005` | Express API port |
 | `VITE_API_URL` | `http://localhost:3005` | Frontend → API URL (build-time) |
-| `UPLOADS_DIR` | `/app/uploads` | Player photo storage path |
+| `UPLOADS_DIR` | `/app/uploads` | Player and user photo storage path |
+| `ALLOWED_ORIGINS` | *(none)* | Comma-separated extra origins for CORS (e.g. your production domain) |
 | `N_SIMS` | `10000` | Monte Carlo simulation count |
 | `N_SENSITIVITY` | `5000` | Sensitivity simulation count |
 | `MIN_RALLIES` | `20` | Minimum rallies required for analysis |
@@ -440,8 +457,10 @@ The schema lives in `api/prisma/schema.prisma`. Key models:
 
 | Model | Description |
 |---|---|
-| `User` | Auth credential linked to a team; role is `manager` or `player` |
+| `User` | Auth credential; role is `superadmin`, `manager`, or `player`; holds `onboardingDone` and `avatarUrl` |
 | `Team` | Top-level tenant; owns all players, seasons, and matches |
+| `TeamMember` | Junction between `User` and `Team`; supports multi-team membership; one membership is flagged `isDefault` |
+| `InviteCode` | Hashed, time-limited invite code for registering a manager or player; optionally bound to an email or player profile |
 | `Player` | Roster member with positions, jersey number, and optional user link |
 | `Season` | Date-bounded grouping for matches; one season is active at a time |
 | `Match` | A game (playing or officiating) with score, sets, and analysis result |
@@ -474,18 +493,43 @@ npx prisma studio         # opens at http://localhost:5555
 
 ### API Reference
 
-All routes are prefixed with `/api`. Authentication uses httpOnly cookies containing a JWT access token (7-day expiry) and a refresh token (30-day expiry).
+All routes are prefixed with `/api`. Authentication uses httpOnly cookies containing a JWT access token (15-minute expiry) and a refresh token (30-day expiry). The client refreshes automatically via `POST /api/auth/refresh`.
 
 #### Auth
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/register` | Public | Create manager account + team |
+| POST | `/auth/register` | Public (invite code required) | Create account using an invite code; manager codes create a new team |
 | POST | `/auth/login` | Public | Log in, sets cookies |
 | POST | `/auth/refresh` | Cookie | Rotate access token |
 | POST | `/auth/logout` | Cookie | Clear cookies |
-| POST | `/auth/invite/:playerId` | Manager | Generate player invite token |
-| POST | `/auth/accept-invite` | Token | Player sets password and links account |
+| GET | `/auth/me` | Cookie | Current user profile |
+| PATCH | `/auth/me` | Cookie | Update name or `onboardingDone` flag |
+| POST | `/auth/me/photo` | Cookie | Upload or replace profile photo (max 5 MB) |
+| DELETE | `/auth/me/photo` | Cookie | Remove profile photo |
+| GET | `/auth/me/teams` | Cookie | List all team memberships for the current user |
+| POST | `/auth/switch-team` | Cookie | Re-issue JWT scoped to a different team |
+| POST | `/auth/teams/join` | Cookie | Join an additional team using an invite code |
+
+#### Invite Codes
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/invites/validate` | Public | Check whether an invite code is valid and return its metadata |
+| POST | `/invites` | Manager | Create a player invite code; superadmin can also create manager codes |
+| GET | `/invites` | Manager | List invite codes created by the current user (superadmin sees all) |
+| DELETE | `/invites/:id` | Manager | Revoke an invite code |
+| POST | `/invites/:id/resend` | Superadmin | Resend the invite email for a bound code |
+
+#### Admin (Superadmin only)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/admin/teams` | Superadmin | List all teams with member, player, and match counts |
+| POST | `/admin/teams` | Superadmin | Create a new team (with an initial season) |
+| DELETE | `/admin/teams/:id` | Superadmin | Delete a team and all its data (cascades fully) |
+| GET | `/admin/users` | Superadmin | List all users with their team memberships |
+| GET | `/admin/invites` | Superadmin | List all invite codes across all teams |
 
 #### Players
 
@@ -604,19 +648,30 @@ The FastAPI service runs independently and connects to PostgreSQL directly.
 ### Auth System
 
 **Roles:**
-- `manager` — full write access to all team resources
+- `superadmin` — platform-wide access; manages teams and issues manager invite codes. Seeded on startup from `SUPERADMIN_EMAIL` / `SUPERADMIN_PASSWORD`.
+- `manager` — full write access to all resources within their team
 - `player` — read access to team data, write access to own RSVP only
+
+**Multi-team:** Users can belong to multiple teams via the `TeamMember` table. Each user has one default team; calling `POST /api/auth/switch-team` updates the default and re-issues tokens scoped to the new team.
 
 **Token storage:** httpOnly cookies (`Secure` in production, `SameSite=Lax`). No tokens are stored in `localStorage`.
 
-**Access token TTL:** 7 days. **Refresh token TTL:** 30 days.
+**Access token TTL:** 15 minutes. **Refresh token TTL:** 30 days. The short access token TTL means the refresh endpoint is called automatically by the client on expiry.
 
 **Password hashing:** bcrypt, cost factor 12.
 
-**Player invite flow:**
-1. Manager calls `POST /api/auth/invite/:playerId` → receives a signed 7-day JWT invite token.
-2. Manager shares the invite URL with the player.
-3. Player calls `POST /api/auth/accept-invite` with the token, email, and chosen password → account is created and linked to the player record.
+**Invite code flow:**
+1. Superadmin creates a manager invite code via `POST /api/invites` (role: `manager`).
+2. Manager registers at `POST /api/auth/register` using that code, providing a team name. A new team and default season are created.
+3. Manager creates player invite codes via `POST /api/invites` (role: `player`), optionally binding each to a player profile and email address.
+4. Players register at `POST /api/auth/register` using their code. If the code was linked to a player profile, the new user account is automatically connected to that profile.
+5. An existing logged-in user can join a second team by calling `POST /api/auth/teams/join` with a valid invite code.
+
+**Invite code details:**
+- Codes are randomly generated, stored bcrypt-hashed, and expire after 7 days.
+- If `boundEmail` is set, only that email address may use the code.
+- `maxUses` defaults to 1; superadmins can set higher values for open-registration codes.
+- If a `RESEND_API_KEY` is configured, an invite email is sent automatically when `boundEmail` is provided.
 
 ---
 
