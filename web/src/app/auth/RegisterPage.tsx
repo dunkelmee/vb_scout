@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { invitesApi, InviteValidateResponse } from '../../lib/api'
-import { Divider, GoogleButton } from './LoginPage'
+import { Divider, GoogleButton, CourtSideLogo } from './LoginPage'
 
 export function RegisterPage() {
   const [inviteCode, setInviteCode]     = useState('')
@@ -105,19 +105,36 @@ export function RegisterPage() {
         backgroundSize: '160px', mixBlendMode: 'overlay',
       }} />
       <div className="absolute bottom-0 left-0 right-0 h-1/2 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, #070600)' }} />
+      {/* Volleyball deco */}
+      <svg
+        className="absolute top-[10px] right-[-30px] pointer-events-none"
+        width={200}
+        height={200}
+        viewBox="0 0 24 24"
+        fill="none"
+        strokeWidth={1}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ opacity: 0.20 }}
+      >
+        <defs>
+          <linearGradient id="vb-grad-reg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#23B5D3" />
+            <stop offset="100%" stopColor="#A2A2D0" />
+          </linearGradient>
+        </defs>
+        <circle cx="12" cy="12" r="10" stroke="url(#vb-grad-reg)" />
+        <path d="M11.1 7.1a16.55 16.55 0 0 1 10.9 4" stroke="url(#vb-grad-reg)" />
+        <path d="M12 12a12.6 12.6 0 0 1-8.7 5" stroke="url(#vb-grad-reg)" />
+        <path d="M16.8 13.6a16.55 16.55 0 0 1-9 7.5" stroke="url(#vb-grad-reg)" />
+        <path d="M20.7 17a12.8 12.8 0 0 0-8.7-5 13.3 13.3 0 0 1 0-10" stroke="url(#vb-grad-reg)" />
+        <path d="M6.3 3.8a16.55 16.55 0 0 0 1.9 11.5" stroke="url(#vb-grad-reg)" />
+      </svg>
 
       <div className="relative z-10 flex flex-col min-h-dvh">
         {/* Hero text */}
-        <div className="px-7 pt-[50px]">
-          <button onClick={() => navigate(-1)} className="w-[34px] h-[34px] rounded-full flex items-center justify-center mb-7 text-white"
-            style={{ background: 'rgba(7,6,0,0.45)', border: '1px solid rgba(247,247,255,0.12)', backdropFilter: 'blur(8px)' }}>
-            ←
-          </button>
-          <p className="text-[12px] font-bold tracking-[0.18em] uppercase text-white/45 mb-3">courtside</p>
-          <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-4"
-            style={{ background: 'rgba(234,82,111,0.12)', border: '1px solid rgba(234,82,111,0.25)' }}>
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[#EA526F]">New team setup</span>
-          </div>
+        <div className="px-7 pt-[20px]">
+          <CourtSideLogo gradientId="logo-grad-reg" from="#23B5D3" to="#A2A2D0" className="mb-4" />
           <h1 className="text-[40px] font-black leading-[1.05] tracking-tight text-white mb-2.5">
             Your team.<br/>
             <span style={{ background: 'linear-gradient(135deg, #EA526F 0%, #23B5D3 55%, #279AF1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -127,7 +144,7 @@ export function RegisterPage() {
         </div>
 
         {/* Form */}
-        <div className="mx-3.5 mt-6 mb-5 rounded-[20px] p-[22px_18px]" style={{
+        <div className="mx-3.5 mt-4 mb-5 rounded-[20px] p-[22px_18px]" style={{
           background: 'rgba(22,20,18,0.72)', backdropFilter: 'blur(20px)', border: '1px solid rgba(247,247,255,0.08)',
         }}>
           <h2 className="text-[18px] font-bold text-white mb-0.5">Create account</h2>

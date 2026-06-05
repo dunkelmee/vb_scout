@@ -493,7 +493,7 @@ npx prisma studio         # opens at http://localhost:5555
 
 ### API Reference
 
-All routes are prefixed with `/api`. Authentication uses httpOnly cookies containing a JWT access token (15-minute expiry) and a refresh token (30-day expiry). The client refreshes automatically via `POST /api/auth/refresh`.
+All routes are prefixed with `/api`. Authentication uses httpOnly cookies containing a JWT access token (15-minute expiry for superadmin, 7-day expiry for managers and players) and a refresh token (30-day expiry for all roles).
 
 #### Auth
 
@@ -656,7 +656,7 @@ The FastAPI service runs independently and connects to PostgreSQL directly.
 
 **Token storage:** httpOnly cookies (`Secure` in production, `SameSite=Lax`). No tokens are stored in `localStorage`.
 
-**Access token TTL:** 15 minutes. **Refresh token TTL:** 30 days. The short access token TTL means the refresh endpoint is called automatically by the client on expiry.
+**Access token TTL:** 15 minutes for `superadmin`; 7 days for `manager` and `player`. **Refresh token TTL:** 30 days (all roles). Cookie `maxAge` matches the JWT expiry.
 
 **Password hashing:** bcrypt, cost factor 12.
 

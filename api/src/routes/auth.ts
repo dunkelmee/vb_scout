@@ -25,9 +25,6 @@ const uploadAvatar = multer({
 
 const router = Router()
 const SALT_ROUNDS = 12
-const ACCESS_TOKEN_EXPIRY = '15m'
-const REFRESH_TOKEN_EXPIRY = '30d'
-
 type Role = 'superadmin' | 'manager' | 'player'
 
 interface JwtPayload {
@@ -37,19 +34,27 @@ interface JwtPayload {
   teamId: string | null
 }
 
+const REFRESH_TTL_S = 30 * 24 * 60 * 60
+
+function accessTokenExpiry(role: Role): { ttlSeconds: number; cookieMs: number } {
+  return role === 'superadmin'
+    ? { ttlSeconds: 15 * 60,          cookieMs: 15 * 60 * 1000 }
+    : { ttlSeconds: 7 * 24 * 60 * 60, cookieMs: 7 * 24 * 60 * 60 * 1000 }
+}
+
 function signTokens(payload: JwtPayload) {
   const secret = process.env.JWT_SECRET!
-  const accessToken  = jwt.sign(payload, secret, { expiresIn: ACCESS_TOKEN_EXPIRY })
-  const refreshToken = jwt.sign(payload, secret, { expiresIn: REFRESH_TOKEN_EXPIRY })
+  const accessToken  = jwt.sign(payload, secret, { expiresIn: accessTokenExpiry(payload.role).ttlSeconds })
+  const refreshToken = jwt.sign(payload, secret, { expiresIn: REFRESH_TTL_S })
   return { accessToken, refreshToken }
 }
 
-function setCookies(res: Response, accessToken: string, refreshToken: string) {
+function setCookies(res: Response, accessToken: string, refreshToken: string, role: Role) {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 15 * 60 * 1000,
+    maxAge: accessTokenExpiry(role).cookieMs,
   })
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
@@ -162,22 +167,11 @@ router.post('/register', async (req: Request, res: Response) => {
         data: { userId: user.id, teamId: teamId!, role: matchedInvite!.role, isDefault: true },
       })
 
-      if (matchedInvite!.role === 'player') {
-        if (matchedInvite!.playerId) {
-          await tx.player.update({
-            where: { id: matchedInvite!.playerId },
-            data: { userId: user.id },
-          })
-        } else {
-          await tx.player.create({
-            data: {
-              firstName: firstName.trim(),
-              lastName: lastName.trim(),
-              teamId: teamId!,
-              userId: user.id,
-            },
-          })
-        }
+      if (matchedInvite!.role === 'player' && matchedInvite!.playerId) {
+        await tx.player.update({
+          where: { id: matchedInvite!.playerId },
+          data: { userId: user.id },
+        })
       }
 
       await tx.inviteCode.update({
@@ -206,7 +200,7 @@ router.post('/register', async (req: Request, res: Response) => {
       teamId: result.teamId,
     }
     const { accessToken, refreshToken } = signTokens(payload)
-    setCookies(res, accessToken, refreshToken)
+    setCookies(res, accessToken, refreshToken, payload.role)
 
     return res.status(201).json({
       user: {
@@ -252,7 +246,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const payload: JwtPayload = { id: user.id, email: user.email, role: user.role as Role, teamId }
     const { accessToken, refreshToken } = signTokens(payload)
-    setCookies(res, accessToken, refreshToken)
+    setCookies(res, accessToken, refreshToken, payload.role)
 
     return res.json({
       user: {
@@ -284,7 +278,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const secret = process.env.JWT_SECRET!
     const payload = jwt.verify(token, secret) as JwtPayload
     const { accessToken, refreshToken } = signTokens(payload)
-    setCookies(res, accessToken, refreshToken)
+    setCookies(res, accessToken, refreshToken, payload.role)
     return res.json({ accessToken })
   } catch {
     return res.status(401).json({ error: 'Invalid refresh token' })
@@ -452,7 +446,7 @@ router.post('/switch-team', authenticate, async (req: Request, res: Response) =>
       teamId,
     }
     const { accessToken, refreshToken } = signTokens(payload)
-    setCookies(res, accessToken, refreshToken)
+    setCookies(res, accessToken, refreshToken, payload.role)
 
     return res.json({ accessToken, teamId, role: membership.role, playerId })
   } catch (err) {

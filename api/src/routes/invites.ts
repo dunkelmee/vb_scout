@@ -31,6 +31,9 @@ invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
   if (role === 'player' && !resolvedTeamId) {
     return res.status(400).json({ error: 'teamId is required for player invite codes' })
   }
+  if (role === 'player' && !playerId) {
+    return res.status(400).json({ error: 'playerId is required for player invite codes' })
+  }
 
   try {
     const plainCode = generateCode()
