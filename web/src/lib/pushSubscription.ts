@@ -1,3 +1,5 @@
+import { api } from './api'
+
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string
 const PROMPT_DISMISS_KEY = 'pushPromptDismissed'
 
@@ -22,12 +24,14 @@ export async function subscribeToPush(): Promise<boolean> {
     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
   })
 
-  await fetch('/api/push/subscribe', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(subscription.toJSON()),
-    credentials: 'include',
-  })
+  // Use the shared api client so the call goes to VITE_API_URL with the Bearer
+  // token (a relative fetch would hit the web origin's nginx proxy and bypass auth).
+  // If the server save fails, surface it instead of falsely reporting success.
+  try {
+    await api.post('/api/push/subscribe', subscription.toJSON())
+  } catch {
+    return false
+  }
 
   return true
 }
@@ -40,12 +44,11 @@ export async function unsubscribeFromPush(): Promise<void> {
 
   await subscription.unsubscribe()
 
-  await fetch('/api/push/unsubscribe', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ endpoint: subscription.endpoint }),
-    credentials: 'include',
-  })
+  try {
+    await api.post('/api/push/unsubscribe', { endpoint: subscription.endpoint })
+  } catch {
+    /* local unsubscribe already done; ignore server cleanup failure */
+  }
 }
 
 export async function isPushSubscribed(): Promise<boolean> {

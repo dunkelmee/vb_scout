@@ -97,13 +97,16 @@ router.post('/reminder', requireManager, async (req: Request, res: Response) => 
     const url = entityType === 'training' ? `/trainings/${entityId}` : `/games/${entityId}`
     const tag = `reminder-${entityType}-${entityId}`
 
-    // Send notifications
-    await Promise.all(eligibleUserIds.map(uid => sendPushToUser(uid, { title, body, url, tag })))
+    // Send notifications — count users who actually received at least one push
+    const deliveryCounts = await Promise.all(
+      eligibleUserIds.map(uid => sendPushToUser(uid, { title, body, url, tag })),
+    )
+    const reachedUserIds = eligibleUserIds.filter((_, i) => deliveryCounts[i] > 0)
 
-    // Log the sends
-    if (eligibleUserIds.length > 0) {
+    // Log only the users we actually reached
+    if (reachedUserIds.length > 0) {
       await prisma.notificationLog.createMany({
-        data: eligibleUserIds.map(uid => ({
+        data: reachedUserIds.map(uid => ({
           userId:     uid,
           type:       'rsvp_request',
           entityType,
@@ -114,7 +117,7 @@ router.post('/reminder', requireManager, async (req: Request, res: Response) => 
       })
     }
 
-    res.json({ sent: eligibleUserIds.length })
+    res.json({ sent: reachedUserIds.length })
   } catch (err) {
     console.error('[notifications/reminder]', err)
     res.status(500).json({ error: 'Failed to send reminder' })

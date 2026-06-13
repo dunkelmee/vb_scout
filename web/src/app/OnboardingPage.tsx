@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
-import { playersApi, seasonsApi } from '../lib/api'
+import { playersApi, seasonsApi, teamApi } from '../lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 
 export function OnboardingPage() {
@@ -195,8 +195,7 @@ function ManagerStep1({ teamId, onNext }: { teamId: string | null; onNext: () =>
 
   React.useEffect(() => {
     if (!teamId) return
-    fetch(`/api/team`, { credentials: 'include' })
-      .then(r => r.json())
+    teamApi.get()
       .then(d => setTeamName(d.name))
       .catch(() => {})
   }, [teamId])

@@ -17,9 +17,10 @@ export interface PushPayload {
   data?:   Record<string, unknown>
 }
 
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
+/** Returns the number of subscriptions the push was successfully delivered to. */
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<number> {
   const subscriptions = await prisma.pushSubscription.findMany({ where: { userId } })
-  if (subscriptions.length === 0) return
+  if (subscriptions.length === 0) return 0
 
   const notification = JSON.stringify({
     title:  payload.title,
@@ -31,7 +32,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
     data:   payload.data,
   })
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     subscriptions.map(async sub => {
       try {
         await webpush.sendNotification(JSON.parse(sub.subscription), notification)
@@ -39,14 +40,18 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
           where: { id: sub.id },
           data:  { lastUsedAt: new Date() },
         })
+        return true
       } catch (err: unknown) {
         const status = (err as { statusCode?: number }).statusCode
         if (status === 410 || status === 404) {
           await prisma.pushSubscription.delete({ where: { id: sub.id } })
         }
+        return false
       }
     })
   )
+
+  return results.filter(r => r.status === 'fulfilled' && r.value === true).length
 }
 
 type NotifPrefField =
