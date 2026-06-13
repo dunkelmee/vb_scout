@@ -35,6 +35,9 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY}
       SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_MAILTO: ${VAPID_MAILTO}
     volumes:
       - player_photos:/app/uploads
     depends_on:
@@ -68,12 +71,16 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
+      args:
+        # Empty → frontend uses relative /api, which nginx proxies to API_UPSTREAM.
+        # This makes login work from any host (localhost, LAN IP, phone) with no CORS.
+        VITE_API_URL: ""
+        VITE_VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
     container_name: vbscout_web
     restart: unless-stopped
     ports:
       - "3004:3000"
     environment:
-      VITE_API_URL: http://localhost:3005
       API_UPSTREAM: http://api:3005
     depends_on:
       - api

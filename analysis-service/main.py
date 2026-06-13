@@ -29,17 +29,26 @@ async def health():
 
 
 @app.post("/analyse/{match_id}")
-async def trigger_analysis(match_id: str, background_tasks: BackgroundTasks):
-    """Queue background analysis for a completed match."""
+async def trigger_analysis(match_id: str, background_tasks: BackgroundTasks, body: dict | None = None):
+    """Queue background analysis for a completed match.
+
+    Accepts an optional JSON body ``{ "locale": "en" | "de" }`` controlling the
+    language of the generated insight cards. Defaults to English.
+    """
+    locale = (body or {}).get("locale", "en")
+    if locale not in ("en", "de"):
+        locale = "en"
+
     # Create/update analysis row as pending
     db.upsert_match_analysis(match_id, 'running')
 
     # Run in background
-    background_tasks.add_task(orchestrator.run_analysis, match_id)
+    background_tasks.add_task(orchestrator.run_analysis, match_id, locale)
 
     return {
         "status": "queued",
         "match_id": match_id,
+        "locale": locale,
         "estimated_seconds": 30,
     }
 

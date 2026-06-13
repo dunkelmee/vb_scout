@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Check, ChevronRight, Plus } from 'lucide-react'
 import { useTeamSeasonStore } from '../../store/teamSeasonStore'
 import { authApi } from '../../lib/api'
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function TeamSwitcherSheet({ onClose }: Props) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
 
   const allTeams       = useTeamSeasonStore(s => s.allTeams)
@@ -59,18 +61,18 @@ export function TeamSwitcherSheet({ onClose }: Props) {
     setJoining(true)
     try {
       const res = await authApi.joinTeam(code)
-      setJoinSuccess(`Joined ${res.team.name}!`)
+      setJoinSuccess(t('teamSwitcher.joined', { team: res.team.name }))
       await loadTeams()
       qc.invalidateQueries()
       setTimeout(onClose, 1500)
     } catch (err: unknown) {
-      setJoinError(err instanceof Error ? err.message : 'Invalid code')
+      setJoinError(err instanceof Error ? err.message : t('errors.invalidInviteCode'))
     } finally {
       setJoining(false)
     }
   }
 
-  const roleLabel = (role: string) => role === 'manager' ? 'Head Coach' : 'Player'
+  const roleLabel = (role: string) => role === 'manager' ? t('teamSwitcher.roleManager') : t('teamSwitcher.rolePlayer')
 
   return (
     /* Backdrop */
@@ -92,7 +94,7 @@ export function TeamSwitcherSheet({ onClose }: Props) {
         <div className="overflow-y-auto" style={{ maxHeight: 'calc(85dvh - 28px)' }}>
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3">
-            <h3 className="text-[15px] font-bold text-white">Switch team</h3>
+            <h3 className="text-[15px] font-bold text-white">{t('teamSwitcher.title')}</h3>
             <button
               onClick={onClose}
               className="w-7 h-7 rounded-full flex items-center justify-center text-[#8A8A9A] hover:text-white transition-colors"
@@ -158,7 +160,7 @@ export function TeamSwitcherSheet({ onClose }: Props) {
             <>
               <div className="mx-5 my-3 h-px" style={{ background: 'rgba(247,247,255,0.06)' }} />
               <div className="px-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A8A9A] mb-2">Season</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A8A9A] mb-2">{t('teamSwitcher.season')}</p>
                 <div className="space-y-1.5">
                   {allSeasons.map(season => {
                     const isActive = season.id === activeSeasonId
@@ -175,7 +177,7 @@ export function TeamSwitcherSheet({ onClose }: Props) {
                         <div className="flex-1 min-w-0">
                           <p className="text-[12px] font-semibold text-white truncate">{season.name}</p>
                           {season.isActive && (
-                            <p className="text-[10px] text-[#23B5D3]">Current season</p>
+                            <p className="text-[10px] text-[#23B5D3]">{t('teamSwitcher.currentSeason')}</p>
                           )}
                         </div>
                         {isActive && <Check size={13} className="text-[#23B5D3] shrink-0" />}
@@ -201,18 +203,18 @@ export function TeamSwitcherSheet({ onClose }: Props) {
                   <Plus size={16} className="text-[#EA526F]" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-[13px] font-bold text-white">Join another team</p>
-                  <p className="text-[10px] text-[#8A8A9A]">Enter an invitation code</p>
+                  <p className="text-[13px] font-bold text-white">{t('teamSwitcher.joinAnother')}</p>
+                  <p className="text-[10px] text-[#8A8A9A]">{t('teamSwitcher.enterCode')}</p>
                 </div>
                 <ChevronRight size={14} className="text-[#4A4A5A] shrink-0" />
               </button>
             ) : (
               <form onSubmit={handleJoin} className="space-y-2.5">
-                <p className="text-[12px] font-semibold text-white">Join another team</p>
+                <p className="text-[12px] font-semibold text-white">{t('teamSwitcher.joinAnother')}</p>
                 <input
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value)}
-                  placeholder="VB3X·9KQM"
+                  placeholder={t('auth.register.inviteCodePlaceholder')}
                   maxLength={9}
                   autoFocus
                   className="w-full rounded-[10px] px-3 py-[11px] text-[15px] font-bold tracking-[0.15em] text-center uppercase outline-none"
@@ -231,7 +233,7 @@ export function TeamSwitcherSheet({ onClose }: Props) {
                     className="flex-1 py-[11px] rounded-[10px] text-[13px] font-semibold text-[#8A8A9A]"
                     style={{ background: 'rgba(247,247,255,0.04)', border: '1px solid rgba(247,247,255,0.06)' }}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="submit"
@@ -239,7 +241,7 @@ export function TeamSwitcherSheet({ onClose }: Props) {
                     className="flex-1 py-[11px] rounded-[10px] text-[13px] font-bold text-black disabled:opacity-50"
                     style={{ background: 'linear-gradient(135deg, #EA526F, #23B5D3)' }}
                   >
-                    {joining ? '…' : 'Join'}
+                    {joining ? '…' : t('teamSwitcher.join')}
                   </button>
                 </div>
               </form>

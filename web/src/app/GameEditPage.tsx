@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { gamesApi, playersApi, seasonsApi, Player, Season } from '../lib/api'
@@ -9,6 +10,7 @@ import { useToast } from '../components/ui/Toast'
 import { ArrowLeft } from 'lucide-react'
 
 export function GameEditPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -84,16 +86,16 @@ export function GameEditPage() {
       qc.invalidateQueries({ queryKey: ['game', id] })
       qc.invalidateQueries({ queryKey: ['games'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
-      showToast('Game updated', 'success')
+      showToast(t('games.gameUpdated'), 'success')
       navigate(-1)
     },
-    onError: () => showToast('Failed to update game', 'error'),
+    onError: () => showToast(t('games.updateFailed'), 'error'),
   })
 
   if (isLoading) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
-        <p className="text-on-surface-variant text-sm animate-pulse">Loading…</p>
+        <p className="text-on-surface-variant text-sm animate-pulse">{t('common.loading')}</p>
       </div>
     )
   }
@@ -101,7 +103,7 @@ export function GameEditPage() {
   if (!match) {
     return (
       <div className="min-h-dvh bg-background flex items-center justify-center">
-        <p className="text-error text-sm">Game not found.</p>
+        <p className="text-error text-sm">{t('games.notFound')}</p>
       </div>
     )
   }
@@ -112,7 +114,7 @@ export function GameEditPage() {
   const officialOpts = (ownId: string) => {
     const taken = new Set([ref1Id, ref2Id, scorer1Id, scorer2Id].filter(id => id && id !== ownId))
     return [
-      { value: '', label: 'None' },
+      { value: '', label: t('common.none') },
       ...players
         .filter((p: Player) => !taken.has(p.id))
         .map((p: Player) => ({ value: p.id, label: `${p.firstName} ${p.lastName}${p.jersey ? ` #${p.jersey}` : ''}` })),
@@ -132,9 +134,9 @@ export function GameEditPage() {
           <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <div className="flex-1">
-          <h1 className="font-display font-bold text-base text-on-surface">Edit game</h1>
+          <h1 className="font-display font-bold text-base text-on-surface">{t('games.editGame')}</h1>
           <p className="text-xs text-on-surface-variant">
-            {isPlaying ? `vs ${match.opponent || 'TBD'}` : `${match.homeTeam || '?'} vs ${match.guestTeam || '?'}`}
+            {isPlaying ? `vs ${match.opponent || t('games.tbd')}` : `${match.homeTeam || '?'} vs ${match.guestTeam || '?'}`}
           </p>
         </div>
       </div>
@@ -145,7 +147,7 @@ export function GameEditPage() {
         {isPlaying ? (
           <>
             <Input
-              label="Opponent"
+              label={t('gameWizard.opponent')}
               value={opponent}
               onChange={e => {
                 setOpponent(e.target.value)
@@ -156,37 +158,37 @@ export function GameEditPage() {
               required
             />
             <Input
-              label="Opponent initials (max 6)"
+              label={t('gameWizard.opponentShort')}
               value={opponentInitials}
               onChange={e => setOppInitials(e.target.value.toUpperCase().slice(0, 6))}
-              placeholder="e.g. OPP"
+              placeholder={t('gameWizard.opponentShortEg')}
             />
           </>
         ) : (
           <>
-            <Input label="Home team"  value={homeTeam}  onChange={e => setHomeTeam(e.target.value)}  required />
-            <Input label="Guest team" value={guestTeam} onChange={e => setGuestTeam(e.target.value)} required />
+            <Input label={t('gameWizard.homeTeam')}  value={homeTeam}  onChange={e => setHomeTeam(e.target.value)}  required />
+            <Input label={t('gameWizard.guestTeam')} value={guestTeam} onChange={e => setGuestTeam(e.target.value)} required />
           </>
         )}
 
         <Input
-          label="Date & time"
+          label={t('gameWizard.dateTime')}
           type="datetime-local"
           value={date}
           onChange={e => setDate(e.target.value)}
           required
         />
         <Input
-          label="Location"
+          label={t('gameWizard.location')}
           value={location}
           onChange={e => setLocation(e.target.value)}
-          placeholder="Optional"
+          placeholder={t('common.optional')}
         />
 
         {isPlaying && (
           <>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Who serves first?</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">{t('gameWizard.firstServe')}</p>
               <div className="flex gap-2">
                 {(['us', 'them'] as const).map(srv => (
                   <button
@@ -198,7 +200,7 @@ export function GameEditPage() {
                         : 'border-outline/20 text-on-surface-variant'
                     }`}
                   >
-                    {srv === 'us' ? 'Us' : 'Them'}
+                    {srv === 'us' ? t('gameWizard.us') : t('gameWizard.them')}
                   </button>
                 ))}
               </div>
@@ -206,12 +208,12 @@ export function GameEditPage() {
 
             {seasons.length > 0 && (
               <Select
-                label="Season"
+                label={t('gameWizard.season')}
                 value={seasonId}
                 onChange={e => setSeasonId(e.target.value)}
                 options={[
-                  { value: '', label: 'No season' },
-                  ...seasons.map(s => ({ value: s.id, label: s.name + (s.isActive ? ' (Active)' : '') })),
+                  { value: '', label: t('gameWizard.noSeason') },
+                  ...seasons.map(s => ({ value: s.id, label: s.name + (s.isActive ? ` (${t('seasons.active')})` : '') })),
                 ]}
               />
             )}
@@ -220,14 +222,14 @@ export function GameEditPage() {
 
         {!isPlaying && players.length > 0 && (
           <div className="pt-2 border-t border-outline/10 space-y-3">
-            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">Officials from roster</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">{t('gameWizard.officialsFromRoster')}</p>
             <div className="grid grid-cols-2 gap-3">
-              <Select label="1st Referee" value={ref1Id}    onChange={e => setRef1Id(e.target.value)}    options={officialOpts(ref1Id)} />
-              <Select label="2nd Referee" value={ref2Id}    onChange={e => setRef2Id(e.target.value)}    options={officialOpts(ref2Id)} />
+              <Select label={t('gameWizard.ref1')} value={ref1Id}    onChange={e => setRef1Id(e.target.value)}    options={officialOpts(ref1Id)} />
+              <Select label={t('gameWizard.ref2')} value={ref2Id}    onChange={e => setRef2Id(e.target.value)}    options={officialOpts(ref2Id)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Select label="1st Scorer"  value={scorer1Id} onChange={e => setScorer1Id(e.target.value)} options={officialOpts(scorer1Id)} />
-              <Select label="2nd Scorer"  value={scorer2Id} onChange={e => setScorer2Id(e.target.value)} options={officialOpts(scorer2Id)} />
+              <Select label={t('gameWizard.scorer1')}  value={scorer1Id} onChange={e => setScorer1Id(e.target.value)} options={officialOpts(scorer1Id)} />
+              <Select label={t('gameWizard.scorer2')}  value={scorer2Id} onChange={e => setScorer2Id(e.target.value)} options={officialOpts(scorer2Id)} />
             </div>
           </div>
         )}
@@ -237,7 +239,7 @@ export function GameEditPage() {
       {/* Footer */}
       <div className="px-5 md:px-8 py-4 border-t border-outline/10 flex gap-3">
         <Button variant="outline" onClick={() => navigate(-1)} className="flex-1">
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button
           onClick={() => updateMutation.mutate()}
@@ -245,7 +247,7 @@ export function GameEditPage() {
           disabled={!canSave}
           className="flex-1"
         >
-          Save changes
+          {t('common.saveChanges')}
         </Button>
       </div>
     </div>

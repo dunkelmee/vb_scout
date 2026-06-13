@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
   const [error, setError]       = useState('')
@@ -23,7 +25,7 @@ export function LoginPage() {
       setShowLoader(true)
       setTimeout(() => navigate(dest, { replace: true }), 900)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : t('auth.login.loginFailed'))
       setLoading(false)
     }
   }
@@ -88,13 +90,13 @@ export function LoginPage() {
         <div className="px-7 pt-[50px]">
           <CourtSideLogo gradientId="logo-grad-login" from="#FF77AA" to="#A2A2D0" className="mb-4" />
           <h1 className="text-[40px] font-black leading-[1.05] tracking-tight text-white mb-2.5">
-            Play smarter.<br/>
+            {t('auth.login.heroTitle1')}<br/>
             <span style={{ background: 'linear-gradient(135deg, #23B5D3 0%, #279AF1 55%, #EA526F 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Win more.
+              {t('auth.login.heroTitle2')}
             </span>
           </h1>
           <p className="text-[13px] text-white/50 leading-relaxed max-w-[280px]">
-            Manage your team and track every point — live on the court.
+            {t('auth.login.heroSubtitle')}
           </p>
         </div>
 
@@ -104,31 +106,31 @@ export function LoginPage() {
           backdropFilter: 'blur(20px)',
           border: '1px solid rgba(247,247,255,0.08)',
         }}>
-          <h2 className="text-[18px] font-bold text-white mb-0.5">Welcome back</h2>
-          <p className="text-[12px] text-[#8A8A9A] mb-5">Sign in to your team account</p>
+          <h2 className="text-[18px] font-bold text-white mb-0.5">{t('auth.login.title')}</h2>
+          <p className="text-[12px] text-[#8A8A9A] mb-5">{t('auth.login.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <AuthField icon="✉" label="Email" type="email" value={email} onChange={setEmail} placeholder="coach@volleyclub.de" />
-            <AuthField icon="🔒" label="Password" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+            <AuthField icon="✉" label={t('auth.login.emailLabel')} type="email" value={email} onChange={setEmail} placeholder={t('auth.login.emailPlaceholder')} />
+            <AuthField icon="🔒" label={t('auth.login.passwordLabel')} type="password" value={password} onChange={setPassword} placeholder="••••••••" />
 
-            <p className="text-[11px] text-[#23B5D3] text-right -mt-1 cursor-pointer">Forgot password?</p>
+            <p className="text-[11px] text-[#23B5D3] text-right -mt-1 cursor-pointer">{t('auth.login.forgotPassword')}</p>
 
             {error && (
               <p className="text-[12px] text-[#F07A90] bg-[rgba(234,82,111,0.1)] rounded-lg px-3 py-2">{error}</p>
             )}
 
             <AuthButton loading={loading} gradient="linear-gradient(135deg, #23B5D3, #279AF1)" shadow="rgba(35,181,211,0.30)">
-              Sign in
+              {t('auth.login.signIn')}
             </AuthButton>
           </form>
 
           <Divider />
 
-          <GoogleButton label="Continue with Google" />
+          <GoogleButton label={t('auth.login.googleButton')} />
 
           <p className="text-center text-[12px] text-[#8A8A9A] mt-4">
-            No account yet?{' '}
-            <Link to="/auth/register" className="text-[#23B5D3] font-semibold">Create one →</Link>
+            {t('auth.login.noAccount')}{' '}
+            <Link to="/auth/register" className="text-[#23B5D3] font-semibold">{t('auth.login.createOne')}</Link>
           </p>
         </div>
       </div>
@@ -181,16 +183,18 @@ function AuthButton({ children, loading, gradient, shadow }: {
 }
 
 function Divider() {
+  const { t } = useTranslation()
   return (
     <div className="flex items-center gap-2.5 my-4 text-[11px] text-[#4A4A5A]">
       <div className="flex-1 h-px bg-[#2F2D28]" />
-      or continue with
+      {t('auth.login.orContinue')}
       <div className="flex-1 h-px bg-[#2F2D28]" />
     </div>
   )
 }
 
 function GoogleButton({ label, onClick }: { label: string; onClick?: () => void }) {
+  const { t } = useTranslation()
   const [toastVisible, setToastVisible] = React.useState(false)
 
   const handleClick = () => {
@@ -212,7 +216,7 @@ function GoogleButton({ label, onClick }: { label: string; onClick?: () => void 
       </button>
       {toastVisible && (
         <p className="text-center text-[11px] text-[#8A8A9A] mt-2">
-          Google sign-in is coming soon. Please use email and password for now.
+          {t('auth.login.googleSoon')}
         </p>
       )}
     </>

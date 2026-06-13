@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { dashboardApi, DashboardData } from '../lib/api'
 import { useRole } from '../hooks/useRole'
@@ -14,6 +15,7 @@ import { chartTheme } from '../lib/chartTheme'
 import { MatchCard } from '../components/game/MatchCard'
 
 export function DashboardPage() {
+  const { t } = useTranslation()
   const { isManager } = useRole()
   const navigate = useNavigate()
   const { data, isLoading } = useQuery<DashboardData>({
@@ -43,28 +45,28 @@ export function DashboardPage() {
           )}
           {isManager && (
             <div>
-              <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">Quick add</h3>
+              <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">{t('dashboard.quickAdd')}</h3>
               <div className="flex gap-2">
                 <button
                   onClick={() => navigate('/games/new')}
                   className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
                 >
                   <CalendarDays size={20} className="text-turq-500" />
-                  <span className="text-xs font-bold text-white">Game</span>
+                  <span className="text-xs font-bold text-white">{t('dashboard.quickGame')}</span>
                 </button>
                 <button
                   onClick={() => navigate('/players/new')}
                   className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
                 >
                   <Users size={20} className="text-turq-500" />
-                  <span className="text-xs font-bold text-white">Player</span>
+                  <span className="text-xs font-bold text-white">{t('dashboard.quickPlayer')}</span>
                 </button>
                 <button
                   onClick={() => navigate('/trainings/new')}
                   className="flex flex-1 flex-col items-center justify-center gap-2 py-4 card active:scale-95 transition-transform"
                 >
                   <Dumbbell size={20} className="text-turq-500" />
-                  <span className="text-xs font-bold text-white">Training</span>
+                  <span className="text-xs font-bold text-white">{t('dashboard.quickTraining')}</span>
                 </button>
               </div>
             </div>
@@ -90,9 +92,9 @@ export function DashboardPage() {
         {(data?.upcomingGames?.length ?? 0) > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant">Upcoming</h3>
+              <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant">{t('dashboard.upcoming')}</h3>
               <Link to="/games" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1">
-                All <ChevronRight size={12} />
+                {t('common.all')} <ChevronRight size={12} />
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
@@ -114,15 +116,15 @@ export function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant">
-                Trainings
+                {t('nav.trainings')}
               </h3>
               <Link to="/trainings" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1">
-                All <ChevronRight size={12} />
+                {t('common.all')} <ChevronRight size={12} />
               </Link>
             </div>
             <div className="space-y-2">
               {data!.upcomingTrainings.slice(0, 3).map(session => {
-                const counts = session.attendanceCounts || { coming: 0, not_coming: 0, pending: 0 }
+                const counts = session.rsvpCounts || { confirmed: 0, declined: 0, maybe: 0, pending: 0 }
                 return (
                   <Link
                     key={session.id}
@@ -136,7 +138,7 @@ export function DashboardPage() {
                       </p>
                     </div>
                     <div className="text-xs text-on-surface-variant shrink-0">
-                      {counts.coming} coming
+                      {t('trainings.coming', { count: counts.confirmed })}
                     </div>
                   </Link>
                 )
@@ -149,27 +151,27 @@ export function DashboardPage() {
         {isManager && data?.recentAnalysis && (
           <div>
             <h3 className="font-display font-bold text-sm uppercase tracking-wide text-on-surface-variant mb-3">
-              Latest Analysis
+              {t('dashboard.latestAnalysis')}
             </h3>
             <div className="card p-4 space-y-3">
               <p className="text-xs text-on-surface-variant">
-                {data.recentAnalysis.matchOpponent || 'Match'} · {format(data.recentAnalysis.matchDate)}
+                {data.recentAnalysis.matchOpponent || t('dashboard.matchFallback')} · {format(data.recentAnalysis.matchDate)}
               </p>
               {data.recentAnalysis.topStrength && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Strength" variant="win" />
+                  <Badge label={t('dashboard.strength')} variant="win" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topStrength.title}</p>
                 </div>
               )}
               {data.recentAnalysis.topWeakness && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Weakness" variant="loss" />
+                  <Badge label={t('dashboard.weakness')} variant="loss" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topWeakness.title}</p>
                 </div>
               )}
               {data.recentAnalysis.topAction && (
                 <div className="flex items-start gap-2">
-                  <Badge label="Action" variant="info" />
+                  <Badge label={t('dashboard.action')} variant="info" />
                   <p className="text-sm text-on-surface">{data.recentAnalysis.topAction.title}</p>
                 </div>
               )}
@@ -177,7 +179,7 @@ export function DashboardPage() {
                 to={`/games/${data.recentAnalysis.matchId}/stats`}
                 className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-1"
               >
-                View full analysis <ChevronRight size={12} />
+                {t('dashboard.viewFullAnalysis')} <ChevronRight size={12} />
               </Link>
             </div>
           </div>
@@ -196,40 +198,41 @@ function SeasonSnapshot({
   kpis: NonNullable<DashboardData['kpis']>
   seasonPerf: DashboardData['seasonPerf']
 }) {
+  const { t } = useTranslation()
   const { matchRecord, setRecord, points } = kpis
   const pointsRatio = points.them > 0 ? (points.us / points.them).toFixed(2) : '—'
-  const trendLabel = matchRecord.wins >= matchRecord.losses ? 'winning' : 'losing'
+  const trendLabel = matchRecord.wins >= matchRecord.losses ? t('dashboard.winning') : t('dashboard.losing')
 
   return (
     <div>
       <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
-        Season Snapshot
+        {t('dashboard.seasonSnapshot')}
       </h3>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Matches</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('dashboard.record')}</p>
           <p className="font-display font-black text-2xl text-on-surface">
             {matchRecord.wins}–{matchRecord.losses}
           </p>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {setRecord.wins}–{setRecord.losses} sets · {trendLabel}
+            {setRecord.wins}–{setRecord.losses} {t('dashboard.setsLabel')} · {trendLabel}
           </p>
         </div>
         <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Points</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('seasonOverview.kpiPoints')}</p>
           <p className="font-display font-black text-2xl text-secondary-container">{pointsRatio}</p>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {points.us} scored · {points.them} conceded
+            {points.us} {t('dashboard.scored')} · {points.them} {t('dashboard.conceded')}
           </p>
         </div>
         <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Sideout %</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('dashboard.sideoutPct')}</p>
           <p className="font-display font-black text-2xl text-turq-500">
             {seasonPerf ? `${seasonPerf.sideoutPct}%` : '—'}
           </p>
         </div>
         <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">Break %</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-1">{t('dashboard.breakPct')}</p>
           <p className="font-display font-black text-2xl text-secondary-container">
             {seasonPerf ? `${seasonPerf.breakPct}%` : '—'}
           </p>
@@ -242,10 +245,11 @@ function SeasonSnapshot({
 // ---- Season Results ----
 
 function SeasonResults({ matches }: { matches: DashboardData['winLossTrend'] }) {
+  const { t } = useTranslation()
   return (
     <div>
       <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
-        Season Results
+        {t('dashboard.seasonResults')}
       </h3>
       <div className="-mx-5 px-5 overflow-x-auto md:mx-0 md:px-0 md:overflow-visible">
         <div className="flex gap-2 pb-1 w-max md:w-auto md:flex-wrap md:pb-0">
@@ -293,6 +297,7 @@ function SeasonPerformance({
   seasonPerf: NonNullable<DashboardData['seasonPerf']>
   weakestRotation: DashboardData['weakestRotation']
 }) {
+  const { t } = useTranslation()
   const withData = trend.filter(m => m.sideoutPct != null)
   const lastMatch = withData[withData.length - 1]
 
@@ -322,33 +327,33 @@ function SeasonPerformance({
   return (
     <div>
       <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
-        Season Performance
+        {t('dashboard.seasonPerformance')}
       </h3>
       <div className="card p-4">
         <div className="flex justify-between items-center mb-4">
           <span className="font-display font-bold text-xs uppercase tracking-widest text-on-surface">
-            Trends across {trend.length} {trend.length === 1 ? 'match' : 'matches'}
+            {t('seasonOverview.trends', { count: trend.length })}
           </span>
           <Link to="/season-performance" className="text-xs text-turq-500 font-bold uppercase tracking-wide flex items-center gap-0.5">
-            Full view <ChevronRight size={11} />
+            {t('dashboard.trendFullView')} <ChevronRight size={11} />
           </Link>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mb-4">
           <StatColumn
-            label="Error Ratio"
+            label={t('stats.errorRatio')}
             value={seasonPerf.errorRatio.toFixed(2)}
             trend={errorTrend}
             valueColor="text-bubb-500"
           />
           <StatColumn
-            label="Sideout"
+            label={t('dashboard.sideout')}
             value={`${seasonPerf.sideoutPct}%`}
             trend={sideoutTrend}
             valueColor="text-turq-500"
           />
           <StatColumn
-            label="Break %"
+            label={t('dashboard.breakPct')}
             value={`${seasonPerf.breakPct}%`}
             trend={breakTrend}
             valueColor="text-secondary-container"
@@ -357,25 +362,24 @@ function SeasonPerformance({
 
         {chartData.length > 1 && (
           <div>
-            <SwimlaneLine data={chartData} dataKey="sideout" color={chartTheme.turq}  label="Sideout %" valueLabel="Sideout" />
-            <SwimlaneLine data={chartData} dataKey="error"   color={chartTheme.pink}  label="Error ratio" valueLabel="Error ratio" />
-            <SwimlaneLine data={chartData} dataKey="break"   color={chartTheme.bell}  label="Break %" valueLabel="Break" showXAxis />
+            <SwimlaneLine data={chartData} dataKey="sideout" color={chartTheme.turq}  label={t('dashboard.sideoutPct')} valueLabel={t('dashboard.sideout')} />
+            <SwimlaneLine data={chartData} dataKey="error"   color={chartTheme.pink}  label={t('stats.errorRatio')} valueLabel={t('stats.errorRatio')} />
+            <SwimlaneLine data={chartData} dataKey="break"   color={chartTheme.bell}  label={t('dashboard.breakPct')} valueLabel={t('dashboard.breakPoint')} showXAxis />
           </div>
         )}
 
         <div className="flex justify-between items-center mt-3 pt-3 border-t border-white/[0.07]">
           <p className="text-xs text-on-surface-variant">
-            Weakest rotation:{' '}
-            {weakestRotation ? (
-              <span className="text-bubb-500 font-bold">
-                R{weakestRotation.rotation} ({weakestRotation.winPct}%)
-              </span>
-            ) : (
-              <span className="opacity-50">not enough data</span>
-            )}
+            {weakestRotation
+              ? (
+                <span className="text-bubb-500 font-bold">
+                  {t('dashboard.weakestRotation', { rotation: `R${weakestRotation.rotation}`, pct: weakestRotation.winPct })}
+                </span>
+              )
+              : t('dashboard.weakestRotation', { rotation: '—', pct: '—' })}
           </p>
           <button className="text-xs text-on-surface-variant/60 font-medium flex items-center gap-0.5">
-            View details <ChevronRight size={10} />
+            {t('dashboard.viewDetails')} <ChevronRight size={10} />
           </button>
         </div>
       </div>
@@ -394,17 +398,22 @@ function StatColumn({
   trend: { label: string; direction: 'up' | 'down' | 'flat'; isGood: boolean }
   valueColor: string
 }) {
+  const { t } = useTranslation()
   const trendColor = trend.direction === 'flat'
     ? 'text-on-surface-variant'
     : trend.isGood ? 'text-turq-400' : 'text-bubb-500'
   const arrow = { up: '↑', down: '↓', flat: '→' }[trend.direction]
+  const trendLabel = trend.label === 'flat' ? t('dashboard.trendFlat')
+    : trend.label === 'worsening' ? t('dashboard.trendWorsening')
+      : trend.label === 'improving' ? t('dashboard.trendImproving')
+        : trend.label
 
   return (
     <div className="min-w-0">
       <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant truncate">{label}</p>
       <p className={cn('font-display font-black text-lg leading-tight mt-0.5', valueColor)}>{value}</p>
       <p className={cn('text-[10px] font-bold mt-0.5 leading-none', trendColor)}>
-        {arrow} {trend.label}
+        {arrow} {trendLabel}
       </p>
     </div>
   )

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bell, ArrowRightLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
@@ -6,6 +7,7 @@ import { useTeamSeasonStore } from '../../store/teamSeasonStore'
 import { TeamSwitcherSheet } from './TeamSwitcherSheet'
 
 export function DashboardHeader() {
+  const { t }      = useTranslation()
   const user       = useAuthStore(s => s.user)
   const allTeams   = useTeamSeasonStore(s => s.allTeams)
   const allSeasons = useTeamSeasonStore(s => s.allSeasons)
@@ -21,7 +23,7 @@ export function DashboardHeader() {
   const initials = [user?.firstName?.[0], user?.lastName?.[0]]
     .filter(Boolean).join('').toUpperCase() || '?'
 
-  const firstName = user?.firstName || 'Coach'
+  const firstName = user?.firstName || t('dashboard.coachFallback')
 
   return (
     <>
@@ -32,7 +34,7 @@ export function DashboardHeader() {
           <button onClick={() => navigate('/settings')} className="relative shrink-0 active:scale-95 transition-transform">
             {user?.avatarUrl ? (
               <img src={`${import.meta.env.VITE_API_URL || ''}${user.avatarUrl}`}
-                className="w-9 h-9 rounded-full object-cover" alt="Profile" />
+                className="w-9 h-9 rounded-full object-cover" alt={t('settings.profile')} />
             ) : (
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-black text-white select-none"
                 style={{ background: 'linear-gradient(135deg, #EA526F 0%, #23B5D3 60%, #279AF1 100%)' }}>
@@ -46,10 +48,10 @@ export function DashboardHeader() {
           {/* Greeting */}
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A8A9A] leading-none mb-0.5">
-              Welcome back
+              {t('dashboard.welcomeBack')}
             </p>
             <p className="text-[16px] font-black text-white leading-none truncate">
-              Hi, {firstName} 👋
+              {t('dashboard.greeting', { firstName })}
             </p>
           </div>
 
@@ -80,7 +82,7 @@ export function DashboardHeader() {
 
           <div className="flex-1 min-w-0 text-left">
             <p className="text-[15px] font-bold text-white leading-tight truncate">
-              {activeTeam?.teamName ?? 'No team'}
+              {activeTeam?.teamName ?? t('dashboard.noTeam')}
             </p>
             {activeSeason && (
               <p className="text-[11px] text-[#8A8A9A] leading-none truncate mt-0.5">

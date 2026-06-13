@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { trainingsApi } from '../lib/api'
@@ -10,6 +11,7 @@ import { ArrowLeft } from 'lucide-react'
 const FOCUS_OPTIONS = ['Serve', 'Reception', 'Attack', 'Block', 'Defence', 'Rotation', 'Fitness', 'Set piece']
 
 export function TrainingFormPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -74,32 +76,33 @@ export function TrainingFormPage() {
           <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <h1 className="font-display font-bold text-base text-on-surface">
-          {isEdit ? 'Edit Training' : 'New Training Session'}
+          {isEdit ? t('trainings.editSession') : t('trainings.newSession')}
         </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-        <Input label="Title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Serve & Reception Drill" required />
-        <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+        <Input label={t('trainings.nameLabel')} value={title} onChange={e => setTitle(e.target.value)} placeholder={t('trainings.titlePlaceholder')} required />
+        <Input label={t('trainings.dateLabel')} type="date" value={date} onChange={e => setDate(e.target.value)} required />
         <div className="grid grid-cols-2 gap-3">
-          <Input label="Start time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
-          <Input label="End time (optional)" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+          <Input label={t('trainings.startTime')} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
+          <Input label={t('trainings.endTime')} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
         </div>
-        <Input label="Location" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Main gym" />
+        <Input label={t('trainings.locationLabel')} value={location} onChange={e => setLocation(e.target.value)} placeholder={t('trainings.locationPlaceholder')} />
         <ChipGroup
-          label="Focus tags"
+          label={t('trainings.focusLabel')}
           options={FOCUS_OPTIONS}
           selected={focusTags}
           onChange={setFocusTags}
+          renderLabel={opt => t(`trainings.focus${opt}`, { defaultValue: opt })}
         />
-        <Textarea label="Notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Describe the session plan..." rows={4} />
+        <Textarea label={t('trainings.notesLabel')} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('trainings.notesPlaceholder')} rows={4} />
 
         <div className="flex gap-3 pt-2 pb-safe">
           <Button variant="outline" type="button" onClick={() => navigate(-1)} className="flex-1">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button type="submit" loading={isLoading} className="flex-1">
-            {isEdit ? 'Save changes' : 'Create session'}
+            {isEdit ? t('trainings.saveChanges') : t('trainings.createSession')}
           </Button>
         </div>
       </form>

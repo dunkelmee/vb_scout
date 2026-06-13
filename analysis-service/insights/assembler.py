@@ -72,15 +72,15 @@ def extract_flat_metrics(analysis_result: Dict) -> Dict:
     return metrics
 
 
-def assemble_insights(analysis_result: Dict) -> Dict:
+def assemble_insights(analysis_result: Dict, locale: str = 'en') -> Dict:
     """Build the full insights payload from raw analysis data."""
     metrics = extract_flat_metrics(analysis_result)
     rotation_profiles = analysis_result.get('rotation_profiles')
     sensitivity = analysis_result.get('simulation', {}).get('sensitivity') if analysis_result.get('simulation') else None
 
-    strengths = detect_strengths(metrics, rotation_profiles)
-    weaknesses = detect_weaknesses(metrics, rotation_profiles, sensitivity)
-    action_items = generate_action_items(weaknesses, sensitivity)
+    strengths = detect_strengths(metrics, rotation_profiles, locale)
+    weaknesses = detect_weaknesses(metrics, rotation_profiles, sensitivity, locale)
+    action_items = generate_action_items(weaknesses, sensitivity, locale)
 
     sim = analysis_result.get('simulation', {})
     simulation_summary = None

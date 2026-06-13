@@ -1,9 +1,11 @@
 """Strength detection from match metrics."""
 from typing import List, Dict, Optional
 from .thresholds import STRENGTH_THRESHOLDS, ROTATION_STRENGTH_THRESHOLD
+from . import templates as tpl
 
 
-def detect_strengths(metrics: Dict, rotation_profiles: Optional[Dict] = None) -> List[Dict]:
+def detect_strengths(metrics: Dict, rotation_profiles: Optional[Dict] = None,
+                     locale: str = 'en') -> List[Dict]:
     """Return list of strength insight dicts, sorted by impact proxy."""
     strengths = []
     priority = 1
@@ -19,12 +21,13 @@ def detect_strengths(metrics: Dict, rotation_profiles: Optional[Dict] = None) ->
         )
 
         if is_strength:
-            detail = detail_tmpl.format(val=value)
+            title = tpl.strength_label(metric, label, locale)
+            detail = tpl.strength_detail(metric, detail_tmpl, locale).format(val=value)
             strengths.append({
                 'id': f'strength_{metric}',
                 'category': 'strength',
                 'priority': priority,
-                'title': label,
+                'title': title,
                 'detail': detail,
                 'metric': metric,
                 'current_value': round(float(value), 4),
@@ -47,8 +50,8 @@ def detect_strengths(metrics: Dict, rotation_profiles: Optional[Dict] = None) ->
                     'id': f'strength_rotation_{rot}',
                     'category': 'strength',
                     'priority': priority,
-                    'title': f'Rotation {rot} is a structural strength',
-                    'detail': f'Rotation {rot} Efficiency: {re:.2f} (Strong). Win rate: {rot_data["win_rate"]:.0%}.',
+                    'title': tpl.misc('rotation_strong_title', locale).format(rot=rot),
+                    'detail': tpl.misc('rotation_strong_detail', locale).format(rot=rot, re=re, win=rot_data["win_rate"]),
                     'metric': f'rotation_{rot}_re',
                     'current_value': round(re, 4),
                     'target_value': ROTATION_STRENGTH_THRESHOLD,

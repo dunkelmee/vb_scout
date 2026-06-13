@@ -190,6 +190,7 @@ router.post('/register', async (req: Request, res: Response) => {
         firstName: firstName.trim(),
         teamName: team?.name ?? '',
         role: result.user.role as 'manager' | 'player',
+        locale: (result.user.locale === 'en' ? 'en' : 'de'),
       }).catch(() => {})
     }
 
@@ -211,6 +212,7 @@ router.post('/register', async (req: Request, res: Response) => {
         role: result.user.role,
         teamId: result.teamId,
         onboardingDone: result.user.onboardingDone,
+        locale: result.user.locale,
       },
       accessToken,
       isFirstLogin: true,
@@ -259,6 +261,7 @@ router.post('/login', async (req: Request, res: Response) => {
         playerId,
         onboardingDone: user.onboardingDone,
         avatarUrl: user.avatarUrl ?? null,
+        locale: user.locale,
       },
       accessToken,
       isFirstLogin: !user.onboardingDone && user.role !== 'superadmin',
@@ -299,7 +302,10 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       where: { id: req.user!.id },
       select: {
         id: true, email: true, firstName: true, lastName: true,
-        role: true, onboardingDone: true, avatarUrl: true,
+        role: true, onboardingDone: true, avatarUrl: true, locale: true,
+        notifRsvpRequests: true, notifRsvpResponses: true,
+        notifMatchReminder: true, notifTrainingReminder: true,
+        notifAnalysisReady: true,
       },
     })
     if (!user) return res.status(404).json({ error: 'User not found' })
@@ -318,12 +324,27 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
   }
 })
 
-// PATCH /api/auth/me — update onboardingDone or name
+// PATCH /api/auth/me — update profile fields and notification preferences
 router.patch('/me', authenticate, async (req: Request, res: Response) => {
-  const { onboardingDone, firstName, lastName } = req.body as {
+  const {
+    onboardingDone, firstName, lastName, locale,
+    notifRsvpRequests, notifRsvpResponses,
+    notifMatchReminder, notifTrainingReminder,
+    notifAnalysisReady,
+  } = req.body as {
     onboardingDone?: boolean
     firstName?: string
     lastName?: string
+    locale?: string
+    notifRsvpRequests?: boolean
+    notifRsvpResponses?: boolean
+    notifMatchReminder?: boolean
+    notifTrainingReminder?: boolean
+    notifAnalysisReady?: boolean
+  }
+
+  if (locale !== undefined && !['en', 'de'].includes(locale)) {
+    return res.status(400).json({ error: 'locale must be "en" or "de"' })
   }
 
   try {
@@ -333,10 +354,19 @@ router.patch('/me', authenticate, async (req: Request, res: Response) => {
         ...(onboardingDone !== undefined && { onboardingDone }),
         ...(firstName !== undefined && { firstName: firstName.trim() }),
         ...(lastName !== undefined && { lastName: lastName.trim() }),
+        ...(locale !== undefined && { locale }),
+        ...(notifRsvpRequests !== undefined && { notifRsvpRequests }),
+        ...(notifRsvpResponses !== undefined && { notifRsvpResponses }),
+        ...(notifMatchReminder !== undefined && { notifMatchReminder }),
+        ...(notifTrainingReminder !== undefined && { notifTrainingReminder }),
+        ...(notifAnalysisReady !== undefined && { notifAnalysisReady }),
       },
       select: {
         id: true, email: true, firstName: true, lastName: true,
-        role: true, onboardingDone: true, avatarUrl: true,
+        role: true, onboardingDone: true, avatarUrl: true, locale: true,
+        notifRsvpRequests: true, notifRsvpResponses: true,
+        notifMatchReminder: true, notifTrainingReminder: true,
+        notifAnalysisReady: true,
       },
     })
     return res.json({ ...updated, teamId: req.user!.teamId })

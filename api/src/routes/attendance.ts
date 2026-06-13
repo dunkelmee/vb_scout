@@ -3,7 +3,8 @@ import prisma from '../lib/prisma'
 
 const router = Router({ mergeParams: true })
 
-// GET /api/trainings/:id/attendance
+// GET /api/trainings/:id/attendance — RSVP roster for a training (manager only)
+// Returns all players with their RSVP status
 router.get('/', async (req: Request, res: Response) => {
   const { id: trainingId } = req.params
   try {
@@ -12,81 +13,30 @@ router.get('/', async (req: Request, res: Response) => {
     })
     if (!session) return res.status(404).json({ error: 'Training session not found' })
 
-    const where: Record<string, unknown> = { trainingSessionId: trainingId }
-
-    // Players can only see own attendance
-    if (req.user!.role === 'player') {
-      const player = await prisma.player.findFirst({ where: { userId: req.user!.id } })
-      if (!player) return res.status(404).json({ error: 'Player not found' })
-      where.playerId = player.id
-    }
-
-    const attendance = await prisma.trainingAttendance.findMany({
-      where,
-      include: {
-        player: {
-          select: { id: true, firstName: true, lastName: true, jersey: true, positions: true },
-        },
-      },
-      orderBy: { player: { lastName: 'asc' } },
+    const players = await prisma.player.findMany({
+      where: { teamId: req.user!.teamId! },
+      select: { id: true, firstName: true, lastName: true, jersey: true, positions: true, userId: true },
+      orderBy: { lastName: 'asc' },
     })
 
-    res.json(attendance)
+    const rsvps = await prisma.rsvp.findMany({
+      where: { entityType: 'training', entityId: trainingId },
+    })
+    const rsvpByUserId = new Map(rsvps.map(r => [r.playerId, r]))
+
+    const result = players.map(p => ({
+      playerId:  p.id,
+      userId:    p.userId,
+      firstName: p.firstName,
+      lastName:  p.lastName,
+      jersey:    p.jersey,
+      positions: p.positions,
+      rsvp:      p.userId ? (rsvpByUserId.get(p.userId) ?? null) : null,
+    }))
+
+    res.json(result)
   } catch {
     res.status(500).json({ error: 'Failed to fetch attendance' })
-  }
-})
-
-// PATCH /api/trainings/:id/attendance/:playerId — update RSVP
-router.patch('/:playerId', async (req: Request, res: Response) => {
-  const { id: trainingId, playerId } = req.params
-  const { status, note } = req.body
-
-  if (!status || !['coming', 'not_coming', 'pending'].includes(status)) {
-    return res.status(400).json({ error: 'status must be coming | not_coming | pending' })
-  }
-
-  try {
-    const session = await prisma.trainingSession.findFirst({
-      where: { id: trainingId, teamId: req.user!.teamId! },
-    })
-    if (!session) return res.status(404).json({ error: 'Training session not found' })
-
-    // Players can only update own RSVP
-    if (req.user!.role === 'player') {
-      const myPlayer = await prisma.player.findFirst({ where: { userId: req.user!.id } })
-      if (!myPlayer || myPlayer.id !== playerId) {
-        return res.status(403).json({ error: 'You can only update your own RSVP' })
-      }
-    }
-
-    const attendance = await prisma.trainingAttendance.upsert({
-      where: {
-        trainingSessionId_playerId: { trainingSessionId: trainingId, playerId },
-      },
-      update: {
-        status,
-        note: note !== undefined ? note : undefined,
-        respondedAt: new Date(),
-      },
-      create: {
-        trainingSessionId: trainingId,
-        playerId,
-        status,
-        note,
-        respondedAt: new Date(),
-      },
-      include: {
-        player: {
-          select: { id: true, firstName: true, lastName: true, jersey: true },
-        },
-      },
-    })
-
-    res.json(attendance)
-  } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Failed to update attendance' })
   }
 })
 

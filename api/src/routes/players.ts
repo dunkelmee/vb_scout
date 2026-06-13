@@ -71,21 +71,6 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
       },
     })
 
-    // Create pending attendance for all upcoming training sessions
-    const upcomingSessions = await prisma.trainingSession.findMany({
-      where: { teamId: req.user!.teamId!, date: { gte: new Date() } },
-    })
-    if (upcomingSessions.length > 0) {
-      await prisma.trainingAttendance.createMany({
-        data: upcomingSessions.map(s => ({
-          trainingSessionId: s.id,
-          playerId: player.id,
-          status: 'pending',
-        })),
-        skipDuplicates: true,
-      })
-    }
-
     res.status(201).json(player)
   } catch (err) {
     console.error(err)

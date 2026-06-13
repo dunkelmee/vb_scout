@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { gamesApi, playersApi, seasonsApi, Player, Season } from '../../lib/api'
@@ -42,6 +43,7 @@ const TOTAL_STEPS_PLAYING = 3
 const TOTAL_STEPS_OFFICIATING = 1
 
 export function CreateGameWizard() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const user = useAuthStore(s => s.user)
@@ -127,11 +129,11 @@ export function CreateGameWizard() {
         </button>
         <div className="flex-1">
           <h1 className="font-display font-bold text-base text-on-surface">
-            {state.matchType === 'officiating' ? 'New Officiating Game' : 'New Game'}
+            {state.matchType === 'officiating' ? t('gameWizard.newOfficiatingGame') : t('gameWizard.newGame')}
           </h1>
           {state.matchType === 'playing' && (
             <p className="text-xs text-on-surface-variant">
-              Step {state.step + 1} of {totalSteps}
+              {t('gameWizard.stepOf', { current: state.step + 1, total: totalSteps })}
             </p>
           )}
         </div>
@@ -157,20 +159,20 @@ export function CreateGameWizard() {
         {/* Match type selector (only on step 0) */}
         {state.step === 0 && (
           <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Match Type</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">{t('gameWizard.matchType')}</p>
             <div className="flex gap-2">
-              {(['playing', 'officiating'] as const).map(t => (
+              {(['playing', 'officiating'] as const).map(mt => (
                 <button
-                  key={t}
-                  onClick={() => update({ matchType: t })}
+                  key={mt}
+                  onClick={() => update({ matchType: mt })}
                   className={cn(
                     'flex-1 py-3 rounded-xl border text-sm font-bold uppercase tracking-wide transition-all',
-                    state.matchType === t
+                    state.matchType === mt
                       ? 'border-orange bg-orange/10 text-orange'
                       : 'border-outline/20 text-on-surface-variant hover:border-outline/40'
                   )}
                 >
-                  {t}
+                  {mt === 'playing' ? t('gameWizard.playing') : t('gameWizard.officiating')}
                 </button>
               ))}
             </div>
@@ -182,17 +184,17 @@ export function CreateGameWizard() {
           <div className="space-y-4">
             {seasons.length > 0 && (
               <Select
-                label="Season"
+                label={t('gameWizard.season')}
                 value={state.seasonId}
                 onChange={e => update({ seasonId: e.target.value })}
                 options={[
-                  { value: '', label: 'No season' },
-                  ...seasons.map(s => ({ value: s.id, label: s.name + (s.isActive ? ' (Active)' : '') })),
+                  { value: '', label: t('gameWizard.noSeason') },
+                  ...seasons.map(s => ({ value: s.id, label: s.name + (s.isActive ? ` (${t('seasons.active')})` : '') })),
                 ]}
               />
             )}
             <Input
-              label="Opponent"
+              label={t('gameWizard.opponent')}
               value={state.opponent}
               onChange={e => {
                 const opp = e.target.value
@@ -201,31 +203,31 @@ export function CreateGameWizard() {
                   opponentInitials: opp.slice(0, 3).toUpperCase(),
                 })
               }}
-              placeholder="Opponent team name"
+              placeholder={t('gameWizard.opponent')}
               required
             />
             <Input
-              label="Opponent initials (max 6)"
+              label={t('gameWizard.opponentShort')}
               value={state.opponentInitials}
               onChange={e => update({ opponentInitials: e.target.value.toUpperCase().slice(0, 6) })}
-              placeholder="e.g. OPP"
+              placeholder={t('gameWizard.opponentShortEg')}
               maxLength={6}
             />
             <Input
-              label="Date & time"
+              label={t('gameWizard.dateTime')}
               type="datetime-local"
               value={state.date}
               onChange={e => update({ date: e.target.value })}
               required
             />
             <Input
-              label="Location"
+              label={t('gameWizard.location')}
               value={state.location}
               onChange={e => update({ location: e.target.value })}
-              placeholder="Optional"
+              placeholder={t('common.optional')}
             />
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Who serves first?</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">{t('gameWizard.firstServe')}</p>
               <div className="flex gap-2">
                 {(['us', 'them'] as const).map(srv => (
                   <button
@@ -238,7 +240,7 @@ export function CreateGameWizard() {
                         : 'border-outline/20 text-on-surface-variant'
                     )}
                   >
-                    {srv === 'us' ? 'Us' : 'Them'}
+                    {srv === 'us' ? t('gameWizard.us') : t('gameWizard.them')}
                   </button>
                 ))}
               </div>
@@ -249,10 +251,10 @@ export function CreateGameWizard() {
         {/* Officiating form */}
         {state.step === 0 && state.matchType === 'officiating' && (
           <div className="space-y-4">
-            <Input label="Home team" value={state.homeTeam} onChange={e => update({ homeTeam: e.target.value })} required />
-            <Input label="Guest team" value={state.guestTeam} onChange={e => update({ guestTeam: e.target.value })} required />
-            <Input label="Date & time" type="datetime-local" value={state.date} onChange={e => update({ date: e.target.value })} required />
-            <Input label="Location" value={state.location} onChange={e => update({ location: e.target.value })} />
+            <Input label={t('gameWizard.homeTeam')} value={state.homeTeam} onChange={e => update({ homeTeam: e.target.value })} required />
+            <Input label={t('gameWizard.guestTeam')} value={state.guestTeam} onChange={e => update({ guestTeam: e.target.value })} required />
+            <Input label={t('gameWizard.dateTime')} type="datetime-local" value={state.date} onChange={e => update({ date: e.target.value })} required />
+            <Input label={t('gameWizard.location')} value={state.location} onChange={e => update({ location: e.target.value })} />
 
             {/* Officials from our roster — each player can only hold one role */}
             {players.length > 0 && (() => {
@@ -262,7 +264,7 @@ export function CreateGameWizard() {
                   .filter(id => id && id !== ownId))
 
               const opts = (ownId: string) => [
-                { value: '', label: 'None' },
+                { value: '', label: t('common.none') },
                 ...players
                   .filter(p => !taken(ownId).has(p.id))
                   .map(p => ({ value: p.id, label: `${p.firstName} ${p.lastName}` })),
@@ -270,15 +272,15 @@ export function CreateGameWizard() {
 
               return (
                 <div className="pt-1 border-t border-outline/10">
-                  <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-3">Officials from roster</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-3">{t('gameWizard.officialsFromRoster')}</p>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
-                      <Select label="1st Referee" value={state.ref1Id}   onChange={e => update({ ref1Id:    e.target.value })} options={opts(state.ref1Id)} />
-                      <Select label="2nd Referee" value={state.ref2Id}   onChange={e => update({ ref2Id:    e.target.value })} options={opts(state.ref2Id)} />
+                      <Select label={t('gameWizard.ref1')} value={state.ref1Id}   onChange={e => update({ ref1Id:    e.target.value })} options={opts(state.ref1Id)} />
+                      <Select label={t('gameWizard.ref2')} value={state.ref2Id}   onChange={e => update({ ref2Id:    e.target.value })} options={opts(state.ref2Id)} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <Select label="1st Scorer"  value={state.scorer1Id} onChange={e => update({ scorer1Id: e.target.value })} options={opts(state.scorer1Id)} />
-                      <Select label="2nd Scorer"  value={state.scorer2Id} onChange={e => update({ scorer2Id: e.target.value })} options={opts(state.scorer2Id)} />
+                      <Select label={t('gameWizard.scorer1')}  value={state.scorer1Id} onChange={e => update({ scorer1Id: e.target.value })} options={opts(state.scorer1Id)} />
+                      <Select label={t('gameWizard.scorer2')}  value={state.scorer2Id} onChange={e => update({ scorer2Id: e.target.value })} options={opts(state.scorer2Id)} />
                     </div>
                   </div>
                 </div>
@@ -291,19 +293,19 @@ export function CreateGameWizard() {
         {state.step === 1 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-bold text-on-surface">Select players ({state.selectedPlayerIds.length} selected)</p>
+              <p className="text-sm font-bold text-on-surface">{t('gameWizard.playersSelected', { count: state.selectedPlayerIds.length })}</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => update({ selectedPlayerIds: players.map(p => p.id) })}
                   className="text-xs text-orange font-bold"
                 >
-                  All
+                  {t('gameWizard.selectAll')}
                 </button>
                 <button
                   onClick={() => update({ selectedPlayerIds: [] })}
                   className="text-xs text-on-surface-variant font-bold"
                 >
-                  Clear
+                  {t('gameWizard.clearAll')}
                 </button>
               </div>
             </div>
@@ -371,7 +373,7 @@ export function CreateGameWizard() {
             loading={createMutation.isPending}
             disabled={!state.homeTeam || !state.guestTeam}
           >
-            Create game
+            {t('gameWizard.createGame')}
           </Button>
         )}
 
@@ -381,7 +383,7 @@ export function CreateGameWizard() {
             onClick={next}
             disabled={!state.opponent || !state.date}
           >
-            Next: Select players <ChevronRight size={16} />
+            {`${t('common.next')}: ${t('gameWizard.stepPlayers')}`} <ChevronRight size={16} />
           </Button>
         )}
 
@@ -391,7 +393,7 @@ export function CreateGameWizard() {
             onClick={next}
             disabled={state.selectedPlayerIds.length < 6}
           >
-            Next: Set lineup <ChevronRight size={16} />
+            {`${t('common.next')}: ${t('gameWizard.stepLineup')}`} <ChevronRight size={16} />
           </Button>
         )}
 
@@ -404,7 +406,7 @@ export function CreateGameWizard() {
               disabled={Object.keys(state.lineup).length < 6}
               className="flex-1"
             >
-              Save
+              {t('common.save')}
             </Button>
             <Button
               onClick={() => handleConfirm(true)}
@@ -412,7 +414,7 @@ export function CreateGameWizard() {
               disabled={Object.keys(state.lineup).length < 6}
               className="flex-1"
             >
-              Save & Log
+              {t('gameWizard.confirmAndLog')}
             </Button>
           </>
         )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router-dom'
 import { LayoutGrid, CalendarDays, Dumbbell, Users, Settings, Shield, type LucideIcon } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -12,33 +13,34 @@ interface AppShellProps {
 }
 
 const MANAGER_NAV = [
-  { to: '/dashboard',  icon: LayoutGrid,  label: 'Home' },
-  { to: '/games',      icon: CalendarDays, label: 'Games' },
-  { to: '/trainings',  icon: Dumbbell,     label: 'Trainings' },
-  { to: '/players',    icon: Users,        label: 'Players' },
-  { to: '/settings',   icon: Settings,     label: 'Settings' },
+  { to: '/dashboard',  icon: LayoutGrid,  labelKey: 'nav.home' },
+  { to: '/games',      icon: CalendarDays, labelKey: 'nav.games' },
+  { to: '/trainings',  icon: Dumbbell,     labelKey: 'nav.trainings' },
+  { to: '/players',    icon: Users,        labelKey: 'nav.players' },
+  { to: '/settings',   icon: Settings,     labelKey: 'nav.settings' },
 ]
 
 const PLAYER_NAV = [
-  { to: '/dashboard',  icon: LayoutGrid,  label: 'Home' },
-  { to: '/games',      icon: CalendarDays, label: 'Games' },
-  { to: '/trainings',  icon: Dumbbell,     label: 'Trainings' },
-  { to: '/settings',   icon: Settings,     label: 'Settings' },
+  { to: '/dashboard',  icon: LayoutGrid,  labelKey: 'nav.home' },
+  { to: '/games',      icon: CalendarDays, labelKey: 'nav.games' },
+  { to: '/trainings',  icon: Dumbbell,     labelKey: 'nav.trainings' },
+  { to: '/settings',   icon: Settings,     labelKey: 'nav.settings' },
 ]
 
 const SUPERADMIN_NAV = [
-  { to: '/dashboard',    icon: LayoutGrid, label: 'Home' },
-  { to: '/admin/teams',  icon: Shield,     label: 'Teams' },
-  { to: '/settings',     icon: Settings,   label: 'Settings' },
+  { to: '/dashboard',    icon: LayoutGrid, labelKey: 'nav.home' },
+  { to: '/admin/teams',  icon: Shield,     labelKey: 'nav.teams' },
+  { to: '/settings',     icon: Settings,   labelKey: 'nav.settings' },
 ]
 
 export function AppShell({ children, hideNav = false }: AppShellProps) {
+  const { t } = useTranslation()
   const location = useLocation()
   const { isSuperAdmin, isManager } = useRole()
   const isLogScreen = location.pathname.includes('/log')
   const showNav = !hideNav && !isLogScreen
 
-  const NAV_ITEMS: { to: string; icon: LucideIcon; label: string }[] = isSuperAdmin ? SUPERADMIN_NAV : isManager ? MANAGER_NAV : PLAYER_NAV
+  const NAV_ITEMS: { to: string; icon: LucideIcon; labelKey: string }[] = isSuperAdmin ? SUPERADMIN_NAV : isManager ? MANAGER_NAV : PLAYER_NAV
 
   const mainRef = useRef<HTMLElement>(null)
   const qc = useQueryClient()
@@ -103,7 +105,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
           {/* Mobile: bottom nav */}
           <nav className="fixed bottom-0 left-0 right-0 z-30 h-[72px] flex items-end pb-2 px-2 bg-pitch-800/95 backdrop-blur-sm border-t border-pitch-400/40 md:hidden">
             <div className="w-full flex justify-around items-center max-w-lg mx-auto">
-              {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+              {NAV_ITEMS.map(({ to, icon: Icon, labelKey }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -120,7 +122,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                         size={22}
                         className={cn(isActive && 'drop-shadow-[0_0_6px_rgba(35,181,211,0.60)]')}
                       />
-                      <span className="text-[10px] font-bold uppercase tracking-wide">{label}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide">{t(labelKey)}</span>
                       {isActive && (
                         <span className="absolute bottom-2 w-1 h-1 rounded-full bg-turq-500" />
                       )}
@@ -137,7 +139,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
               <img src="/vb-icon.svg" alt="courtside" className="w-8 h-8" />
             </div>
             <div className="flex-1 flex flex-col items-center gap-1 py-4 w-full px-2">
-              {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+              {NAV_ITEMS.map(({ to, icon: Icon, labelKey }) => (
                 <NavLink
                   key={to}
                   to={to}
@@ -157,7 +159,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                         className={cn(isActive && 'drop-shadow-[0_0_6px_rgba(35,181,211,0.60)]')}
                       />
                       <span className="text-[9px] font-bold uppercase tracking-wide leading-tight text-center">
-                        {label}
+                        {t(labelKey)}
                       </span>
                     </>
                   )}

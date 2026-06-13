@@ -20,6 +20,10 @@ import trainingsRouter from './routes/trainings'
 import attendanceRouter from './routes/attendance'
 import statsRouter from './routes/stats'
 import teamRouter from './routes/team'
+import pushRouter from './routes/push'
+import rsvpRouter from './routes/rsvp'
+import notificationsRouter from './routes/notifications'
+import { startReminderCron } from './jobs/reminders'
 
 const app = express()
 const PORT = process.env.PORT || 3005
@@ -68,11 +72,15 @@ app.use('/api/trainings', trainingsRouter)
 app.use('/api/trainings/:id/attendance', attendanceRouter)
 app.use('/api', statsRouter)
 app.use('/api/team', teamRouter)
+app.use('/api/push', pushRouter)
+app.use('/api/rsvp', rsvpRouter)
+app.use('/api/notifications', notificationsRouter)
 
 app.listen(PORT, async () => {
   console.log(`VB Scout API running on port ${PORT}`)
   await wipeAllDataIfRequested()
   await seedSuperAdmin()
+  startReminderCron()
 })
 
 export default app

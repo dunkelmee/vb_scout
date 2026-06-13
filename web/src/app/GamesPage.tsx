@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { gamesApi, Match } from '../lib/api'
@@ -8,14 +9,14 @@ import { Tabs } from '../components/ui/Tabs'
 import { Plus } from 'lucide-react'
 import { MatchCard } from '../components/game/MatchCard'
 
-const FILTER_TABS = [
-  { id: 'playing', label: 'Playing' },
-  { id: 'officiating', label: 'Officiating' },
-]
-
 export function GamesPage() {
+  const { t } = useTranslation()
   const { isManager } = useRole()
   const [filter, setFilter] = useState('playing')
+  const FILTER_TABS = [
+    { id: 'playing', label: t('games.playing') },
+    { id: 'officiating', label: t('games.officiating') },
+  ]
   const qc = useQueryClient()
   const navigate = useNavigate()
 
@@ -42,8 +43,8 @@ export function GamesPage() {
   return (
     <div className="min-h-dvh bg-background">
       <PageHeader
-        title="Games"
-        subtitle="Match Schedule"
+        title={t('games.title')}
+        subtitle={t('games.eyebrow')}
         right={isManager ? (
           <button
             onClick={() => navigate('/games/new')}
@@ -65,7 +66,7 @@ export function GamesPage() {
           <section>
             <h3 className="text-[11px] font-bold uppercase tracking-[0.09em] text-turq-500 mb-2.5 flex items-center gap-2">
               <span className="w-[3px] h-3.5 rounded-sm bg-turq-500 inline-block flex-shrink-0" />
-              Upcoming
+              {t('games.upcoming')}
             </h3>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
               {upcoming.map(match => (
@@ -75,7 +76,7 @@ export function GamesPage() {
                   isManager={isManager}
                   canLog={isManager && (isToday(match.date) || match.status === 'in_progress')}
                   onDelete={() => {
-                    if (confirm('Delete this game?')) deleteMutation.mutate(match.id)
+                    if (confirm(t('games.deleteConfirm'))) deleteMutation.mutate(match.id)
                   }}
                 />
               ))}
@@ -87,7 +88,7 @@ export function GamesPage() {
           <section>
             <h3 className="text-[11px] font-bold uppercase tracking-[0.09em] text-turq-500 mb-2.5 flex items-center gap-2">
               <span className="w-[3px] h-3.5 rounded-sm bg-turq-500 inline-block flex-shrink-0" />
-              Past Results
+              {t('games.pastResults')}
             </h3>
             <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 md:gap-3">
               {past.map(match => (
@@ -97,7 +98,7 @@ export function GamesPage() {
                   isManager={isManager}
                   canLog={false}
                   onDelete={() => {
-                    if (confirm('Delete this game?')) deleteMutation.mutate(match.id)
+                    if (confirm(t('games.deleteConfirm'))) deleteMutation.mutate(match.id)
                   }}
                 />
               ))}
@@ -110,13 +111,13 @@ export function GamesPage() {
             <div className="w-16 h-16 rounded-full bg-pitch-600 flex items-center justify-center">
               <CalendarDays size={28} className="text-ghost-400" />
             </div>
-            <p className="text-ghost-300 text-center">No games found.</p>
+            <p className="text-ghost-300 text-center">{t('games.empty')}</p>
             {isManager && (
               <button
                 onClick={() => navigate('/games/new')}
                 className="text-turq-500 font-bold text-sm border border-turq-500/30 rounded-full px-4 py-2"
               >
-                Create first game
+                {t('games.createFirst')}
               </button>
             )}
           </div>
