@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi, invitesApi, AdminTeam, AdminInvite } from '../../lib/api'
+import { currentLocale } from '../../lib/format'
 import { PageHeader } from '../../components/ui/AppShell'
 import {
   Plus, Copy, Trash2, Mail, Users, Trophy, ChevronDown, ChevronUp, X, Check,
 } from 'lucide-react'
 
 export function AdminTeamsPage() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
 
   const { data: teams = [], isLoading: teamsLoading } = useQuery({
@@ -50,8 +53,8 @@ export function AdminTeamsPage() {
   return (
     <div className="min-h-dvh" style={{ background: '#0B0A08' }}>
       <PageHeader
-        title="Teams"
-        subtitle="Superadmin"
+        title={t('nav.teams')}
+        subtitle={t('admin.superadmin')}
         right={
           <button
             onClick={() => setShowNewTeam(true)}
@@ -59,7 +62,7 @@ export function AdminTeamsPage() {
             style={{ background: 'linear-gradient(135deg, #23B5D3, #279AF1)' }}
           >
             <Plus size={14} />
-            New team
+            {t('admin.newTeam')}
           </button>
         }
       />
@@ -67,7 +70,7 @@ export function AdminTeamsPage() {
       <div className="px-5 md:px-8 space-y-3 pb-8">
         {teams.length === 0 && (
           <div className="text-center py-16 text-[#8A8A9A] text-sm">
-            No teams yet. Create the first one.
+            {t('admin.noTeams')}
           </div>
         )}
 
@@ -116,7 +119,7 @@ export function AdminTeamsPage() {
                   style={{ background: 'rgba(234,82,111,0.12)', border: '1px solid rgba(234,82,111,0.25)', color: '#EA526F' }}
                 >
                   <Plus size={11} />
-                  Invite manager
+                  {t('admin.inviteManager')}
                 </button>
 
                 {activeInvites.length > 0 && (
@@ -126,7 +129,7 @@ export function AdminTeamsPage() {
                     style={{ background: 'rgba(35,181,211,0.08)', border: '1px solid rgba(35,181,211,0.20)', color: '#23B5D3' }}
                   >
                     <Mail size={11} />
-                    {activeInvites.length} active code{activeInvites.length !== 1 ? 's' : ''}
+                    {t('admin.activeCodes', { count: activeInvites.length })}
                   </button>
                 )}
 
@@ -134,10 +137,10 @@ export function AdminTeamsPage() {
                   onClick={() => setDeleteTeam(team)}
                   className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[11px] font-semibold transition-colors"
                   style={{ background: 'rgba(234,82,111,0.08)', border: '1px solid rgba(234,82,111,0.20)', color: '#F07A90' }}
-                  title="Delete team"
+                  title={t('admin.deleteTeam')}
                 >
                   <Trash2 size={11} />
-                  Delete
+                  {t('common.delete')}
                 </button>
               </div>
 
@@ -145,7 +148,7 @@ export function AdminTeamsPage() {
               {isExpanded && invites.length > 0 && (
                 <div className="border-t mx-4 mb-4 pt-3" style={{ borderColor: 'rgba(247,247,255,0.06)' }}>
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[#8A8A9A] mb-2">
-                    Invite codes
+                    {t('admin.inviteCodes')}
                   </p>
                   <div className="space-y-2">
                     {invites.map(invite => (
@@ -162,7 +165,7 @@ export function AdminTeamsPage() {
               )}
 
               {isExpanded && invites.length === 0 && (
-                <div className="px-4 pb-4 text-[12px] text-[#8A8A9A]">No invite codes yet.</div>
+                <div className="px-4 pb-4 text-[12px] text-[#8A8A9A]">{t('admin.noInviteCodes')}</div>
               )}
             </div>
           )
@@ -196,12 +199,12 @@ export function AdminTeamsPage() {
             style={{ background: 'rgba(234,82,111,0.12)' }}>
             <Trash2 size={18} className="text-[#EA526F]" />
           </div>
-          <h3 className="text-[16px] font-bold text-white text-center mb-1">Delete team?</h3>
+          <h3 className="text-[16px] font-bold text-white text-center mb-1">{t('admin.deleteTeamTitle')}</h3>
           <p className="text-[12px] text-[#8A8A9A] text-center mb-1">
-            <span className="text-white font-semibold">{deleteTeam.name}</span> and all its data will be permanently deleted.
+            {t('admin.deleteTeamBody', { name: deleteTeam.name })}
           </p>
           <p className="text-[11px] text-[#F07A90] text-center mb-5">
-            {deleteTeam.memberCount} member{deleteTeam.memberCount !== 1 ? 's' : ''} · {deleteTeam.matchCount} game{deleteTeam.matchCount !== 1 ? 's' : ''} · {deleteTeam.playerCount} player{deleteTeam.playerCount !== 1 ? 's' : ''}
+            {t('admin.members', { count: deleteTeam.memberCount })} · {t('admin.games', { count: deleteTeam.matchCount })} · {t('admin.players', { count: deleteTeam.playerCount })}
           </p>
           <div className="flex gap-2">
             <button
@@ -210,7 +213,7 @@ export function AdminTeamsPage() {
               className="flex-1 py-[12px] rounded-[12px] text-[13px] font-semibold text-[#8A8A9A] disabled:opacity-50"
               style={{ background: 'rgba(247,247,255,0.04)', border: '1px solid rgba(247,247,255,0.08)' }}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={() => deleteTeamMutation.mutate(deleteTeam.id)}
@@ -218,7 +221,7 @@ export function AdminTeamsPage() {
               className="flex-1 py-[12px] rounded-[12px] text-[13px] font-bold text-white disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #EA526F, #C0392B)' }}
             >
-              {deleteTeamMutation.isPending ? 'Deleting…' : 'Delete forever'}
+              {deleteTeamMutation.isPending ? t('admin.deleting') : t('admin.deleteForever')}
             </button>
           </div>
         </ModalBackdrop>
@@ -249,6 +252,7 @@ function InviteCodeRow({
   onResend: () => void
   revoking: boolean
 }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const expired = invite.isExpired || invite.isFullyUsed
 
@@ -274,13 +278,13 @@ function InviteCodeRow({
           {expired && (
             <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
               style={{ background: 'rgba(234,82,111,0.15)', color: '#F07A90' }}>
-              {invite.isFullyUsed ? 'Used' : 'Expired'}
+              {invite.isFullyUsed ? t('admin.used') : t('admin.expired')}
             </span>
           )}
         </div>
         <p className="text-[10px] text-[#4A4A5A] mt-0.5">
-          {invite.useCount}/{invite.maxUses} uses · expires {shortDate(invite.expiresAt)}
-          {invite.createdBy && ` · by ${invite.createdBy}`}
+          {t('admin.usesExpires', { used: invite.useCount, max: invite.maxUses, date: shortDate(invite.expiresAt) })}
+          {invite.createdBy && ` · ${t('admin.byCreator', { creator: invite.createdBy })}`}
         </p>
       </div>
 
@@ -288,7 +292,7 @@ function InviteCodeRow({
         {!expired && invite.boundEmail && (
           <button onClick={onResend}
             className="p-1.5 rounded-md text-[#8A8A9A] hover:text-[#23B5D3] transition-colors"
-            title="Resend email">
+            title={t('admin.resendEmail')}>
             <Mail size={13} />
           </button>
         )}
@@ -296,13 +300,13 @@ function InviteCodeRow({
           <button onClick={copyCode}
             className="p-1.5 rounded-md transition-colors"
             style={{ color: copied ? '#23B5D3' : '#8A8A9A' }}
-            title="Copy invite ID">
+            title={t('admin.copyInviteId')}>
             {copied ? <Check size={13} /> : <Copy size={13} />}
           </button>
         )}
         <button onClick={onRevoke} disabled={revoking}
           className="p-1.5 rounded-md text-[#8A8A9A] hover:text-[#F07A90] transition-colors disabled:opacity-40"
-          title="Revoke">
+          title={t('admin.revoke')}>
           <Trash2 size={13} />
         </button>
       </div>
@@ -311,6 +315,7 @@ function InviteCodeRow({
 }
 
 function RoleBadge({ role }: { role: string }) {
+  const { t } = useTranslation()
   const isManager = role === 'manager'
   return (
     <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded"
@@ -318,18 +323,19 @@ function RoleBadge({ role }: { role: string }) {
         background: isManager ? 'rgba(234,82,111,0.15)' : 'rgba(39,154,241,0.15)',
         color: isManager ? '#EA526F' : '#279AF1',
       }}>
-      {isManager ? 'Manager' : 'Player'}
+      {isManager ? t('teamSwitcher.roleManager') : t('teamSwitcher.rolePlayer')}
     </span>
   )
 }
 
 function shortDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return new Date(iso).toLocaleDateString(currentLocale(), { day: 'numeric', month: 'short' })
 }
 
 // ── New Team Modal ─────────────────────────────────────────────────────────────
 
 function NewTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
@@ -343,7 +349,7 @@ function NewTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
       await adminApi.createTeam(name.trim())
       onCreated()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create team')
+      setError(err instanceof Error ? err.message : t('admin.createTeamFailed'))
     } finally {
       setLoading(false)
     }
@@ -351,13 +357,13 @@ function NewTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 
   return (
     <ModalBackdrop onClose={onClose}>
-      <h3 className="text-[16px] font-bold text-white mb-1">New team</h3>
-      <p className="text-[12px] text-[#8A8A9A] mb-4">A default season will be created automatically.</p>
+      <h3 className="text-[16px] font-bold text-white mb-1">{t('admin.newTeam')}</h3>
+      <p className="text-[12px] text-[#8A8A9A] mb-4">{t('admin.defaultSeasonNote')}</p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           value={name}
           onChange={e => setName(e.target.value)}
-          placeholder="e.g. VBC Berlin"
+          placeholder={t('admin.teamNamePlaceholder')}
           autoFocus
           className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
           style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }}
@@ -366,7 +372,7 @@ function NewTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
         <button type="submit" disabled={loading || !name.trim()}
           className="w-full py-[13px] rounded-[12px] text-[14px] font-bold text-black disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #23B5D3, #279AF1)' }}>
-          {loading ? '…' : 'Create team'}
+          {loading ? '…' : t('admin.createTeam')}
         </button>
       </form>
     </ModalBackdrop>
@@ -378,6 +384,7 @@ function NewTeamModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 function InviteManagerModal({
   team, onClose, onCreated,
 }: { team: AdminTeam; onClose: () => void; onCreated: () => void }) {
+  const { t } = useTranslation()
   const [boundEmail, setBoundEmail] = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
@@ -396,7 +403,7 @@ function InviteManagerModal({
       setResult({ code: res.code, emailSent: res.emailSent })
       onCreated()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create invite')
+      setError(err instanceof Error ? err.message : t('admin.createInviteFailed'))
     } finally {
       setLoading(false)
     }
@@ -410,16 +417,16 @@ function InviteManagerModal({
             style={{ background: 'rgba(35,181,211,0.15)' }}>
             <Check size={22} className="text-[#23B5D3]" />
           </div>
-          <h3 className="text-[16px] font-bold text-white mb-1">Code generated</h3>
+          <h3 className="text-[16px] font-bold text-white mb-1">{t('admin.codeGenerated')}</h3>
           <p className="text-[12px] text-[#8A8A9A] mb-4">
-            Share this code with the new manager for <span className="text-white font-semibold">{team.name}</span>.
+            {t('admin.shareCodeManager', { team: team.name })}
           </p>
 
           <CodeDisplay code={result.code} />
 
           {result.emailSent && (
             <p className="flex items-center justify-center gap-1.5 text-[11px] text-[#23B5D3] mt-3">
-              <Mail size={12} /> Invite email sent
+              <Mail size={12} /> {t('admin.inviteEmailSent')}
             </p>
           )}
         </div>
@@ -429,32 +436,32 @@ function InviteManagerModal({
 
   return (
     <ModalBackdrop onClose={onClose}>
-      <h3 className="text-[16px] font-bold text-white mb-0.5">Invite manager</h3>
+      <h3 className="text-[16px] font-bold text-white mb-0.5">{t('admin.inviteManager')}</h3>
       <p className="text-[12px] text-[#8A8A9A] mb-4">
-        Generating a code for <span className="text-white font-semibold">{team.name}</span>
+        {t('admin.generatingCode', { team: team.name })}
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label className="block text-[10px] font-semibold uppercase tracking-[0.07em] text-[#8A8A9A] mb-1.5">
-            Manager email (optional)
+            {t('admin.managerEmail')}
           </label>
           <input
             type="email"
             value={boundEmail}
             onChange={e => setBoundEmail(e.target.value)}
-            placeholder="manager@club.de"
+            placeholder={t('admin.managerEmailPlaceholder')}
             className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
             style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }}
           />
           <p className="text-[10px] text-[#4A4A5A] mt-1">
-            If provided, the code is locked to this email and an invite email is sent.
+            {t('admin.emailLockNote')}
           </p>
         </div>
         {error && <p className="text-[12px] text-[#F07A90]">{error}</p>}
         <button type="submit" disabled={loading}
           className="w-full py-[13px] rounded-[12px] text-[14px] font-bold text-black disabled:opacity-50"
           style={{ background: 'linear-gradient(135deg, #EA526F, #23B5D3)' }}>
-          {loading ? '…' : '🔑 Generate invite code'}
+          {loading ? '…' : t('admin.generateCode')}
         </button>
       </form>
     </ModalBackdrop>

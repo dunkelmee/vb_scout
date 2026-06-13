@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface DonutChartProps {
   teamName: string
@@ -8,6 +9,7 @@ interface DonutChartProps {
 }
 
 export function DonutChart({ teamName, ownPoints, opponentErrors, variant }: DonutChartProps) {
+  const { t } = useTranslation()
   const cx = 40, cy = 40, r = 28
   const C = 2 * Math.PI * r
 
@@ -74,11 +76,11 @@ export function DonutChart({ teamName, ownPoints, opponentErrors, variant }: Don
 
       <div className="w-full mt-2 space-y-0.5">
         <div className="flex justify-between items-center text-xs">
-          <span className="text-ghost-300">Own play</span>
+          <span className="text-ghost-300">{t('timeline.ownPlay')}</span>
           <span className="font-bold" style={{ color: baseColor }}>{ownPoints}</span>
         </div>
         <div className="flex justify-between items-center text-xs">
-          <span className="text-ghost-300">Opp errors</span>
+          <span className="text-ghost-300">{t('postMatch.oppError')}</span>
           <span className="font-bold text-ghost-400">{opponentErrors}</span>
         </div>
       </div>

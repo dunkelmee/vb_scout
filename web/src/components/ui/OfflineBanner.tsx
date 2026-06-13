@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { WifiOff, RefreshCw } from 'lucide-react'
 import { cn } from './cn'
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function OfflineBanner({ pendingCount, isOnline }: Props) {
+  const { t } = useTranslation()
   if (isOnline && pendingCount === 0) return null
 
   return (
@@ -23,17 +25,15 @@ export function OfflineBanner({ pendingCount, isOnline }: Props) {
         <>
           <RefreshCw size={11} className="animate-spin shrink-0" />
           <span>
-            Syncing {pendingCount} pending {pendingCount === 1 ? 'action' : 'actions'}…
+            {t('offline.syncing', { count: pendingCount })}
           </span>
         </>
       ) : (
         <>
           <WifiOff size={11} className="shrink-0" />
           <span>
-            Offline
-            {pendingCount > 0
-              ? ` — ${pendingCount} ${pendingCount === 1 ? 'action' : 'actions'} queued`
-              : ''}
+            {t('offline.offline')}
+            {pendingCount > 0 ? t('offline.queued', { count: pendingCount }) : ''}
           </span>
         </>
       )}

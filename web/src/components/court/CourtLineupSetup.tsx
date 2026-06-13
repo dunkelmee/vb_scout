@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Player } from '../../lib/api'
 import { Zone, ALL_ZONES, ZONE_POSITIONS, isBackRow, Lineup } from '../../lib/rotation'
 import { cn } from '../ui/cn'
@@ -25,6 +26,7 @@ const ZONE_GRID: Zone[][] = [
 export function CourtLineupSetup({
   players, lineup, setPositions, onLineupChange
 }: CourtLineupSetupProps) {
+  const { t } = useTranslation()
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
   const [positionPickerPlayer, setPositionPickerPlayer] = useState<{ playerId: string; zone: Zone } | null>(null)
 
@@ -92,7 +94,7 @@ export function CourtLineupSetup({
       {/* Court grid */}
       <div className="w-full bg-surface-high rounded-xl p-3 mb-4 border border-outline/10">
         {/* Net */}
-        <div className="text-center text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">NET</div>
+        <div className="text-center text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">{t('court.net')}</div>
         <div className="w-full h-px bg-secondary-container/30 mb-3" />
 
         {ZONE_GRID.map((row, rowIdx) => (
@@ -118,7 +120,7 @@ export function CourtLineupSetup({
                     <PlayerToken player={player} position={(setPositions[zone]?.[0]) || player.positions[0]} compact />
                   ) : (
                     <span className="text-xs text-on-surface-variant/40">
-                      {isSelected ? 'Pick player ↓' : 'Empty'}
+                      {isSelected ? t('court.pickPlayer') : t('court.empty')}
                     </span>
                   )}
                 </button>
@@ -127,7 +129,7 @@ export function CourtLineupSetup({
           </div>
         ))}
 
-        <div className="text-center text-xs font-bold uppercase tracking-widest text-on-surface-variant mt-2">OUR BASELINE</div>
+        <div className="text-center text-xs font-bold uppercase tracking-widest text-on-surface-variant mt-2">{t('court.ourBaseline')}</div>
       </div>
 
       {/* Player list for assignment */}
@@ -169,7 +171,7 @@ export function CourtLineupSetup({
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60">
           <div className="w-full max-w-sm bg-surface-container rounded-t-2xl p-6">
             <h3 className="font-display font-bold text-base text-on-surface mb-3">
-              Select position for this zone
+              {t('court.selectPosition')}
             </h3>
             <div className="flex flex-col gap-2">
               {players.find(p => p.id === positionPickerPlayer.playerId)?.positions.map(pos => (
@@ -178,7 +180,7 @@ export function CourtLineupSetup({
                   onClick={() => confirmPosition(pos)}
                   className="py-3 px-4 rounded-xl bg-surface-high hover:bg-surface-highest text-on-surface font-bold text-sm transition-all"
                 >
-                  {pos}
+                  {t(`positions.${pos}`, { defaultValue: pos })}
                 </button>
               ))}
             </div>
@@ -186,7 +188,7 @@ export function CourtLineupSetup({
               onClick={() => setPositionPickerPlayer(null)}
               className="mt-3 w-full py-2 text-sm text-on-surface-variant"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>

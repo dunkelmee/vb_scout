@@ -17,6 +17,7 @@ import { GamesPage } from './app/GamesPage'
 import { GameLogPage } from './app/GameLogPage'
 import { GameEditPage } from './app/GameEditPage'
 import { GameStatsPage } from './app/GameStatsPage'
+import { GameDetailPage } from './app/GameDetailPage'
 import { TrainingsPage } from './app/TrainingsPage'
 import { TrainingDetailPage } from './app/TrainingDetailPage'
 import { TrainingFormPage } from './app/TrainingFormPage'
@@ -76,6 +77,7 @@ function AppWithSeasonLoader() {
 
         {/* Games */}
         <Route path="/games" element={<AppLayout><GamesPage /></AppLayout>} />
+        <Route path="/games/:id" element={<AppLayout><GameDetailPage /></AppLayout>} />
         <Route path="/games/new" element={
           <RequireAuth>
             <ManagerOnly><CreateGameWizard /></ManagerOnly>

@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import {
   ComposedChart, Area, ReferenceLine,
@@ -91,6 +92,7 @@ export function SetSummaryOverlay({
   onSetupNextSet,
   onViewStats,
 }: SetSummaryOverlayProps) {
+  const { t } = useTranslation()
   const won = scoreUs > scoreThem
 
   const previousSet = sets.find(s => s.setNumber === setNumber - 1 && s.status === 'completed')
@@ -173,8 +175,8 @@ export function SetSummaryOverlay({
           <X size={18} className="text-ghost-100" />
         </button>
         <div className="flex-1">
-          <p className="text-xs text-ghost-300">Set {setNumber}</p>
-          <h1 className="font-display font-bold text-base text-ghost-100 leading-tight">Set summary</h1>
+          <p className="text-xs text-ghost-300">{t('liveLog.set', { number: setNumber })}</p>
+          <h1 className="font-display font-bold text-base text-ghost-100 leading-tight">{t('setSummary.title')}</h1>
         </div>
       </div>
 
@@ -217,7 +219,7 @@ export function SetSummaryOverlay({
                     : { background: 'rgba(234,82,111,0.18)',  color: '#EA526F' }
                 }
               >
-                {won ? '✓ Set won' : '✗ Set lost'}
+                {won ? `✓ ${t('setSummary.setWon', { number: setNumber })}` : `✗ ${t('setSummary.setLost', { number: setNumber })}`}
               </span>
             </div>
 
@@ -253,29 +255,29 @@ export function SetSummaryOverlay({
               })}
             </div>
             <p className="text-center text-[11px] text-ghost-400/60 mt-2">
-              {teamInitials} leads {setsWonUs}–{setsWonThem} · {rallies.length} rallies
+              {teamInitials} {t('setSummary.leading', { us: setsWonUs, them: setsWonThem })} · {t('setSummary.rallies', { count: rallies.length })}
             </p>
           </div>
         </div>
 
         {/* Point origin donuts */}
-        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Point origin</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.pointOrigin')}</p>
         <div className="grid grid-cols-2 gap-3">
           <DonutChart teamName={teamName}     ownPoints={ourPos}  opponentErrors={ourErr}  variant="us" />
           <DonutChart teamName={opponentName} ownPoints={themPos} opponentErrors={themErr} variant="them" />
         </div>
 
         {/* Key stats */}
-        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">This set</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.thisSet')}</p>
         <div className="grid grid-cols-2 gap-3">
-          <StatTile label="Sideout %"    value={stats.sideoutPct}           prevValue={prevStats?.sideoutPct}           higherIsBetter />
-          <StatTile label="Break %"      value={stats.breakPct}             prevValue={prevStats?.breakPct}             higherIsBetter />
-          <StatTile label="Error ratio"  value={stats.errorRatioCumulative} prevValue={prevStats?.errorRatioCumulative} higherIsBetter={false} />
-          <StatTile label="Positive play" value={stats.positivePlayPct}    prevValue={prevStats?.positivePlayPct}      higherIsBetter />
+          <StatTile label={t('dashboard.sideoutPct')}  value={stats.sideoutPct}           prevValue={prevStats?.sideoutPct}           higherIsBetter />
+          <StatTile label={t('dashboard.breakPct')}    value={stats.breakPct}             prevValue={prevStats?.breakPct}             higherIsBetter />
+          <StatTile label={t('stats.errorRatio')}      value={stats.errorRatioCumulative} prevValue={prevStats?.errorRatioCumulative} higherIsBetter={false} />
+          <StatTile label={t('stats.positivePlay')}    value={stats.positivePlayPct}      prevValue={prevStats?.positivePlayPct}      higherIsBetter />
         </div>
 
         {/* Score timeline — §2.9 */}
-        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Score timeline</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.scoreTimeline')}</p>
         <div className="card p-3">
           <ResponsiveContainer width="100%" height={140}>
             <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
@@ -297,7 +299,7 @@ export function SetSummaryOverlay({
                 labelFormatter={(v) => `Rally ${v}`}
                 formatter={(value: number, name: string) => [
                   value > 0 ? `+${value}` : `${value}`,
-                  name === 'pos' ? 'Lead' : 'Deficit',
+                  name === 'pos' ? t('postMatch.leading') : t('postMatch.trailing'),
                 ]}
               />
               <ReferenceLine y={0} stroke={chartTheme.gridColor} />
@@ -317,7 +319,7 @@ export function SetSummaryOverlay({
         </div>
 
         {/* Rotation performance — §2.4 */}
-        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">Rotation performance</p>
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.rotationPerf')}</p>
         <div className="card p-4">
           <div className="grid grid-cols-6 gap-2">
             {stats.rotationStats.map(rot => {
@@ -342,11 +344,11 @@ export function SetSummaryOverlay({
       {/* Bottom actions */}
       <div className="shrink-0 px-4 py-4 border-t border-pitch-400/40 space-y-2 bg-pitch-950">
         <Button fullWidth onClick={onSetupNextSet}>
-          Set up Set {setNumber + 1}
+          {t('setSummary.setupNextSet', { number: setNumber + 1 })}
         </Button>
         <Button fullWidth variant="outline" onClick={onViewStats} className="gap-2">
           <BarChart2 size={15} />
-          View full match stats
+          {t('setSummary.fullMatchStats')}
         </Button>
       </div>
     </div>

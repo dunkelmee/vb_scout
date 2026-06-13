@@ -98,8 +98,13 @@ export const authApi = {
   logout:   () => api.post('/api/auth/logout', {}),
   refresh:  () => api.post<{ accessToken: string }>('/api/auth/refresh', {}),
   me:       () => api.get<AppUser>('/api/auth/me'),
-  patchMe:  (data: { onboardingDone?: boolean; firstName?: string; lastName?: string }) =>
-    api.patch<AppUser>('/api/auth/me', data),
+  patchMe:  (data: {
+    onboardingDone?: boolean; firstName?: string; lastName?: string;
+    locale?: 'en' | 'de';
+    notifRsvpRequests?: boolean; notifRsvpResponses?: boolean;
+    notifMatchReminder?: boolean; notifTrainingReminder?: boolean;
+    notifAnalysisReady?: boolean;
+  }) => api.patch<AppUser>('/api/auth/me', data),
   uploadAvatar: (file: File) => {
     const form = new FormData()
     form.append('photo', file)
@@ -243,15 +248,38 @@ export const timeoutsApi = {
 // ── Trainings ─────────────────────────────────────────────────────────────────
 
 export const trainingsApi = {
-  list:   () => api.get<TrainingSession[]>('/api/trainings'),
-  get:    (id: string) => api.get<TrainingSession>(`/api/trainings/${id}`),
-  create: (data: Partial<TrainingSession>) => api.post<TrainingSession>('/api/trainings', data),
-  update: (id: string, data: Partial<TrainingSession>) =>
+  list:         () => api.get<TrainingSession[]>('/api/trainings'),
+  get:          (id: string) => api.get<TrainingSession>(`/api/trainings/${id}`),
+  create:       (data: Partial<TrainingSession>) => api.post<TrainingSession>('/api/trainings', data),
+  update:       (id: string, data: Partial<TrainingSession>) =>
     api.patch<TrainingSession>(`/api/trainings/${id}`, data),
-  delete: (id: string) => api.delete(`/api/trainings/${id}`),
-  getAttendance:    (id: string) => api.get<TrainingAttendance[]>(`/api/trainings/${id}/attendance`),
-  updateAttendance: (id: string, playerId: string, status: string, note?: string) =>
-    api.patch(`/api/trainings/${id}/attendance/${playerId}`, { status, note }),
+  delete:       (id: string) => api.delete(`/api/trainings/${id}`),
+  getAttendance: (id: string) => api.get<AttendanceEntry[]>(`/api/trainings/${id}/attendance`),
+}
+
+export const rsvpApi = {
+  submit: (data: { entityType: 'training' | 'game'; entityId: string; status: string; note?: string }) =>
+    api.post<{ rsvp: Rsvp }>('/api/rsvp', data),
+  getForEntity: (entityType: string, entityId: string) =>
+    api.get<Rsvp[]>(`/api/rsvp/${entityType}/${entityId}`),
+  getMine: (entityType: string, entityId: string) =>
+    api.get<Rsvp | null>(`/api/rsvp/me/${entityType}/${entityId}`),
+}
+
+export const pushApi = {
+  status:      () => api.get<{ subscribed: boolean; devices: { id: string; deviceLabel: string | null; lastUsedAt: string }[] }>('/api/push/status'),
+  unsubscribe: (endpoint: string) => api.post('/api/push/unsubscribe', { endpoint }),
+}
+
+export const notificationsApi = {
+  sendReminder: (data: {
+    entityType: 'training' | 'game'
+    entityId: string
+    message?: string
+    targetFilter?: 'all' | 'no_response' | 'no_response_and_maybe'
+  }) => api.post<{ sent: number }>('/api/notifications/reminder', data),
+  lastReminder: (entityType: string, entityId: string) =>
+    api.get<{ sentAt: string | null }>(`/api/notifications/last-reminder?entityType=${entityType}&entityId=${entityId}`),
 }
 
 // ── Dashboard & stats ─────────────────────────────────────────────────────────
@@ -289,6 +317,12 @@ export interface AppUser {
   lastName: string
   onboardingDone: boolean
   avatarUrl?: string | null
+  locale?: 'en' | 'de'
+  notifRsvpRequests?: boolean
+  notifRsvpResponses?: boolean
+  notifMatchReminder?: boolean
+  notifTrainingReminder?: boolean
+  notifAnalysisReady?: boolean
 }
 
 export interface AuthResponse {
@@ -516,18 +550,37 @@ export interface TrainingSession {
   location?: string | null
   focusTags: string[]
   createdBy?: string | null
-  trainingAttendance?: TrainingAttendance[]
-  attendanceCounts?: { coming: number; not_coming: number; pending: number }
+  rsvpEnabled?: boolean
+  rsvpDeadline?: string | null
+  autoReminderSent?: boolean
+  autoReminderTime?: string | null
+  // Computed fields from API
+  rsvpCounts?: { confirmed: number; declined: number; maybe: number; pending: number }
+  myRsvp?: Rsvp | null
+  attendanceRoster?: AttendanceEntry[]
+  confirmedCount?: number
+  lastReminderSentAt?: string | null
 }
 
-export interface TrainingAttendance {
-  id: string
-  trainingSessionId: string
+export interface AttendanceEntry {
   playerId: string
-  status: 'pending' | 'coming' | 'not_coming'
-  note?: string | null
+  userId?: string | null
+  firstName: string
+  lastName: string
+  jersey?: number | null
+  positions: string[]
+  rsvp: Rsvp | null
+}
+
+export interface Rsvp {
+  id: string
+  playerId: string
+  entityType: 'training' | 'game'
+  entityId: string
+  status: 'confirmed' | 'declined' | 'maybe' | 'pending'
   respondedAt?: string | null
-  player?: Player
+  note?: string | null
+  player?: { id: string; firstName: string; lastName: string }
 }
 
 export interface MatchStats {

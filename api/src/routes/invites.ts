@@ -65,8 +65,16 @@ invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
 
     let emailSent = false
     if (boundEmail) {
+      // Send in the recipient's preferred language if they already have an
+      // account, otherwise default to German (German-market invites).
+      const existing = await prisma.user.findUnique({
+        where: { email: boundEmail.toLowerCase() },
+        select: { locale: true },
+      })
+      const locale = (existing?.locale === 'en' ? 'en' : 'de') as 'en' | 'de'
+
       if (role === 'manager') {
-        emailSent = await sendManagerInviteEmail({ to: boundEmail, code: plainCode, expiresAt, invitedBy })
+        emailSent = await sendManagerInviteEmail({ to: boundEmail, code: plainCode, expiresAt, invitedBy, locale })
       } else if (role === 'player' && invite.team) {
         emailSent = await sendPlayerInviteEmail({
           to: boundEmail,
@@ -74,6 +82,7 @@ invitesRouter.post('/', requireManager, async (req: Request, res: Response) => {
           teamName: invite.team.name,
           expiresAt,
           invitedBy,
+          locale,
         })
       }
       await prisma.inviteCode.update({
@@ -165,14 +174,20 @@ invitesRouter.post('/:id/resend', requireSuperAdmin, async (req: Request, res: R
 
     const invitedBy = `${invite.createdBy.firstName} ${invite.createdBy.lastName}`.trim() || invite.createdBy.email
 
+    const existing = await prisma.user.findUnique({
+      where: { email: invite.boundEmail.toLowerCase() },
+      select: { locale: true },
+    })
+    const locale = (existing?.locale === 'en' ? 'en' : 'de') as 'en' | 'de'
+
     let emailSent = false
     if (invite.role === 'manager') {
       emailSent = await sendManagerInviteEmail({
-        to: invite.boundEmail, code: invite.code, expiresAt: invite.expiresAt, invitedBy,
+        to: invite.boundEmail, code: invite.code, expiresAt: invite.expiresAt, invitedBy, locale,
       })
     } else if (invite.team) {
       emailSent = await sendPlayerInviteEmail({
-        to: invite.boundEmail, code: invite.code, teamName: invite.team.name, expiresAt: invite.expiresAt, invitedBy,
+        to: invite.boundEmail, code: invite.code, teamName: invite.team.name, expiresAt: invite.expiresAt, invitedBy, locale,
       })
     }
 

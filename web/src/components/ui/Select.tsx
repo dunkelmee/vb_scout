@@ -46,9 +46,11 @@ interface ChipGroupProps {
   selected: string[]
   onChange: (selected: string[]) => void
   maxSelect?: number
+  /** Optional display transform — stored value stays the raw option string */
+  renderLabel?: (opt: string) => string
 }
 
-export function ChipGroup({ label, options, selected, onChange, maxSelect }: ChipGroupProps) {
+export function ChipGroup({ label, options, selected, onChange, maxSelect, renderLabel }: ChipGroupProps) {
   const toggle = (opt: string) => {
     if (selected.includes(opt)) {
       onChange(selected.filter(s => s !== opt))
@@ -76,7 +78,7 @@ export function ChipGroup({ label, options, selected, onChange, maxSelect }: Chi
                 : 'bg-surface-high text-on-surface-variant border-outline/20 hover:border-orange/40'
             )}
           >
-            {opt}
+            {renderLabel ? renderLabel(opt) : opt}
           </button>
         ))}
       </div>

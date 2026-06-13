@@ -3,12 +3,14 @@ from typing import List, Dict, Optional
 from .thresholds import (
     WEAKNESS_THRESHOLDS, ROTATION_WEAKNESS_THRESHOLD, TRAINING_DRILL_TEMPLATES
 )
+from . import templates as tpl
 
 
 def detect_weaknesses(
     metrics: Dict,
     rotation_profiles: Optional[Dict] = None,
     sensitivity: Optional[Dict] = None,
+    locale: str = 'en',
 ) -> List[Dict]:
     """Return list of weakness insight dicts, ranked by simulation impact."""
     weaknesses = []
@@ -33,17 +35,18 @@ def detect_weaknesses(
                 if scenario.get('metric') == metric:
                     delta = scenario.get('win_rate_delta', 0)
                     if delta != 0:
-                        impact_str = f'+{delta*100:.1f}% win rate if addressed' if delta > 0 else f'{delta*100:.1f}% win rate if addressed'
+                        key = 'impact_addressed_pos' if delta > 0 else 'impact_addressed_neg'
+                        impact_str = tpl.misc(key, locale).format(pct=delta * 100)
                     break
 
         fmt_vars = {'val': value, 'delta': abs(value - threshold)}
-        detail = detail_tmpl.format(**fmt_vars)
+        detail = tpl.weakness_detail(w_id, detail_tmpl, locale).format(**fmt_vars)
 
         weaknesses.append({
             'id': f'weakness_{w_id}',
             'category': 'weakness',
             'priority': 0,  # assigned after sort
-            'title': label,
+            'title': tpl.weakness_label(w_id, label, locale),
             'detail': detail,
             'metric': metric,
             'current_value': round(float(value), 4),
@@ -67,8 +70,8 @@ def detect_weaknesses(
                     'id': f'weakness_rotation_{rot}',
                     'category': 'weakness',
                     'priority': 0,
-                    'title': f'Rotation {rot} is critically weak',
-                    'detail': f'Rotation {rot} Efficiency: {re:.2f} (Critical). Win rate: {rot_data["win_rate"]:.0%}.',
+                    'title': tpl.misc('rotation_weak_title', locale).format(rot=rot),
+                    'detail': tpl.misc('rotation_weak_detail', locale).format(rot=rot, re=re, win=rot_data["win_rate"]),
                     'metric': f'rotation_{rot}_re',
                     'current_value': round(re, 4),
                     'target_value': ROTATION_WEAKNESS_THRESHOLD,
@@ -89,14 +92,16 @@ def detect_weaknesses(
     return weaknesses
 
 
-def generate_action_items(weaknesses: List[Dict], sensitivity: Optional[Dict] = None) -> List[Dict]:
+def generate_action_items(weaknesses: List[Dict], sensitivity: Optional[Dict] = None,
+                          locale: str = 'en') -> List[Dict]:
     """Generate top 3 action items from weaknesses."""
     top3 = weaknesses[:3]
     actions = []
 
     for i, weakness in enumerate(top3):
         metric = weakness['metric']
-        drill = TRAINING_DRILL_TEMPLATES.get(metric, 'Focused practice on this area during training sessions.')
+        en_drill = TRAINING_DRILL_TEMPLATES.get(metric)
+        drill = tpl.drill(metric, en_drill, locale) if en_drill else tpl.misc('default_drill', locale)
 
         # Find best sensitivity scenario for this metric
         win_rate_improvement = None
@@ -108,14 +113,14 @@ def generate_action_items(weaknesses: List[Dict], sensitivity: Optional[Dict] = 
 
         impact_str = None
         if win_rate_improvement and win_rate_improvement > 0:
-            impact_str = f'+{win_rate_improvement * 100:.1f}% win rate if achieved'
+            impact_str = tpl.misc('impact_achieved', locale).format(pct=win_rate_improvement * 100)
 
         actions.append({
             'id': f'action_{i+1}_{metric}',
             'category': 'action_item',
             'priority': i + 1,
-            'title': f'Priority {i+1}: {weakness["title"]}',
-            'detail': f'{weakness["detail"]} Recommended drill: {drill}',
+            'title': tpl.misc('priority', locale).format(i=i + 1, title=weakness["title"]),
+            'detail': tpl.misc('recommended_drill', locale).format(detail=weakness["detail"], drill=drill),
             'metric': metric,
             'current_value': weakness['current_value'],
             'target_value': weakness['target_value'],

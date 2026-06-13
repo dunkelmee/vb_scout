@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMatchStore } from '../store/matchStore'
@@ -22,13 +23,6 @@ import { TacticsTab } from '../components/court/TacticsTab'
 import { SetSummaryOverlay } from '../components/SetSummaryOverlay'
 import { useSyncQueue } from '../hooks/useSyncQueue'
 
-const LOG_TABS = [
-  { id: 'log', label: 'Log' },
-  { id: 'stats', label: 'Stats' },
-  { id: 'timeline', label: 'Timeline' },
-  { id: 'tactics', label: 'Tactics' },
-]
-
 /** Returns true when the set has a valid winner by volleyball rules */
 function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
   const target = setNumber === 5 ? 15 : 25
@@ -38,9 +32,17 @@ function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): b
 }
 
 export function GameLogPage() {
+  const { t } = useTranslation()
   const { id: matchId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+
+  const LOG_TABS = [
+    { id: 'log', label: t('liveLog.tabLog') },
+    { id: 'stats', label: t('liveLog.tabStats') },
+    { id: 'timeline', label: t('liveLog.tabTimeline') },
+    { id: 'tactics', label: t('liveLog.tabTactics') },
+  ]
 
   const [activeTab, setActiveTab] = useState('log')
   const [showSubModal, setShowSubModal] = useState(false)
@@ -314,7 +316,7 @@ export function GameLogPage() {
                 <ArrowLeft size={18} className="text-white" />
               </button>
               <span className="text-[11px] md:text-sm font-bold uppercase tracking-widest text-white/55">
-                Set {store.currentSetNumber}
+                {t('liveLog.set', { number: store.currentSetNumber })}
               </span>
               <div className="w-9" />
             </div>
@@ -420,7 +422,7 @@ export function GameLogPage() {
                 /* Step 2: How was the point earned? */
                 <div className="space-y-2">
                   <p className="text-xs text-center text-on-surface-variant font-bold uppercase tracking-wide">
-                    {store.pendingScorer === 'us' ? 'Our point — how?' : 'Their point — how?'}
+                    {store.pendingScorer === 'us' ? t('liveLog.ourPointHow') : t('liveLog.theirPointHow')}
                   </p>
                   <ProgressBar value={autoFallbackProgress} color="orange" height="sm" className="mb-2" />
                   <div className="flex gap-3">
@@ -433,7 +435,7 @@ export function GameLogPage() {
                           : 'border-bubb-500 text-bubb-400 bg-bubb-500/[0.12] hover:bg-bubb-500/20'
                       )}
                     >
-                      {store.pendingScorer === 'us' ? '✓ Own point' : '✓ Their play'}
+                      {store.pendingScorer === 'us' ? `✓ ${t('timeline.ownPlay')}` : `✓ ${t('timeline.theirPlay')}`}
                     </button>
                     <button
                       onClick={() => store.tapPointType('error')}
@@ -442,14 +444,14 @@ export function GameLogPage() {
                         'border-white/20 text-on-surface-variant backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]'
                       )}
                     >
-                      {store.pendingScorer === 'us' ? '✗ Their error' : '✗ Our error'}
+                      {store.pendingScorer === 'us' ? `✗ ${t('timeline.theirError')}` : `✗ ${t('timeline.ourError')}`}
                     </button>
                   </div>
                   <button
                     onClick={store.cancelScoring}
                     className="w-full text-xs text-on-surface-variant py-1"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 </div>
               )}
@@ -461,20 +463,20 @@ export function GameLogPage() {
               disabled={store.rallies.length === 0}
               className="flex items-center justify-center gap-2 text-xs text-on-surface-variant hover:text-on-surface transition-colors py-1 disabled:opacity-30"
             >
-              <RotateCcw size={12} /> Undo last point
+              <RotateCcw size={12} /> {t('liveLog.undoLastPoint')}
             </button>
           </div>
 
           {/* Bottom action icons — pinned to bottom */}
           <div className="shrink-0 flex justify-around items-center px-4 py-2 border-t border-outline/10">
             {[
-              { icon: <RefreshCw size={18} />, label: 'Lineup', badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
-              { icon: <ChevronDown size={18} />, label: 'Sub', badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
-              { icon: <Clock size={18} />, label: 'Timeout', badge: null, disabled: store.rallies.length === 0, action: () => setShowTimeoutModal(true) },
-              { icon: <Flag size={18} />, label: 'End Set', badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
-            ].map(({ icon, label, badge, disabled, action }) => (
+              { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
+              { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
+              { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0, action: () => setShowTimeoutModal(true) },
+              { id: 'endSet', icon: <Flag size={18} />, label: t('liveLog.actionEndSet'), badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
+            ].map(({ id, icon, label, badge, disabled, action }) => (
               <button
-                key={label}
+                key={id}
                 onClick={action}
                 disabled={disabled}
                 className={cn(
@@ -482,10 +484,10 @@ export function GameLogPage() {
                   disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/[0.06] hover:shadow-[0_2px_12px_rgba(0,0,0,0.25)]'
                 )}
               >
-                <span className={cn('text-on-surface-variant', label === 'End Set' && setWon && 'text-turq-500')}>{icon}</span>
+                <span className={cn('text-on-surface-variant', id === 'endSet' && setWon && 'text-turq-500')}>{icon}</span>
                 <span className={cn(
                   'text-[10px] font-bold uppercase',
-                  label === 'End Set' && setWon ? 'text-turq-500' : 'text-on-surface-variant'
+                  id === 'endSet' && setWon ? 'text-turq-500' : 'text-on-surface-variant'
                 )}>{label}</span>
                 {badge !== null && (
                   <span className="text-[9px] text-on-surface-variant/50 font-bold -mt-0.5">{badge}</span>
@@ -527,7 +529,7 @@ export function GameLogPage() {
       <BottomSheet
         open={showSubModal}
         onClose={() => setShowSubModal(false)}
-        title={`Substitution — ${nonLiberoSubs}/6 used`}
+        title={`${t('liveLog.subTitle')} — ${nonLiberoSubs}/6`}
       >
         <SubstitutionForm
           setId={store.currentSetId || ''}
@@ -546,7 +548,7 @@ export function GameLogPage() {
       <BottomSheet
         open={showTimeoutModal}
         onClose={closeTimeoutModal}
-        title="Timeout"
+        title={t('liveLog.timeoutTitle')}
       >
         {timeoutStep === 'pick' ? (
           /* Step 1 — who called it? */
@@ -556,7 +558,7 @@ export function GameLogPage() {
               onClick={() => timeoutMutation.mutate('us')}
               loading={timeoutMutation.isPending}
             >
-              Called by Us
+              {t('liveLog.timeoutUs')}
             </Button>
             <Button
               fullWidth
@@ -564,7 +566,7 @@ export function GameLogPage() {
               onClick={() => timeoutMutation.mutate('them')}
               loading={timeoutMutation.isPending}
             >
-              Called by Them
+              {t('liveLog.timeoutThem')}
             </Button>
           </div>
         ) : (
@@ -572,7 +574,7 @@ export function GameLogPage() {
           <div className="flex flex-col items-center gap-5 py-4">
             {/* Who called it */}
             <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
-              {timeoutCaller === 'us' ? 'Our timeout' : 'Their timeout'}
+              {timeoutCaller === 'us' ? t('liveLog.timeoutUs') : t('liveLog.timeoutThem')}
             </p>
 
             {/* Timer or "Back to court" */}
@@ -583,7 +585,7 @@ export function GameLogPage() {
               </p>
             ) : (
               <p className="font-display font-bold text-2xl text-secondary-container tracking-wide">
-                Back to court!
+                {t('liveLog.backToCourt')}
               </p>
             )}
 
@@ -593,7 +595,7 @@ export function GameLogPage() {
               variant={timeoutSeconds === 0 ? 'secondary' : 'ghost'}
               onClick={closeTimeoutModal}
             >
-              {timeoutSeconds > 0 ? 'Dismiss early' : 'Back to court'}
+              {timeoutSeconds > 0 ? t('liveLog.dismissEarly') : t('liveLog.backToCourt')}
             </Button>
           </div>
         )}
@@ -603,21 +605,21 @@ export function GameLogPage() {
       <BottomSheet
         open={showEndSetModal}
         onClose={() => setShowEndSetModal(false)}
-        title={`End Set ${store.currentSetNumber}?`}
+        title={t('liveLog.endSetTitle', { number: store.currentSetNumber })}
       >
         <div className="space-y-4">
           <p className="text-center text-on-surface-variant">
-            Current score: <span className="font-bold text-on-surface">{store.scoreUs} – {store.scoreThem}</span>
+            {t('liveLog.currentScore')}: <span className="font-bold text-on-surface">{store.scoreUs} – {store.scoreThem}</span>
           </p>
           <Button
             fullWidth
             onClick={() => endSetMutation.mutate()}
             loading={endSetMutation.isPending}
           >
-            Confirm — End Set {store.currentSetNumber}
+            {t('liveLog.confirmEndSet', { number: store.currentSetNumber })}
           </Button>
           <Button variant="ghost" fullWidth onClick={() => setShowEndSetModal(false)}>
-            Cancel
+            {t('common.cancel')}
           </Button>
         </div>
       </BottomSheet>
@@ -638,15 +640,15 @@ export function GameLogPage() {
             </button>
             <div className="flex-1">
               <h1 className="font-display font-bold text-base text-on-surface">
-                Set {store.currentSetNumber + 1} — Starting lineup
+                {t('liveLog.set', { number: store.currentSetNumber + 1 })} — {t('liveLog.startingLineup')}
               </h1>
-              <p className="text-xs text-on-surface-variant">Assign all 6 zones, then confirm</p>
+              <p className="text-xs text-on-surface-variant">{t('liveLog.assignZones')}</p>
             </div>
           </div>
 
           {/* Serving-first toggle */}
           <div className="shrink-0 px-4 pt-3 pb-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Who serves first?</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">{t('gameWizard.firstServe')}</p>
             <div className="flex gap-2">
               {(['us', 'them'] as const).map(side => (
                 <button
@@ -686,7 +688,7 @@ export function GameLogPage() {
               loading={createSetMutation.isPending}
               disabled={Object.keys(newSetLineup).length < 6}
             >
-              Start Set {store.currentSetNumber + 1}
+              {t('liveLog.startSet', { number: store.currentSetNumber + 1 })}
             </Button>
           </div>
         </div>
@@ -739,6 +741,7 @@ function SubstitutionForm({
   lineup: Lineup | null
   onSuccess: (playerOutId: string, playerInId: string) => void
 }) {
+  const { t } = useTranslation()
   const [playerOutId, setPlayerOutId] = useState('')
   const [playerInId, setPlayerInId] = useState('')
   const [isLiberoSwap, setIsLiberoSwap] = useState(false)
@@ -771,16 +774,16 @@ function SubstitutionForm({
   return (
     <div className="space-y-4">
       <Select
-        label="Player OUT (on court)"
+        label={t('liveLog.subPlayerOff')}
         value={playerOutId}
         onChange={e => setPlayerOutId(e.target.value)}
-        options={[{ value: '', label: 'Select...' }, ...makeOpts(onCourtPlayers)]}
+        options={[{ value: '', label: t('common.select') }, ...makeOpts(onCourtPlayers)]}
       />
       <Select
-        label="Player IN (bench)"
+        label={t('liveLog.subPlayerOn')}
         value={playerInId}
         onChange={e => setPlayerInId(e.target.value)}
-        options={[{ value: '', label: 'Select...' }, ...makeOpts(benchPlayers)]}
+        options={[{ value: '', label: t('common.select') }, ...makeOpts(benchPlayers)]}
       />
       <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
         <input
@@ -789,7 +792,7 @@ function SubstitutionForm({
           onChange={e => setIsLiberoSwap(e.target.checked)}
           className="w-4 h-4 accent-turq-500"
         />
-        Libero swap (doesn't count against limit)
+        {t('liveLog.liberoSwapNote')}
       </label>
       <Button
         fullWidth
@@ -797,7 +800,7 @@ function SubstitutionForm({
         loading={mutation.isPending}
         disabled={!playerOutId || !playerInId}
       >
-        Confirm substitution
+        {t('liveLog.confirmSub')}
       </Button>
     </div>
   )

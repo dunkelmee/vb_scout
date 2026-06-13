@@ -1,17 +1,18 @@
-// Minimal date formatting utilities
+// Minimal date formatting utilities — locale-aware via the active i18n language
+import { currentLocale } from './format'
 
 export function format(dateStr: string | Date, opts?: { time?: boolean }): string {
   const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   if (isNaN(d.getTime())) return '–'
 
-  const dateFormatted = d.toLocaleDateString('en-GB', {
+  const dateFormatted = d.toLocaleDateString(currentLocale(), {
     day: 'numeric',
     month: 'short',
     year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
   })
 
   if (opts?.time) {
-    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    const time = d.toLocaleTimeString(currentLocale(), { hour: '2-digit', minute: '2-digit', hour12: false })
     return `${dateFormatted} · ${time}`
   }
 

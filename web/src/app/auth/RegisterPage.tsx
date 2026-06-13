@@ -1,10 +1,12 @@
 import React, { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { invitesApi, InviteValidateResponse } from '../../lib/api'
 import { Divider, GoogleButton, CourtSideLogo } from './LoginPage'
 
 export function RegisterPage() {
+  const { t } = useTranslation()
   const [inviteCode, setInviteCode]     = useState('')
   const [validation, setValidation]     = useState<InviteValidateResponse | null>(null)
   const [validating, setValidating]     = useState(false)
@@ -62,9 +64,9 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!validation?.valid) { setError('Please enter a valid invitation code'); return }
-    if (!termsChecked) { setError('Please accept the terms to continue'); return }
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return }
+    if (!validation?.valid) { setError(t('errors.invalidInviteCode')); return }
+    if (!termsChecked) { setError(t('auth.register.acceptTerms')); return }
+    if (password.length < 8) { setError(t('errors.passwordTooShort')); return }
 
     setError('')
     setLoading(true)
@@ -79,14 +81,14 @@ export function RegisterPage() {
       })
       navigate(isFirstLogin ? '/onboarding' : '/dashboard', { replace: true })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
+      setError(err instanceof Error ? err.message : t('auth.register.registrationFailed'))
     } finally {
       setLoading(false)
     }
   }
 
   const strengthColors = ['#4A4A5A', '#EA526F', '#279AF1', '#23B5D3', '#23B5D3']
-  const strengthLabel  = ['', 'Weak', 'Fair', 'Good', 'Strong'][passwordStrength]
+  const strengthLabel  = ['', t('auth.register.pwWeak'), t('auth.register.pwFair'), t('auth.register.pwGood'), t('auth.register.pwStrong')][passwordStrength]
 
   return (
     <div className="relative min-h-dvh overflow-hidden" style={{ background: '#070600' }}>
@@ -136,9 +138,9 @@ export function RegisterPage() {
         <div className="px-7 pt-[20px]">
           <CourtSideLogo gradientId="logo-grad-reg" from="#23B5D3" to="#A2A2D0" className="mb-4" />
           <h1 className="text-[40px] font-black leading-[1.05] tracking-tight text-white mb-2.5">
-            Your team.<br/>
+            {t('auth.register.heroTitle1')}<br/>
             <span style={{ background: 'linear-gradient(135deg, #EA526F 0%, #23B5D3 55%, #279AF1 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              Your data.
+              {t('auth.register.heroTitle2')}
             </span>
           </h1>
         </div>
@@ -147,22 +149,22 @@ export function RegisterPage() {
         <div className="mx-3.5 mt-4 mb-5 rounded-[20px] p-[22px_18px]" style={{
           background: 'rgba(22,20,18,0.72)', backdropFilter: 'blur(20px)', border: '1px solid rgba(247,247,255,0.08)',
         }}>
-          <h2 className="text-[18px] font-bold text-white mb-0.5">Create account</h2>
-          <p className="text-[12px] text-[#8A8A9A] mb-5">Join your team with an invitation code</p>
+          <h2 className="text-[18px] font-bold text-white mb-0.5">{t('auth.register.title')}</h2>
+          <p className="text-[12px] text-[#8A8A9A] mb-5">{t('auth.register.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {/* Invite code — prominent */}
             <div className="rounded-[12px] p-3" style={{ background: 'rgba(35,181,211,0.06)', border: '1px solid rgba(35,181,211,0.25)' }}>
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="text-[15px]" style={{ color: '#23B5D3' }}>🔑</span>
-                <span className="text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: '#23B5D3' }}>Invitation code</span>
-                {validating && <span className="text-[10px] text-[#8A8A9A] ml-auto">Checking…</span>}
+                <span className="text-[11px] font-semibold uppercase tracking-[0.07em]" style={{ color: '#23B5D3' }}>{t('auth.register.inviteCode')}</span>
+                {validating && <span className="text-[10px] text-[#8A8A9A] ml-auto">{t('common.loading')}</span>}
               </div>
               <input
                 value={inviteCode}
                 onChange={e => handleCodeChange(e.target.value)}
                 onBlur={handleCodeBlur}
-                placeholder="VB3X·9KQM"
+                placeholder={t('auth.register.inviteCodePlaceholder')}
                 maxLength={9}
                 className="w-full rounded-[8px] px-3 py-[10px] text-[16px] font-bold tracking-[0.18em] text-center uppercase outline-none"
                 style={{
@@ -181,8 +183,8 @@ export function RegisterPage() {
                   </span>
                   <span className="text-[11px] font-medium" style={{ color: validation.valid ? '#23B5D3' : '#F07A90' }}>
                     {validation.valid
-                      ? `Joining ${validation.teamName ?? 'a team'} as ${validation.role === 'manager' ? 'Head Coach' : 'Player'} · Invited by ${validation.invitedBy}`
-                      : 'This code is invalid or has expired'}
+                      ? `${t('auth.register.inviteValid', { teamName: validation.teamName ?? '—', role: validation.role === 'manager' ? t('teamSwitcher.roleManager') : t('teamSwitcher.rolePlayer') })} · ${validation.invitedBy}`
+                      : t('auth.register.inviteInvalid')}
                   </span>
                 </div>
               )}
@@ -194,22 +196,22 @@ export function RegisterPage() {
                 <div className="flex-1 py-2.5 rounded-[9px] text-center text-[11px] font-semibold flex flex-col items-center gap-0.5"
                   style={{ background: 'rgba(35,181,211,0.12)', border: '1px solid rgba(35,181,211,0.40)', color: '#23B5D3' }}>
                   <span className="text-lg">{validation.role === 'manager' ? '🎯' : '🏐'}</span>
-                  {validation.role === 'manager' ? 'Head Coach' : 'Player'}
+                  {validation.role === 'manager' ? t('teamSwitcher.roleManager') : t('teamSwitcher.rolePlayer')}
                 </div>
                 <div className="flex-1 py-2.5 rounded-[9px] text-center text-[11px] font-semibold flex flex-col items-center gap-0.5 opacity-40"
                   style={{ background: 'rgba(7,6,0,0.5)', border: '1px solid #2F2D28', color: '#8A8A9A' }}>
                   <span className="text-lg">{validation.role === 'manager' ? '🏐' : '🎯'}</span>
-                  {validation.role === 'manager' ? 'Player' : 'Head Coach'}
+                  {validation.role === 'manager' ? t('teamSwitcher.rolePlayer') : t('teamSwitcher.roleManager')}
                 </div>
               </div>
             )}
 
             {/* Team name (pre-filled or editable) */}
-            <FieldGroup label="Team name">
+            <FieldGroup label={t('auth.register.teamName')}>
               <input
                 value={teamName}
                 onChange={e => setTeamName(e.target.value)}
-                placeholder="Your team name"
+                placeholder={t('auth.register.teamName')}
                 readOnly={!!(validation?.valid && validation.teamName)}
                 className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                 style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28', opacity: (validation?.valid && validation.teamName) ? 0.6 : 1 }}
@@ -217,27 +219,27 @@ export function RegisterPage() {
             </FieldGroup>
 
             {/* Name */}
-            <FieldGroup label="Your name">
+            <FieldGroup label={`${t('auth.register.firstName')} / ${t('auth.register.lastName')}`}>
               <div className="grid grid-cols-2 gap-2">
-                <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First"
+                <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder={t('auth.register.firstName')}
                   required className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                   style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }} />
-                <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last"
+                <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder={t('auth.register.lastName')}
                   required className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                   style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }} />
               </div>
             </FieldGroup>
 
             {/* Email */}
-            <FieldGroup label="Email">
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="coach@volleyclub.de"
+            <FieldGroup label={t('auth.login.emailLabel')}>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder={t('auth.login.emailPlaceholder')}
                 required className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                 style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }} />
             </FieldGroup>
 
             {/* Password + strength */}
-            <FieldGroup label="Password">
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min. 8 characters"
+            <FieldGroup label={t('auth.register.password')}>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder={t('auth.register.passwordHint')}
                 required className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                 style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }} />
               {password && (
@@ -264,7 +266,10 @@ export function RegisterPage() {
                 {termsChecked && <span className="text-[11px]" style={{ color: '#23B5D3' }}>✓</span>}
               </button>
               <p className="text-[11px] text-[#8A8A9A] leading-relaxed">
-                I agree to the <span className="text-[#23B5D3] cursor-pointer">Terms of Service</span> and <span className="text-[#23B5D3] cursor-pointer">Privacy Policy</span>
+                {t('auth.register.terms', {
+                  terms: t('auth.register.termsLink'),
+                  privacy: t('auth.register.privacyLink'),
+                })}
               </p>
             </div>
 
@@ -275,16 +280,16 @@ export function RegisterPage() {
             <button type="submit" disabled={loading || !validation?.valid}
               className="w-full py-[14px] rounded-[12px] text-[14px] font-bold text-black flex items-center justify-center gap-2 disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #EA526F, #23B5D3, #279AF1)', boxShadow: '0 4px 22px rgba(234,82,111,0.28)' }}>
-              {loading ? '…' : '🚀 Create team account'}
+              {loading ? '…' : `🚀 ${t('auth.register.createButton')}`}
             </button>
           </form>
 
           <Divider />
-          <GoogleButton label="Sign up with Google" />
+          <GoogleButton label={t('auth.register.googleButton')} />
 
           <p className="text-center text-[12px] text-[#8A8A9A] mt-4">
-            Already have an account?{' '}
-            <Link to="/auth/login" className="text-[#23B5D3] font-semibold">Sign in →</Link>
+            {t('auth.register.alreadyAccount')}{' '}
+            <Link to="/auth/login" className="text-[#23B5D3] font-semibold">{t('auth.register.signIn')}</Link>
           </p>
         </div>
       </div>

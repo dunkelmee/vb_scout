@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { authApi, AppUser, RegisterData } from '../lib/api'
+import { applyLocale } from '../lib/i18n'
 
 interface AuthState {
   user: AppUser | null
@@ -10,7 +11,13 @@ interface AuthState {
   logout:   () => Promise<void>
   setUser:  (user: AppUser, token: string) => void
   refresh:  () => Promise<void>
-  patchMe:  (data: { onboardingDone?: boolean; firstName?: string; lastName?: string }) => Promise<void>
+  patchMe:  (data: {
+    onboardingDone?: boolean; firstName?: string; lastName?: string;
+    locale?: 'en' | 'de';
+    notifRsvpRequests?: boolean; notifRsvpResponses?: boolean;
+    notifMatchReminder?: boolean; notifTrainingReminder?: boolean;
+    notifAnalysisReady?: boolean;
+  }) => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -24,12 +31,14 @@ export const useAuthStore = create<AuthState>()(
           user: AppUser; accessToken: string; isFirstLogin: boolean
         }
         set({ user, token: accessToken })
+        applyLocale(user.locale)
         return { isFirstLogin: isFirstLogin ?? false }
       },
 
       register: async (data) => {
         const res = await authApi.register(data)
         set({ user: res.user, token: res.accessToken })
+        applyLocale(res.user.locale)
         return { isFirstLogin: res.isFirstLogin ?? true }
       },
 
@@ -38,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, token: null })
       },
 
-      setUser: (user, token) => set({ user, token }),
+      setUser: (user, token) => { set({ user, token }); applyLocale(user.locale) },
 
       refresh: async () => {
         try {

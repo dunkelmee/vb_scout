@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { gamesApi, setsApi, MatchStats, MatchAnalysis, GameSet } from '../lib/api'
@@ -56,6 +58,7 @@ function KpiTile({ label, display, color, barValue, sub }: {
 // ── Per-set score timeline ────────────────────────────────────────────────────
 
 function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
+  const { t } = useTranslation()
   const { data: setData, isLoading } = useQuery({
     queryKey: ['set', set.id],
     queryFn: () => setsApi.get(matchId, set.id),
@@ -105,7 +108,7 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
             labelFormatter={(v) => `Rally ${v}`}
             formatter={(value: number, name: string) => [
               value > 0 ? `+${value}` : `${value}`,
-              name === 'pos' ? 'Lead' : 'Deficit',
+              name === 'pos' ? t('postMatch.leading') : t('postMatch.trailing'),
             ]}
           />
           <ReferenceLine y={0} stroke={chartTheme.gridColor} />
@@ -123,8 +126,8 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
         </ComposedChart>
       </ResponsiveContainer>
       <div className="flex justify-between text-[11px] text-on-surface-variant/40 mt-1 px-1">
-        <span>Final: {setData.scoreUs}–{setData.scoreThem}</span>
-        <span>{setData.rallies.length} rallies</span>
+        <span>{t('postMatch.final')}: {setData.scoreUs}–{setData.scoreThem}</span>
+        <span>{t('postMatch.rallies', { count: setData.rallies.length })}</span>
       </div>
     </div>
   )
@@ -158,15 +161,15 @@ function SetTableRow({
 
 // ── Analysis section ──────────────────────────────────────────────────────────
 
-function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) {
+function AnalysisSection({ analysis, t }: { analysis: MatchAnalysis | undefined; t: TFunction }) {
   const [simExpanded, setSimExpanded] = useState(false)
 
   if (!analysis || analysis.status === 'pending' || analysis.status === 'running') {
     return (
       <div className="card p-6 flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-2 border-turq-500/30 border-t-turq-500 rounded-full animate-spin" />
-        <p className="text-sm font-bold text-on-surface">Analysing match data…</p>
-        <p className="text-xs text-on-surface-variant">Usually ready within 30 seconds.</p>
+        <p className="text-sm font-bold text-on-surface">{t('postMatch.analysing')}</p>
+        <p className="text-xs text-on-surface-variant">{t('postMatch.analysingSub')}</p>
       </div>
     )
   }
@@ -175,7 +178,7 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
     return (
       <div className="card p-4">
         <p className="text-sm text-on-surface-variant">
-          Not enough data to analyse ({analysis.nRallies} rallies). Minimum 20 required.
+          {t('postMatch.insufficientData', { count: analysis.nRallies ?? 0 })}
         </p>
       </div>
     )
@@ -184,7 +187,7 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
   if (analysis.status === 'error') {
     return (
       <div className="card p-4 border-bubb-500/20">
-        <p className="text-sm text-bubb-500">Analysis failed: {analysis.errorMessage || 'Unknown error'}</p>
+        <p className="text-sm text-bubb-500">{t('postMatch.analysisFailed')}: {analysis.errorMessage || t('common.error')}</p>
       </div>
     )
   }
@@ -195,9 +198,9 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
 
   return (
     <div className="space-y-4">
-      {strengths.length > 0 && <InsightGroup title="Strengths" cards={strengths} color="turq" />}
-      {weaknesses.length > 0 && <InsightGroup title="Areas to Address" cards={weaknesses} color="bubb" />}
-      {action_items.length > 0 && <InsightGroup title="Coaching Actions" cards={action_items} color="bell" />}
+      {strengths.length > 0 && <InsightGroup title={t('postMatch.strengthsTitle')} cards={strengths} color="turq" t={t} />}
+      {weaknesses.length > 0 && <InsightGroup title={t('postMatch.weaknessesTitle')} cards={weaknesses} color="bubb" t={t} />}
+      {action_items.length > 0 && <InsightGroup title={t('postMatch.actionsTitle')} cards={action_items} color="bell" t={t} />}
 
       {simulation_summary && (
         <div className="card p-4">
@@ -205,21 +208,21 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
             onClick={() => setSimExpanded(!simExpanded)}
             className="flex items-center justify-between w-full"
           >
-            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">Simulation</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">{t('postMatch.simulation')}</p>
             {simExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
 
           {simExpanded && (
             <div className="mt-3 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-on-surface-variant">Baseline win probability</span>
+                <span className="text-sm text-on-surface-variant">{t('postMatch.baselineWin')}</span>
                 <span className="font-bold text-sm text-on-surface">
                   {(simulation_summary.baseline_win_pct * 100).toFixed(1)}%
                 </span>
               </div>
               {simulation_summary.top_intervention && (
                 <div className="mt-2 p-3 rounded-lg bg-surface-high">
-                  <p className="text-xs text-on-surface-variant">Top improvement scenario:</p>
+                  <p className="text-xs text-on-surface-variant">{t('postMatch.topScenario')}</p>
                   <p className="text-sm font-bold text-turq-500 mt-0.5">
                     {simulation_summary.top_intervention.label}
                   </p>
@@ -237,9 +240,10 @@ function AnalysisSection({ analysis }: { analysis: MatchAnalysis | undefined }) 
 }
 
 function InsightGroup({
-  title, cards, color
+  title, cards, color, t
 }: {
   title: string
+  t: TFunction
   cards: Array<{
     id: string; title: string; detail: string; current_value: number
     target_value?: number | null; direction: string; impact?: string | null
@@ -259,9 +263,9 @@ function InsightGroup({
             <p className="text-xs text-on-surface-variant mt-1">{card.detail}</p>
             <div className="flex items-center justify-between mt-2 flex-wrap gap-1">
               <span className="text-xs text-on-surface-variant">
-                Current: <span className="font-bold text-on-surface">{(card.current_value * 100).toFixed(1)}%</span>
+                {t('postMatch.current')}: <span className="font-bold text-on-surface">{(card.current_value * 100).toFixed(1)}%</span>
                 {card.target_value != null && (
-                  <> → Target: <span className="font-bold text-on-surface">{(card.target_value * 100).toFixed(1)}%</span></>
+                  <> → {t('postMatch.target')}: <span className="font-bold text-on-surface">{(card.target_value * 100).toFixed(1)}%</span></>
                 )}
               </span>
               {card.impact && (
@@ -278,6 +282,7 @@ function InsightGroup({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export function GameStatsPage() {
+  const { t } = useTranslation()
   const { id: matchId } = useParams<{ id: string }>()
   const { isManager } = useRole()
   const [timelineSetId, setTimelineSetId] = useState<string | null>(null)
@@ -324,11 +329,11 @@ export function GameStatsPage() {
 
   // Opponent name for hero
   const ourTeam = match?.matchType === 'playing'
-    ? (match.team?.name || 'Us')
-    : (match?.homeTeam || 'Home')
+    ? (match.team?.name || t('gameWizard.us'))
+    : (match?.homeTeam || t('games.home'))
   const theirTeam = match?.matchType === 'playing'
-    ? (match?.opponent || 'Opponent')
-    : (match?.guestTeam || 'Guest')
+    ? (match?.opponent || t('gameWizard.opponent'))
+    : (match?.guestTeam || t('games.guest'))
 
   const won = (match?.setsWonUs ?? 0) > (match?.setsWonThem ?? 0)
 
@@ -359,7 +364,7 @@ export function GameStatsPage() {
             {match?.location ? ` · ${match.location}` : ''}
           </p>
           <h1 className="font-display font-bold text-base text-on-surface truncate">
-            Match summary
+            {t('postMatch.title')}
           </h1>
         </div>
         {isManager && !isCompleted && sets.length > 0 && (
@@ -367,7 +372,7 @@ export function GameStatsPage() {
             to={`/games/${matchId}/log`}
             className="text-xs text-turq-500 font-bold border border-turq-500/30 rounded-full px-3 py-1.5 shrink-0"
           >
-            Log
+            {t('games.actionLog')}
           </Link>
         )}
       </div>
@@ -392,7 +397,7 @@ export function GameStatsPage() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center shrink-0">
-                  <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wide">Sets</p>
+                  <p className="text-[9px] text-on-surface-variant/40 uppercase tracking-wide">{t('postMatch.sets')}</p>
                   <p className="text-2xl font-light text-on-surface-variant/30">–</p>
                 </div>
                 <div className="flex-1 text-center">
@@ -415,7 +420,7 @@ export function GameStatsPage() {
                       ? { background: 'rgba(35,181,211,0.18)',  color: '#23B5D3' }
                       : { background: 'rgba(234,82,111,0.18)', color: '#EA526F' }}
                   >
-                    {won ? '🏆 Match won' : '✗ Match lost'}
+                    {won ? `🏆 ${t('postMatch.matchWon')}` : `✗ ${t('postMatch.matchLost')}`}
                   </span>
                 </div>
               )}
@@ -433,7 +438,7 @@ export function GameStatsPage() {
                           ? { background: 'rgba(35,181,211,0.18)',  border: '1px solid rgba(35,181,211,0.25)' }
                           : { background: 'rgba(234,82,111,0.10)', border: '1px solid rgba(234,82,111,0.15)' }}
                       >
-                        <p className="text-[8px] text-on-surface-variant/50 mb-0.5">Set {s.setNumber}</p>
+                        <p className="text-[8px] text-on-surface-variant/50 mb-0.5">{t('liveLog.set', { number: s.setNumber })}</p>
                         <p className="text-xs font-bold" style={{ color: setWon ? '#23B5D3' : '#EA526F' }}>
                           {s.scoreUs}–{s.scoreThem}
                         </p>
@@ -448,7 +453,7 @@ export function GameStatsPage() {
                 <div className="flex justify-center gap-4 mt-3 pt-3 border-t border-outline/10 text-[11px] text-on-surface-variant/40">
                   <span className="flex items-center gap-1">
                     <Hash size={10} />
-                    {stats.overall.totalRallies} rallies
+                    {t('postMatch.rallies', { count: stats.overall.totalRallies })}
                   </span>
                 </div>
               )}
@@ -458,7 +463,7 @@ export function GameStatsPage() {
 
         {isCompleted && (pointCounts.ourPos + pointCounts.ourErr + pointCounts.themPos + pointCounts.themErr) > 0 && (
           <>
-            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Point origin</p>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('setSummary.pointOrigin')}</p>
             <div className="grid grid-cols-2 gap-3">
               <DonutChart teamName={ourTeam}   ownPoints={pointCounts.ourPos}  opponentErrors={pointCounts.ourErr}  variant="us" />
               <DonutChart teamName={theirTeam} ownPoints={pointCounts.themPos} opponentErrors={pointCounts.themErr} variant="them" />
@@ -469,56 +474,56 @@ export function GameStatsPage() {
         {stats && isCompleted && (
           <>
             {/* ── Key metrics ── */}
-            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Key metrics</p>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.keyMetrics')}</p>
             <div className="grid grid-cols-2 gap-3">
               <KpiTile
-                label="Sideout %"
+                label={t('dashboard.sideoutPct')}
                 display={`${(stats.overall.sideoutPct * 100).toFixed(1)}%`}
                 color={kpiSideout}
                 barValue={stats.overall.sideoutPct}
-                sub={`target ≥55%${stats.overall.sideoutPct >= 0.55 ? ' ✓' : ''}`}
+                sub={stats.overall.sideoutPct >= 0.55 ? t('dashboard.targetMet', { value: 55 }) : t('dashboard.targetNotMet', { value: 55 })}
               />
               <KpiTile
-                label="Break %"
+                label={t('dashboard.breakPct')}
                 display={`${(stats.overall.breakPct * 100).toFixed(1)}%`}
                 color={kpiBreak}
                 barValue={stats.overall.breakPct}
-                sub={`target ≥45%${stats.overall.breakPct >= 0.45 ? ' ✓' : ''}`}
+                sub={stats.overall.breakPct >= 0.45 ? t('dashboard.targetMet', { value: 45 }) : t('dashboard.targetNotMet', { value: 45 })}
               />
               <KpiTile
-                label="Error ratio"
+                label={t('stats.errorRatio')}
                 display={stats.overall.errorRatio.toFixed(2)}
                 color={kpiError}
                 barValue={Math.min(1, stats.overall.errorRatio)}
-                sub={`target ≤0.30${stats.overall.errorRatio <= 0.30 ? ' ✓' : ''}`}
+                sub={`≤0.30${stats.overall.errorRatio <= 0.30 ? ' ✓' : ''}`}
               />
               <KpiTile
-                label="Positive play"
+                label={t('stats.positivePlay')}
                 display={`${(stats.pointQuality.positivePlayPct * 100).toFixed(1)}%`}
                 color={kpiPosPlay}
                 barValue={stats.pointQuality.positivePlayPct}
-                sub={`target ≥60%${stats.pointQuality.positivePlayPct >= 0.60 ? ' ✓' : ''}`}
+                sub={stats.pointQuality.positivePlayPct >= 0.60 ? t('dashboard.targetMet', { value: 60 }) : t('dashboard.targetNotMet', { value: 60 })}
               />
               <KpiTile
-                label="Points ratio"
+                label={t('dashboard.pointsRatio')}
                 display={pointsRatio.toFixed(2)}
                 color={kpiRatio}
                 barValue={Math.min(1, pointsRatio / 1.5)}
-                sub={`${stats.overall.pointsUs} scored · ${stats.overall.pointsThem} conceded`}
+                sub={`${stats.overall.pointsUs} : ${stats.overall.pointsThem}`}
               />
               <KpiTile
-                label="Error clustering"
+                label={t('stats.clustering')}
                 display={stats.errorClustering < 0 ? 'N/A' : stats.errorClustering.toFixed(2)}
                 color={kpiCluster}
                 barValue={stats.errorClustering < 0 ? 0 : Math.min(1, stats.errorClustering)}
-                sub={stats.errorClustering < 0 ? 'Insufficient data' : stats.errorClustering >= 0.5 ? 'Clustered errors' : 'Mild clustering'}
+                sub={stats.errorClustering < 0 ? '' : stats.errorClustering >= 0.5 ? t('stats.clearBurstPattern') : t('stats.mildClustering')}
               />
             </div>
 
             {/* ── Set comparison ── */}
             {stats.perSetStats.length > 0 && (
               <>
-                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Set comparison</p>
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.setComparison')}</p>
                 <div className="card p-4 overflow-x-auto">
                   <table className="w-full text-xs min-w-[220px]">
                     <thead>
@@ -532,7 +537,7 @@ export function GameStatsPage() {
                               className="text-center pb-2.5 text-[9px] font-bold uppercase tracking-wide"
                               style={{ color: sw ? '#23B5D3' : '#EA526F' }}
                             >
-                              S{s.setNumber} {sw ? 'W' : 'L'}
+                              {sw ? t('postMatch.setWon', { number: s.setNumber }) : t('postMatch.setLost', { number: s.setNumber })}
                             </th>
                           )
                         })}
@@ -540,24 +545,24 @@ export function GameStatsPage() {
                     </thead>
                     <tbody>
                       <SetTableRow
-                        label="Score"
+                        label={t('postMatch.score')}
                         sets={stats.perSetStats}
                         getValue={s => `${s.scoreUs}–${s.scoreThem}`}
                         getColor={s => s.scoreUs > s.scoreThem ? '#23B5D3' : '#EA526F'}
                       />
                       <SetTableRow
-                        label="Rallies"
+                        label={t('postMatch.ralliesLabel')}
                         sets={stats.perSetStats}
                         getValue={s => `${s.stats.totalRallies}`}
                       />
                       <SetTableRow
-                        label="Sideout"
+                        label={t('postMatch.sideout')}
                         sets={stats.perSetStats}
                         getValue={s => `${(s.stats.sideoutPct * 100).toFixed(0)}%`}
                         getColor={s => perfColor(s.stats.sideoutPct, 0.55, true)}
                       />
                       <SetTableRow
-                        label="Break %"
+                        label={t('dashboard.breakPct')}
                         sets={stats.perSetStats}
                         getValue={s => `${(s.stats.breakPct * 100).toFixed(0)}%`}
                         getColor={s => perfColor(s.stats.breakPct, 0.45, true)}
@@ -573,7 +578,7 @@ export function GameStatsPage() {
         {/* ── Score timeline with set selector ── */}
         {isCompleted && sets.length > 0 && matchId && (
           <>
-            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Score timeline</p>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.scoreTimeline')}</p>
             <div className="card p-4">
               {/* Set pills */}
               <div className="flex gap-2 flex-wrap mb-4">
@@ -605,11 +610,11 @@ export function GameStatsPage() {
               <div className="flex gap-4 mt-3 text-[11px] text-on-surface-variant/50">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#23B5D3' }} />
-                  Leading
+                  {t('postMatch.leading')}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full inline-block" style={{ background: '#EA526F' }} />
-                  Trailing
+                  {t('postMatch.trailing')}
                 </span>
               </div>
             </div>
@@ -621,7 +626,7 @@ export function GameStatsPage() {
             {/* ── Rotation performance ── */}
             {stats.rotationStats.length > 0 && (
               <>
-                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Rotation performance</p>
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.rotationPerf')}</p>
                 <div className="card p-4">
                   <div className="grid grid-cols-6 gap-2">
                     {stats.rotationStats.map(rot => {
@@ -648,8 +653,8 @@ export function GameStatsPage() {
         {/* ── AI insights ── */}
         {isCompleted && (
           <>
-            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">Match insights</p>
-            <AnalysisSection analysis={analysis} />
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.matchInsights')}</p>
+            <AnalysisSection analysis={analysis} t={t} />
           </>
         )}
 

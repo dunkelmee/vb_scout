@@ -34,12 +34,22 @@ model User {
   role           String    @default("player") // superadmin | manager | player
   onboardingDone Boolean   @default(false)    @map("onboarding_done")
   avatarUrl      String?   @map("avatar_url")
+  locale         String    @default("en")
+  // Notification preferences
+  notifRsvpRequests     Boolean @default(true) @map("notif_rsvp_requests")
+  notifRsvpResponses    Boolean @default(true) @map("notif_rsvp_responses")
+  notifMatchReminder    Boolean @default(true) @map("notif_match_reminder")
+  notifTrainingReminder Boolean @default(true) @map("notif_training_reminder")
+  notifAnalysisReady    Boolean @default(true) @map("notif_analysis_ready")
   createdAt      DateTime  @default(now())    @map("created_at")
   updatedAt      DateTime  @updatedAt         @map("updated_at")
 
   teamMemberships    TeamMember[]
   inviteCodesCreated InviteCode[] @relation("CreatedBy")
   trainingSessions   TrainingSession[]
+  pushSubscriptions  PushSubscription[]
+  rsvps              Rsvp[]
+  notificationLogs   NotificationLog[]
 
   @@map("users")
 }
@@ -104,7 +114,6 @@ model Player {
   matchPlayers       MatchPlayer[]
   substitutionsOut   Substitution[]     @relation("SubOut")
   substitutionsIn    Substitution[]     @relation("SubIn")
-  trainingAttendance TrainingAttendance[]
   matchRef1          Match[]            @relation("Ref1")
   matchRef2          Match[]            @relation("Ref2")
   matchScorer1       Match[]            @relation("Scorer1")
@@ -147,6 +156,11 @@ model Match {
   setsWonUs        Int       @default(0) @map("sets_won_us")
   setsWonThem      Int       @default(0) @map("sets_won_them")
   status           String    @default("upcoming") // upcoming | in_progress | completed
+  // RSVP fields
+  rsvpEnabled      Boolean   @default(true)  @map("rsvp_enabled")
+  rsvpDeadline     DateTime? @map("rsvp_deadline")
+  autoReminderSent Boolean   @default(false) @map("auto_reminder_sent")
+  autoReminderTime DateTime? @map("auto_reminder_time")
   ref1Id           String?   @map("ref1_id") @db.Uuid
   ref2Id           String?   @map("ref2_id") @db.Uuid
   scorer1Id        String?   @map("scorer1_id") @db.Uuid
@@ -262,29 +276,66 @@ model TrainingSession {
   location  String?
   focusTags String[] @map("focus_tags")
   createdBy String?  @map("created_by") @db.Uuid
+  // RSVP fields
+  rsvpEnabled      Boolean   @default(true)  @map("rsvp_enabled")
+  rsvpDeadline     DateTime? @map("rsvp_deadline")
+  autoReminderSent Boolean   @default(false) @map("auto_reminder_sent")
+  autoReminderTime DateTime? @map("auto_reminder_time")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  team               Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  creator            User?              @relation(fields: [createdBy], references: [id], onDelete: SetNull)
-  trainingAttendance TrainingAttendance[]
+  team    Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  creator User? @relation(fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@map("training_sessions")
 }
 
-model TrainingAttendance {
-  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trainingSessionId String    @map("training_session_id") @db.Uuid
-  playerId          String    @map("player_id") @db.Uuid
-  status            String    @default("pending") // pending | coming | not_coming
-  note              String?
-  respondedAt       DateTime? @map("responded_at")
+model PushSubscription {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  endpoint    String
+  subscription String  // JSON stringified PushSubscriptionJSON
+  deviceLabel String?  @map("device_label")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastUsedAt  DateTime @default(now()) @map("last_used_at")
 
-  trainingSession TrainingSession @relation(fields: [trainingSessionId], references: [id], onDelete: Cascade)
-  player          Player          @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([trainingSessionId, playerId])
-  @@map("training_attendance")
+  @@unique([userId, endpoint])
+  @@map("push_subscriptions")
+}
+
+model Rsvp {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playerId    String    @map("player_id") @db.Uuid  // references User.id
+  entityType  String    @map("entity_type")          // "training" | "game"
+  entityId    String    @map("entity_id")            // TrainingSession.id or Match.id
+  status      String    // "confirmed" | "declined" | "maybe" | "pending"
+  respondedAt DateTime? @map("responded_at")
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([playerId, entityType, entityId])
+  @@map("rsvps")
+}
+
+model NotificationLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  type           String   // rsvp_request | rsvp_response | analysis_ready | match_reminder | training_reminder
+  entityType     String?  @map("entity_type")
+  entityId       String?  @map("entity_id")
+  title          String
+  body           String
+  sentAt         DateTime @default(now()) @map("sent_at")
+  deliveryStatus String   @default("sent") @map("delivery_status") // sent | failed | stale
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_logs")
 }
 
 model MatchAnalysis {

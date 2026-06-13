@@ -1,3 +1,4 @@
+import './lib/i18n' // initialise i18n before anything renders
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'

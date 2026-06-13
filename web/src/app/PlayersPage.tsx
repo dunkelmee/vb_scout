@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { playersApi, invitesApi, Player } from '../lib/api'
@@ -11,6 +12,7 @@ import { Plus, Edit3, Trash2, ShieldCheck, UserPlus, Copy, Check, X } from 'luci
 import { cn } from '../components/ui/cn'
 
 export function PlayersPage() {
+  const { t } = useTranslation()
   const { isManager } = useRole()
   const user = useAuthStore(s => s.user)
   const navigate = useNavigate()
@@ -32,8 +34,8 @@ export function PlayersPage() {
   return (
     <div className="min-h-dvh bg-background">
       <PageHeader
-        title="Players"
-        subtitle={`Active Roster · ${players.length} players`}
+        title={t('players.title')}
+        subtitle={t('players.eyebrow', { count: players.length })}
         right={isManager ? (
           <button
             onClick={() => navigate('/players/new')}
@@ -73,7 +75,7 @@ export function PlayersPage() {
                   <p className="font-display font-bold text-base text-on-surface leading-tight">
                     {player.firstName} {player.lastName}
                   </p>
-                  {isMe && <Badge label="You" variant="info" size="sm" />}
+                  {isMe && <Badge label={t('players.you')} variant="info" size="sm" />}
                   {player.hasRefereeLicense && isManager && (
                     <ShieldCheck size={12} className="text-secondary-container" />
                   )}
@@ -102,7 +104,7 @@ export function PlayersPage() {
                     <button
                       onClick={() => setInvitePlayer(player)}
                       className="p-2 rounded-full hover:bg-white/[0.06] text-turq-500/70"
-                      title="Invite player"
+                      title={t('players.invitePlayer')}
                     >
                       <UserPlus size={16} />
                     </button>
@@ -115,7 +117,7 @@ export function PlayersPage() {
                   </button>
                   <button
                     onClick={() => {
-                      if (confirm(`Delete ${player.firstName} ${player.lastName}?`)) {
+                      if (confirm(t('players.deleteConfirm', { name: `${player.firstName} ${player.lastName}` }))) {
                         deleteMutation.mutate(player.id)
                       }
                     }}
@@ -142,6 +144,7 @@ export function PlayersPage() {
 }
 
 function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string; playerName: string; onClose: () => void }) {
+  const { t } = useTranslation()
   const [boundEmail, setBoundEmail] = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
@@ -156,7 +159,7 @@ function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string
       const res = await invitesApi.create({ role: 'player', playerId, boundEmail: boundEmail.trim() || undefined })
       setResult({ code: res.code, emailSent: res.emailSent })
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to create invite')
+      setError(err instanceof Error ? err.message : t('players.createInviteFailed'))
     } finally {
       setLoading(false)
     }
@@ -196,8 +199,8 @@ function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string
             <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{ background: 'rgba(35,181,211,0.15)' }}>
               <Check size={22} style={{ color: '#23B5D3' }} />
             </div>
-            <h3 className="text-[16px] font-bold text-white mb-1">Invite code ready</h3>
-            <p className="text-[12px] text-[#8A8A9A] mb-4">Share this code with the player so they can register.</p>
+            <h3 className="text-[16px] font-bold text-white mb-1">{t('players.inviteCodeReady')}</h3>
+            <p className="text-[12px] text-[#8A8A9A] mb-4">{t('players.shareCodePlayer')}</p>
             <div className="flex items-center gap-2 rounded-[12px] p-3 mb-3" style={{ background: 'rgba(35,181,211,0.08)', border: '1px solid rgba(35,181,211,0.25)' }}>
               <span className="flex-1 font-bold tracking-[0.20em] text-[18px] text-center" style={{ color: '#23B5D3' }}>
                 {result.code.slice(0, 4)}·{result.code.slice(4)}
@@ -207,29 +210,29 @@ function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string
               </button>
             </div>
             {result.emailSent && (
-              <p className="text-[11px] text-[#23B5D3]">Invite email sent to {boundEmail}</p>
+              <p className="text-[11px] text-[#23B5D3]">{t('players.inviteEmailSentTo', { email: boundEmail })}</p>
             )}
           </div>
         ) : (
           <>
-            <h3 className="text-[16px] font-bold text-white mb-0.5">Invite {playerName}</h3>
-            <p className="text-[12px] text-[#8A8A9A] mb-4">Generate a one-time code for {playerName} to register and join your team.</p>
+            <h3 className="text-[16px] font-bold text-white mb-0.5">{t('players.inviteName', { name: playerName })}</h3>
+            <p className="text-[12px] text-[#8A8A9A] mb-4">{t('players.generateCodeFor', { name: playerName })}</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-semibold uppercase tracking-[0.07em] text-[#8A8A9A] mb-1.5">Player email (optional)</label>
+                <label className="block text-[10px] font-semibold uppercase tracking-[0.07em] text-[#8A8A9A] mb-1.5">{t('players.playerEmail')}</label>
                 <input
                   type="email"
                   value={boundEmail}
                   onChange={e => setBoundEmail(e.target.value)}
-                  placeholder="player@club.de"
+                  placeholder={t('players.playerEmailPlaceholder')}
                   className="w-full rounded-[10px] px-3 py-[11px] text-[14px] text-white outline-none"
                   style={{ background: 'rgba(7,6,0,0.60)', border: '1px solid #2F2D28' }}
                 />
-                <p className="text-[10px] text-[#4A4A5A] mt-1">If provided, the code is locked to this email and an invite is sent automatically.</p>
+                <p className="text-[10px] text-[#4A4A5A] mt-1">{t('players.emailLockNoteAuto')}</p>
               </div>
               {error && <p className="text-[12px] text-[#F07A90]">{error}</p>}
               <button type="submit" disabled={loading} className="w-full py-[13px] rounded-[12px] text-[14px] font-bold text-black disabled:opacity-50" style={{ background: 'linear-gradient(135deg, #23B5D3, #279AF1)' }}>
-                {loading ? '…' : '🔑 Generate invite code'}
+                {loading ? '…' : t('players.generateInviteCode')}
               </button>
             </form>
           </>

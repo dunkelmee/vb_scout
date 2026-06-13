@@ -1,4 +1,6 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GameSet, ralliesApi } from '../../lib/api'
 import { cn } from '../ui/cn'
@@ -15,6 +17,7 @@ type TimelineEntry =
   | { type: 'substitution'; rallyIndex: number; playerOutName: string; playerInName: string; id: string }
 
 export function TimelineTab({ set, matchId }: TimelineTabProps) {
+  const { t } = useTranslation()
   const qc = useQueryClient()
 
   const entries: TimelineEntry[] = []
@@ -59,16 +62,16 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
   entries.sort((a, b) => b.rallyIndex - a.rallyIndex)
 
   const pointTypeLabel: Record<string, string> = {
-    us_positive:  'Own play',
-    them_error:   'Their error',
-    them_positive:'Their play',
-    us_error:     'Our error',
+    us_positive:  t('timeline.ownPlay'),
+    them_error:   t('timeline.theirError'),
+    them_positive:t('timeline.theirPlay'),
+    us_error:     t('timeline.ourError'),
   }
 
   return (
     <div className="px-4 py-4 pb-20">
       {entries.length === 0 && (
-        <p className="text-center text-ghost-300 text-sm py-8">No events yet.</p>
+        <p className="text-center text-ghost-300 text-sm py-8">{t('timeline.noEvents')}</p>
       )}
 
 
@@ -77,7 +80,7 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
 
         <div className="space-y-2 pl-6">
           {entries.map((entry, idx) => (
-            <TimelineEntry key={entry.id} entry={entry} isNewest={idx === 0} setNumber={set.setNumber} pointTypeLabel={pointTypeLabel} />
+            <TimelineEntry key={entry.id} entry={entry} isNewest={idx === 0} setNumber={set.setNumber} pointTypeLabel={pointTypeLabel} t={t} />
           ))}
         </div>
       </div>
@@ -86,12 +89,13 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
 }
 
 function TimelineEntry({
-  entry, isNewest, setNumber, pointTypeLabel
+  entry, isNewest, setNumber, pointTypeLabel, t
 }: {
   entry: TimelineEntry
   isNewest: boolean
   setNumber: number
   pointTypeLabel: Record<string, string>
+  t: TFunction
 }) {
   if (entry.type === 'timeout') {
     return (
@@ -101,10 +105,10 @@ function TimelineEntry({
           <Clock size={14} className="text-bell-500 shrink-0" />
           <div>
             <p className="text-xs font-bold text-bell-500 uppercase tracking-wide">
-              TIMEOUT: {entry.calledBy === 'us' ? 'US' : 'THEM'}
+              {t('timeline.timeout', { team: entry.calledBy === 'us' ? t('gameWizard.us') : t('gameWizard.them') })}
             </p>
             <p className="text-xs text-ghost-300">
-              Called at {entry.atScoreUs}–{entry.atScoreThem}
+              {t('timeline.calledAt', { score: `${entry.atScoreUs}–${entry.atScoreThem}` })}
             </p>
           </div>
         </div>
@@ -119,9 +123,9 @@ function TimelineEntry({
         <div className="card p-3 flex items-center gap-3">
           <span className="text-ghost-300 text-sm">⇄</span>
           <div className="flex-1">
-            <span className="text-xs font-bold text-ghost-300">IN </span>
+            <span className="text-xs font-bold text-ghost-300">{t('timeline.in')} </span>
             <span className="text-xs font-bold text-turq-400">{entry.playerInName}</span>
-            <span className="text-xs text-ghost-300"> → OUT </span>
+            <span className="text-xs text-ghost-300"> → {t('timeline.out')} </span>
             <span className="text-xs font-bold text-bubb-500/70">{entry.playerOutName}</span>
           </div>
         </div>
@@ -156,14 +160,14 @@ function TimelineEntry({
             {isNewest && (
               <span className="text-[9px] text-pitch-950 rounded-full px-2 py-0.5 font-bold uppercase"
                 style={{ background: '#23B5D3' }}>
-                Newest
+                {t('timeline.newest')}
               </span>
             )}
             <span className={cn(
               'text-xs font-bold uppercase flex items-center gap-1',
               ourPoint ? 'text-turq-500' : 'text-bubb-500/70'
             )}>
-              {ourPoint ? '✓' : '✗'} {ourPoint ? 'Our point' : 'Their point'}
+              {ourPoint ? '✓' : '✗'} {ourPoint ? t('timeline.ourPoint') : t('timeline.theirPoint')}
             </span>
           </div>
         </div>
@@ -173,7 +177,7 @@ function TimelineEntry({
           </p>
           {entry.rotated && (
             <span className="text-xs text-bell-500 flex items-center gap-1">
-              <RotateCw size={10} /> Rotated
+              <RotateCw size={10} /> {t('timeline.rotated')}
             </span>
           )}
         </div>

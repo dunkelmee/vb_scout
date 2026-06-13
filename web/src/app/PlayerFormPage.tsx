@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { playersApi } from '../lib/api'
@@ -13,6 +14,7 @@ import { useRole } from '../hooks/useRole'
 const POSITION_OPTIONS = ['Setter', 'Outside', 'Opposite', 'Middle', 'Libero', 'DS']
 
 export function PlayerFormPage() {
+  const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -61,9 +63,9 @@ export function PlayerFormPage() {
       qc.invalidateQueries({ queryKey: ['player', id] })
       setPhotoPreview(null)
       setPendingPhoto(null)
-      showToast('Photo saved', 'success')
+      showToast(t('players.photoSaved'), 'success')
     },
-    onError: () => showToast('Failed to upload photo', 'error'),
+    onError: () => showToast(t('players.photoUploadFailed'), 'error'),
   })
 
   const deletePhotoMutation = useMutation({
@@ -73,9 +75,9 @@ export function PlayerFormPage() {
       qc.invalidateQueries({ queryKey: ['player', id] })
       setPhotoPreview(null)
       setPendingPhoto(null)
-      showToast('Photo removed', 'success')
+      showToast(t('players.photoRemoved'), 'success')
     },
-    onError: () => showToast('Failed to remove photo', 'error'),
+    onError: () => showToast(t('players.photoRemoveFailed'), 'error'),
   })
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +159,7 @@ export function PlayerFormPage() {
           <ArrowLeft size={18} className="text-on-surface-variant" />
         </button>
         <h1 className="font-display font-bold text-base text-on-surface">
-          {isEdit ? 'Edit Player' : 'Add Player'}
+          {isEdit ? t('players.editPlayer') : t('players.addPlayer')}
         </h1>
       </div>
 
@@ -193,7 +195,7 @@ export function PlayerFormPage() {
                 onClick={() => fileInputRef.current?.click()}
                 className="text-xs text-orange font-bold"
               >
-                {hasPhoto ? 'Change photo' : 'Add photo'}
+                {hasPhoto ? t('players.changePhoto') : t('players.addPhoto')}
               </button>
 
               {/* Direct upload for existing players with a pending or saved photo */}
@@ -204,7 +206,7 @@ export function PlayerFormPage() {
                   disabled={photoMutation.isPending}
                   className="text-xs text-secondary-container font-bold"
                 >
-                  {photoMutation.isPending ? 'Uploading…' : 'Save photo now'}
+                  {photoMutation.isPending ? t('players.uploading') : t('players.savePhotoNow')}
                 </button>
               )}
 
@@ -215,7 +217,7 @@ export function PlayerFormPage() {
                   disabled={deletePhotoMutation.isPending}
                   className="text-xs text-error/70 font-bold flex items-center gap-1"
                 >
-                  <Trash2 size={11} /> Remove
+                  <Trash2 size={11} /> {t('players.removePhoto')}
                 </button>
               )}
             </div>
@@ -224,21 +226,22 @@ export function PlayerFormPage() {
 
         {/* ── Profile fields ── */}
         <div className="grid grid-cols-2 gap-3">
-          <Input label="First name" value={firstName} onChange={e => setFirstName(e.target.value)} required />
-          <Input label="Last name"  value={lastName}  onChange={e => setLastName(e.target.value)}  required />
+          <Input label={t('players.firstName')} value={firstName} onChange={e => setFirstName(e.target.value)} required />
+          <Input label={t('players.lastName')}  value={lastName}  onChange={e => setLastName(e.target.value)}  required />
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <Input label="Jersey #"   type="number" value={jersey}   onChange={e => setJersey(e.target.value)}   placeholder="7" />
-          <Input label="Height (m)" type="number" value={heightM}  onChange={e => setHeightM(e.target.value)}  step="0.01" placeholder="1.85" />
-          <Input label="Birthday"   type="date"   value={birthday} onChange={e => setBirthday(e.target.value)} />
+          <Input label={t('players.jersey')}   type="number" value={jersey}   onChange={e => setJersey(e.target.value)}   placeholder="7" />
+          <Input label={t('players.height')} type="number" value={heightM}  onChange={e => setHeightM(e.target.value)}  step="0.01" placeholder="1.85" />
+          <Input label={t('players.birthday')}   type="date"   value={birthday} onChange={e => setBirthday(e.target.value)} />
         </div>
 
         <ChipGroup
-          label="Positions"
+          label={t('players.positions')}
           options={POSITION_OPTIONS}
           selected={positions}
           onChange={handlePositions}
+          renderLabel={opt => t(`positions.${opt}`, { defaultValue: opt })}
         />
 
         <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
@@ -248,13 +251,13 @@ export function PlayerFormPage() {
             onChange={e => setHasRef(e.target.checked)}
             className="w-4 h-4 accent-orange"
           />
-          Has referee license
+          {t('players.hasLicense')}
         </label>
 
 
         <div className="flex gap-3 pt-2">
           <Button variant="outline" type="button" onClick={() => navigate(-1)} className="flex-1">
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
@@ -262,7 +265,7 @@ export function PlayerFormPage() {
             disabled={!firstName || !lastName || positions.length === 0}
             className="flex-1"
           >
-            {isEdit ? 'Save' : 'Add player'}
+            {isEdit ? t('common.save') : t('players.addPlayer')}
           </Button>
         </div>
       </form>

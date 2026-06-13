@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
+import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { useRole } from '../hooks/useRole'
-import { seasonsApi, teamApi, authApi, playersApi, Season } from '../lib/api'
+import { seasonsApi, teamApi, authApi, playersApi, pushApi, Season } from '../lib/api'
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, shouldShowPushPrompt } from '../lib/pushSubscription'
 import { PageHeader } from '../components/ui/AppShell'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
@@ -18,6 +21,7 @@ import { format } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
 
 export function SettingsPage() {
+  const { t } = useTranslation()
   const user = useAuthStore(s => s.user)
   const logout = useAuthStore(s => s.logout)
   const { isManager, isSuperAdmin } = useRole()
@@ -35,32 +39,37 @@ export function SettingsPage() {
 
   return (
     <div className="min-h-dvh bg-background pb-8">
-      <PageHeader title="Settings" subtitle="Account & Preferences" />
+      <PageHeader title={t('settings.title')} subtitle={t('settings.account')} />
 
       <div className="px-5 space-y-5">
         {/* Profile section */}
-        <SettingsSection title="Profile">
+        <SettingsSection title={t('settings.profile')}>
           <ProfileSection />
         </SettingsSection>
 
+        {/* Language section */}
+        <SettingsSection title={t('settings.language')}>
+          <LanguageSelector />
+        </SettingsSection>
+
         {/* Account section */}
-        <SettingsSection title="Account">
+        <SettingsSection title={t('settings.account')}>
           <div className="space-y-1">
-            <p className="text-xs text-on-surface-variant">Email</p>
+            <p className="text-xs text-on-surface-variant">{t('settings.email')}</p>
             <p className="text-sm font-bold text-on-surface">{user?.email}</p>
           </div>
           <div className="pt-3 border-t border-outline/10">
-            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">Change password</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">{t('settings.changePassword')}</p>
             <div className="space-y-2">
               <Input
                 type="password"
-                placeholder="New password"
+                placeholder={t('auth.register.password')}
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
               />
               <Input
                 type="password"
-                placeholder="Confirm password"
+                placeholder={t('auth.register.password')}
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
               />
@@ -68,9 +77,9 @@ export function SettingsPage() {
                 size="sm"
                 variant="outline"
                 disabled={!newPassword || newPassword !== confirmPassword}
-                onClick={() => showToast('Password updated', 'success')}
+                onClick={() => showToast(t('settings.passwordUpdated'), 'success')}
               >
-                Update password
+                {t('settings.updatePassword')}
               </Button>
             </div>
           </div>
@@ -79,53 +88,53 @@ export function SettingsPage() {
         {isManager && !isSuperAdmin && (
           <>
             {/* Team */}
-            <SettingsSection title="Team">
+            <SettingsSection title={t('settings.team')}>
               <TeamSettings />
             </SettingsSection>
 
             {/* TUS Settings */}
-            <SettingsSection title="Timeout Urgency Score">
+            <SettingsSection title={t('settings.timeoutUrgencyScore')}>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-on-surface">Window size</span>
-                  <span className="text-sm font-bold text-on-surface">6 rallies</span>
+                  <span className="text-sm text-on-surface">{t('settings.windowSize')}</span>
+                  <span className="text-sm font-bold text-on-surface">{t('postMatch.rallies', { count: 6 })}</span>
                 </div>
-                <p className="text-xs text-on-surface-variant">Range: 4–10 rallies</p>
+                <p className="text-xs text-on-surface-variant">{t('settings.windowRange')}</p>
               </div>
 
               <button
                 onClick={() => setShowTUSWeights(!showTUSWeights)}
                 className="flex items-center justify-between w-full pt-3 border-t border-outline/10 mt-3"
               >
-                <span className="text-sm font-bold text-on-surface">Advanced: Signal weights</span>
+                <span className="text-sm font-bold text-on-surface">{t('settings.signalWeights')}</span>
                 {showTUSWeights ? <ChevronUp size={14} className="text-on-surface-variant" /> : <ChevronDown size={14} className="text-on-surface-variant" />}
               </button>
 
               {showTUSWeights && (
                 <div className="mt-3 space-y-3 bg-surface-high rounded-xl p-3">
                   {[
-                    { label: 'Momentum', default: '30%' },
-                    { label: 'Error ratio', default: '25%' },
-                    { label: 'Lead/deficit', default: '25%' },
-                    { label: 'Positive play', default: '20%' },
+                    { label: t('stats.momentum'), default: '30%' },
+                    { label: t('stats.errorRatio'), default: '25%' },
+                    { label: t('stats.leadDeficit'), default: '25%' },
+                    { label: t('stats.positivePlay'), default: '20%' },
                   ].map(({ label, default: def }) => (
                     <div key={label} className="flex items-center justify-between">
                       <span className="text-xs text-on-surface">{label}</span>
                       <span className="text-xs font-bold text-orange">{def}</span>
                     </div>
                   ))}
-                  <p className="text-xs text-on-surface-variant">Weights must sum to 100%</p>
+                  <p className="text-xs text-on-surface-variant">{t('settings.weightSum')}</p>
                 </div>
               )}
             </SettingsSection>
 
             {/* Seasons — hidden from main nav, accessible here */}
-            <SettingsSection title="Seasons">
+            <SettingsSection title={t('seasons.title')}>
               <button
                 onClick={() => setShowSeasons(!showSeasons)}
                 className="flex items-center justify-between w-full"
               >
-                <span className="text-sm text-on-surface">Manage seasons</span>
+                <span className="text-sm text-on-surface">{t('settings.manageSeasons')}</span>
                 {showSeasons ? <ChevronUp size={14} className="text-on-surface-variant" /> : <ChevronDown size={14} className="text-on-surface-variant" />}
               </button>
 
@@ -133,31 +142,38 @@ export function SettingsPage() {
             </SettingsSection>
 
             {/* Danger zone */}
-            <SettingsSection title="Danger Zone" className="border-error/20">
+            <SettingsSection title={t('settings.dangerZone')} className="border-error/20">
               <Button
                 variant="danger"
                 size="sm"
                 onClick={() => {
-                  if (confirm('Delete all match data? This cannot be undone.')) {
-                    showToast('All match data deleted', 'error')
+                  if (confirm(t('settings.deleteMatchData') + '?')) {
+                    showToast(t('settings.matchDataDeleted'), 'error')
                   }
                 }}
               >
-                Delete all match data
+                {t('settings.deleteMatchData')}
               </Button>
             </SettingsSection>
           </>
         )}
 
+        {/* Notifications */}
+        {!isSuperAdmin && (
+          <SettingsSection title={t('settings.notifications')}>
+            <NotificationSettings />
+          </SettingsSection>
+        )}
+
         {/* Sign out */}
         <div className="pt-2">
           <Button variant="outline" fullWidth onClick={handleLogout}>
-            Sign out
+            {t('settings.signOut')}
           </Button>
         </div>
 
         <p className="text-center text-xs text-on-surface-variant">
-          courtside v{import.meta.env.VITE_APP_VERSION ?? 'dev'}
+          {t('settings.version', { version: import.meta.env.VITE_APP_VERSION ?? 'dev' })}
         </p>
       </div>
     </div>
@@ -165,6 +181,7 @@ export function SettingsPage() {
 }
 
 function ProfileSection() {
+  const { t } = useTranslation()
   const user    = useAuthStore(s => s.user)
   const { isPlayer } = useRole()
   const setUser = useAuthStore(s => s.setUser)
@@ -227,9 +244,9 @@ function ProfileSection() {
         qc.invalidateQueries({ queryKey: ['players'] })
         qc.invalidateQueries({ queryKey: ['player', user.playerId] })
       }
-      showToast('Profile picture updated', 'success')
+      showToast(t('settings.photoUpdated'), 'success')
     } catch {
-      showToast('Failed to upload photo', 'error')
+      showToast(t('players.photoUploadFailed'), 'error')
     } finally {
       setUploading(false)
       e.target.value = ''
@@ -246,9 +263,9 @@ function ProfileSection() {
         qc.invalidateQueries({ queryKey: ['players'] })
         qc.invalidateQueries({ queryKey: ['player', user.playerId] })
       }
-      showToast('Profile picture removed', 'success')
+      showToast(t('settings.photoRemoved'), 'success')
     } catch {
-      showToast('Failed to remove photo', 'error')
+      showToast(t('players.photoRemoveFailed'), 'error')
     } finally {
       setUploading(false)
     }
@@ -272,9 +289,9 @@ function ProfileSection() {
         qc.invalidateQueries({ queryKey: ['players'] })
         qc.invalidateQueries({ queryKey: ['player', user.playerId] })
       }
-      showToast('Profile saved', 'success')
+      showToast(t('settings.profileSaved'), 'success')
     } catch {
-      showToast('Failed to save profile', 'error')
+      showToast(t('settings.profileSaveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -337,24 +354,25 @@ function ProfileSection() {
 
       {/* Name — shared between user account and player record */}
       <div className="grid grid-cols-2 gap-2">
-        <Input label="First name" value={firstName} onChange={e => setFirstName(e.target.value)} />
-        <Input label="Last name"  value={lastName}  onChange={e => setLastName(e.target.value)} />
+        <Input label={t('players.firstName')} value={firstName} onChange={e => setFirstName(e.target.value)} />
+        <Input label={t('players.lastName')}  value={lastName}  onChange={e => setLastName(e.target.value)} />
       </div>
 
       {/* Player-specific fields — only visible to player-role users */}
       {isPlayer && (
         <>
           <div className="grid grid-cols-3 gap-2">
-            <Input label="Jersey #"   type="number" value={jersey}   onChange={e => setJersey(e.target.value)}   placeholder="7" />
-            <Input label="Height (m)" type="number" value={heightM}  onChange={e => setHeightM(e.target.value)}  step="0.01" placeholder="1.85" />
-            <Input label="Birthday"   type="date"   value={birthday} onChange={e => setBirthday(e.target.value)} />
+            <Input label={t('players.jersey')}   type="number" value={jersey}   onChange={e => setJersey(e.target.value)}   placeholder="7" />
+            <Input label={t('players.height')} type="number" value={heightM}  onChange={e => setHeightM(e.target.value)}  step="0.01" placeholder="1.85" />
+            <Input label={t('players.birthday')}   type="date"   value={birthday} onChange={e => setBirthday(e.target.value)} />
           </div>
 
           <ChipGroup
-            label="Positions"
+            label={t('players.positions')}
             options={POSITION_OPTIONS}
             selected={positions}
             onChange={handlePositions}
+            renderLabel={opt => t(`positions.${opt}`, { defaultValue: opt })}
           />
 
           <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
@@ -364,15 +382,115 @@ function ProfileSection() {
               onChange={e => setHasRef(e.target.checked)}
               className="w-4 h-4 accent-orange"
             />
-            Has referee license
+            {t('players.hasLicense')}
           </label>
         </>
       )}
 
       {hasChanges && (
         <Button size="sm" onClick={handleSave} loading={saving}>
-          Save profile
+          {t('common.save')}
         </Button>
+      )}
+    </div>
+  )
+}
+
+function NotificationSettings() {
+  const { t } = useTranslation()
+  const user     = useAuthStore(s => s.user)
+  const { isManager } = useRole()
+  const { showToast } = useToast()
+  const patchMe  = useAuthStore(s => s.patchMe)
+
+  const [subscribed, setSubscribed]     = useState<boolean | null>(null)
+  const [toggling, setToggling]         = useState(false)
+
+  useEffect(() => {
+    isPushSubscribed().then(setSubscribed)
+  }, [])
+
+  const handleTogglePush = async () => {
+    setToggling(true)
+    try {
+      if (subscribed) {
+        await unsubscribeFromPush()
+        setSubscribed(false)
+        showToast(t('settings.pushDisabled'), 'success')
+      } else {
+        const ok = await subscribeToPush()
+        setSubscribed(ok)
+        showToast(ok ? t('settings.pushEnabled') : t('settings.permissionDenied'), ok ? 'success' : 'error')
+      }
+    } catch {
+      showToast(t('settings.notifChangeFailed'), 'error')
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  const handlePrefToggle = async (field: string, value: boolean) => {
+    try {
+      await patchMe({ [field]: value } as Parameters<typeof patchMe>[0])
+    } catch {
+      showToast(t('settings.prefUpdateFailed'), 'error')
+    }
+  }
+
+  const prefs = [
+    { key: 'notifTrainingReminder', label: t('settings.trainingReminders'), desc: t('settings.trainingRemindersSub') },
+    { key: 'notifMatchReminder',    label: t('settings.matchReminders'),    desc: t('settings.matchRemindersSub') },
+    ...(isManager ? [
+      { key: 'notifRsvpResponses',  label: t('settings.playerResponses'),   desc: t('settings.playerResponsesSub') },
+      { key: 'notifAnalysisReady',  label: t('settings.analysisReady'),     desc: t('settings.analysisReadySub') },
+    ] : []),
+  ]
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-on-surface">{t('settings.pushNotifications')}</p>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            {subscribed === null ? t('settings.checking') : subscribed ? t('settings.enabledThisDevice') : t('settings.disabledState')}
+          </p>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          loading={toggling}
+          onClick={handleTogglePush}
+          disabled={subscribed === null}
+        >
+          {subscribed ? t('settings.disable') : t('settings.enable')}
+        </Button>
+      </div>
+
+      <div className="pt-3 border-t border-outline/10 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant">{t('settings.whatToNotify')}</p>
+        {prefs.map(pref => {
+          const value = (user as unknown as Record<string, unknown>)?.[pref.key] as boolean | undefined
+          return (
+            <label key={pref.key} className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={value ?? true}
+                onChange={e => handlePrefToggle(pref.key, e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-orange shrink-0"
+              />
+              <div>
+                <p className="text-sm text-on-surface">{pref.label}</p>
+                <p className="text-xs text-on-surface-variant">{pref.desc}</p>
+              </div>
+            </label>
+          )
+        })}
+      </div>
+
+      {'Notification' in window && (
+        <p className="text-xs text-on-surface-variant">
+          {t('settings.iphoneHint')}
+        </p>
       )}
     </div>
   )
@@ -405,6 +523,7 @@ function deriveInitials(name: string): string {
 // ── Team settings component ───────────────────────────────────────────────
 
 function TeamSettings() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { showToast } = useToast()
   const [teamName, setTeamName] = useState('')
@@ -428,29 +547,29 @@ function TeamSettings() {
       teamApi.update({ name: teamName.trim(), initials: initials.trim() || undefined }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['team'] })
-      showToast('Team settings saved', 'success')
+      showToast(t('settings.teamSaved'), 'success')
     },
-    onError: () => showToast('Failed to save team settings', 'error'),
+    onError: () => showToast(t('settings.teamSaveFailed'), 'error'),
   })
 
   const preview = initials.trim() || deriveInitials(teamName)
 
   if (isLoading) {
-    return <p className="text-xs text-on-surface-variant animate-pulse">Loading…</p>
+    return <p className="text-xs text-on-surface-variant animate-pulse">{t('common.loading')}</p>
   }
 
   return (
     <div className="space-y-3">
       <Input
-        label="Team name"
+        label={t('settings.teamName')}
         value={teamName}
         onChange={e => setTeamName(e.target.value)}
-        placeholder="e.g. Volleyball Elite"
+        placeholder={t('settings.teamNameEg')}
       />
 
       <div>
         <Input
-          label="Scoring-button initials"
+          label={t('settings.scoringInitials')}
           value={initials}
           onChange={e => setInitials(e.target.value.toUpperCase().slice(0, 5))}
           placeholder={deriveInitials(teamName) || 'e.g. VE'}
@@ -467,7 +586,7 @@ function TeamSettings() {
       {/* Live preview */}
       {preview && (
         <div className="flex items-center gap-3 py-2 px-3 rounded-xl bg-surface-high">
-          <span className="text-xs text-on-surface-variant uppercase tracking-wide">Preview</span>
+          <span className="text-xs text-on-surface-variant uppercase tracking-wide">{t('settings.preview')}</span>
           <span className="font-display font-bold text-sm text-orange">{preview} ⊕</span>
         </div>
       )}
@@ -478,7 +597,7 @@ function TeamSettings() {
         loading={updateMutation.isPending}
         disabled={!teamName.trim()}
       >
-        Save team settings
+        {t('common.save')}
       </Button>
     </div>
   )
@@ -487,6 +606,7 @@ function TeamSettings() {
 // ── Seasons manager ───────────────────────────────────────────────────────
 
 function SeasonsManager() {
+  const { t } = useTranslation()
   const qc = useQueryClient()
   const { showToast } = useToast()
   const [showForm, setShowForm] = useState(false)
@@ -517,16 +637,16 @@ function SeasonsManager() {
       qc.invalidateQueries({ queryKey: ['seasons'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
       setEditId(null)
-      showToast('Season renamed', 'success')
+      showToast(t('settings.seasonRenamed'), 'success')
     },
-    onError: () => showToast('Failed to rename season', 'error'),
+    onError: () => showToast(t('settings.seasonRenameFailed'), 'error'),
   })
 
   const activateMutation = useMutation({
     mutationFn: (id: string) => seasonsApi.update(id, { isActive: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['seasons'] })
-      showToast('Season activated', 'success')
+      showToast(t('settings.seasonActivated'), 'success')
     },
   })
 
@@ -545,14 +665,14 @@ function SeasonsManager() {
                 <Input
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
-                  placeholder="Season name"
+                  placeholder={t('seasons.nameLabel')}
                   autoFocus
                 />
                 <button
                   onClick={() => renameMutation.mutate({ id: s.id, newName: editName })}
                   disabled={!editName.trim() || renameMutation.isPending}
                   className="p-1.5 rounded text-orange disabled:opacity-40"
-                  title="Save"
+                  title={t('common.save')}
                 >
                   <Check size={14} />
                 </button>
@@ -566,7 +686,7 @@ function SeasonsManager() {
             ) : (
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-on-surface truncate">{s.name}</p>
-                {s.isActive && <Badge label="Active" variant="green" size="sm" />}
+                {s.isActive && <Badge label={t('seasons.active')} variant="green" size="sm" />}
               </div>
             )}
             <p className="text-xs text-on-surface-variant mt-0.5">{format(s.startDate)}</p>
@@ -576,7 +696,7 @@ function SeasonsManager() {
               <button
                 onClick={() => { setEditId(s.id); setEditName(s.name) }}
                 className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant"
-                title="Rename"
+                title={t('common.rename')}
               >
                 <Edit3 size={12} />
               </button>
@@ -585,7 +705,7 @@ function SeasonsManager() {
               <button
                 onClick={() => activateMutation.mutate(s.id)}
                 className="p-1.5 rounded hover:bg-white/[0.06] text-on-surface-variant"
-                title="Set active"
+                title={t('seasons.setActive')}
               >
                 <Check size={12} />
               </button>
@@ -593,7 +713,7 @@ function SeasonsManager() {
             {editId !== s.id && (
               <button
                 onClick={() => {
-                  if (confirm(`Delete "${s.name}"?`)) deleteMutation.mutate(s.id)
+                  if (confirm(`${t('common.delete')} "${s.name}"?`)) deleteMutation.mutate(s.id)
                 }}
                 className="p-1.5 rounded hover:bg-white/[0.06] text-error/60"
               >
@@ -609,17 +729,17 @@ function SeasonsManager() {
           onClick={() => setShowForm(true)}
           className="flex items-center gap-2 text-xs text-orange font-bold mt-1"
         >
-          <Plus size={12} /> Add season
+          <Plus size={12} /> {t('seasons.newSeason')}
         </button>
       ) : (
         <div className="space-y-2 mt-2">
-          <Input label="Season name" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Spring 2025" required />
-          <Input label="Start date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
-          <Input label="End date (optional)" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          <Input label={t('seasons.nameLabel')} value={name} onChange={e => setName(e.target.value)} placeholder={t('seasons.namePlaceholder')} required />
+          <Input label={t('seasons.startDate')} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+          <Input label={t('seasons.endDateOptional')} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setShowForm(false)} className="flex-1">Cancel</Button>
+            <Button size="sm" variant="outline" onClick={() => setShowForm(false)} className="flex-1">{t('common.cancel')}</Button>
             <Button size="sm" onClick={() => createMutation.mutate()} loading={createMutation.isPending} disabled={!name} className="flex-1">
-              Create
+              {t('common.create')}
             </Button>
           </div>
         </div>

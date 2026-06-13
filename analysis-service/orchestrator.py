@@ -22,10 +22,13 @@ N_SIMS = int(os.environ.get('N_SIMS', '10000'))
 N_SENSITIVITY = int(os.environ.get('N_SENSITIVITY', '5000'))
 
 
-def run_analysis(match_id: str):
+def run_analysis(match_id: str, locale: str = 'en'):
     """
     Full analysis pipeline for a completed match.
     Reads from DB, runs all modules, writes results.
+
+    ``locale`` controls the language of the generated insight-card text
+    ('en' | 'de'); it falls back to English for any untranslated entries.
     """
     try:
         db.upsert_match_analysis(match_id, 'running')
@@ -145,8 +148,9 @@ def run_analysis(match_id: str):
             'clustering_index': clustering_index,
         }
 
-        # --- Assemble insights
-        insights, simulation_summary = assemble_insights(analysis_result)
+        # --- Assemble insights (in the requested language)
+        analysis_result['locale'] = locale
+        insights, simulation_summary = assemble_insights(analysis_result, locale)
 
         # --- Outcome tracking
         team_id = match_data['match'].get('team_id')

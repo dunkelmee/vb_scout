@@ -62,9 +62,6 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       where: { teamId, date: { gte: now } },
       orderBy: { date: 'asc' },
       take: 5,
-      include: {
-        trainingAttendance: { select: { status: true, playerId: true } },
-      },
     })
 
     // Recent analysis (manager only)

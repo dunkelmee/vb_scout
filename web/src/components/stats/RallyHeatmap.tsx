@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Rally } from '../../lib/api'
 import { cn } from '../ui/cn'
 
@@ -8,13 +9,14 @@ interface RallyHeatmapProps {
 }
 
 export function RallyHeatmap({ rallies, count = 15 }: RallyHeatmapProps) {
+  const { t } = useTranslation()
   const recent = rallies.slice(-count)
   const emptySlots = Math.max(0, count - recent.length)
 
   return (
     <div className="card p-4">
       <p className="text-xs font-bold uppercase tracking-wide text-ghost-300 mb-3">
-        Last {count} points
+        {t('stats.lastPoints', { count })}
       </p>
 
       <div
@@ -45,10 +47,10 @@ export function RallyHeatmap({ rallies, count = 15 }: RallyHeatmapProps) {
       </div>
 
       <div className="flex items-center justify-end gap-x-3 opacity-60">
-        <LegendItem color="#23B5D3" dot={false} label="Our point" />
-        <LegendItem color="#EA526F" dot={false} label="Their point" />
-        <LegendItem color="#23B5D3" dot label="Their error" />
-        <LegendItem color="#EA526F" dot label="Our error" />
+        <LegendItem color="#23B5D3" dot={false} label={t('timeline.ourPoint')} />
+        <LegendItem color="#EA526F" dot={false} label={t('timeline.theirPoint')} />
+        <LegendItem color="#23B5D3" dot label={t('timeline.theirError')} />
+        <LegendItem color="#EA526F" dot label={t('timeline.ourError')} />
       </div>
     </div>
   )

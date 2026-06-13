@@ -87,7 +87,6 @@ router.delete('/teams/:id', async (req: Request, res: Response) => {
       const sessions = await tx.trainingSession.findMany({ where: { teamId: id }, select: { id: true } })
       const sessionIds = sessions.map((s: { id: string }) => s.id)
       if (sessionIds.length > 0) {
-        await tx.trainingAttendance.deleteMany({ where: { trainingSessionId: { in: sessionIds } } })
         await tx.trainingSession.deleteMany({ where: { teamId: id } })
       }
 

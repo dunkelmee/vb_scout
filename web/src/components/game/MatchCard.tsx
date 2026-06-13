@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Match, BASE } from '../../lib/api'
 import { format } from '../../lib/dateUtils'
 import { cn } from '../ui/cn'
@@ -46,13 +47,14 @@ function OfficialGroup({ label, p1, p2 }: { label: string; p1?: OfficialPlayer |
 export function OfficiatingAvatars({ match }: {
   match: Pick<Match, 'ref1' | 'ref2' | 'scorer1' | 'scorer2'>
 }) {
+  const { t } = useTranslation()
   const hasRefs = !!(match.ref1 || match.ref2)
   const hasScorers = !!(match.scorer1 || match.scorer2)
   if (!hasRefs && !hasScorers) return null
   return (
     <div className="grid grid-cols-2 gap-3 mt-2 mb-1">
-      <OfficialGroup label="Refs" p1={match.ref1} p2={match.ref2} />
-      <OfficialGroup label="Scorers" p1={match.scorer1} p2={match.scorer2} />
+      <OfficialGroup label={t('games.refs')} p1={match.ref1} p2={match.ref2} />
+      <OfficialGroup label={t('games.scorers')} p1={match.scorer1} p2={match.scorer2} />
     </div>
   )
 }
@@ -75,6 +77,7 @@ export function MatchCard({
   onDelete,
   onCardClick,
 }: MatchCardProps) {
+  const { t } = useTranslation()
   const isPlaying  = match.matchType === 'playing'
   const isCompleted = match.status === 'completed'
   const isLive     = match.status === 'in_progress'
@@ -83,7 +86,7 @@ export function MatchCard({
   const navigate   = useNavigate()
   const dashMode   = !!onCardClick
 
-  const teamName   = match.team?.name ?? 'Us'
+  const teamName   = match.team?.name ?? t('gameWizard.us')
   const currentSet = isLive ? (match.sets?.find(s => s.status === 'in_progress') ?? null) : null
 
   const borderClass = isLive
@@ -126,7 +129,7 @@ export function MatchCard({
             {isLive && (
               <span className="flex items-center gap-1 text-[10px] font-bold text-turq-500 uppercase tracking-[0.06em]">
                 <span className="w-1.5 h-1.5 rounded-full bg-turq-500 animate-pulse inline-block" />
-                {currentSet ? `Live · Set ${currentSet.setNumber}` : 'Live'}
+                {currentSet ? `${t('games.liveBadge')} · ${t('liveLog.set', { number: currentSet.setNumber })}` : t('games.liveBadge')}
               </span>
             )}
             {isCompleted && match.location && (
@@ -139,7 +142,7 @@ export function MatchCard({
             )}
             {!isPlaying && (
               <span className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.05em] px-2 py-0.5 rounded-full bg-bell-500/10 text-bell-500 border border-bell-500/25">
-                <Gavel size={9} /> Officiating
+                <Gavel size={9} /> {t('games.officBadge')}
               </span>
             )}
           </div>
@@ -156,7 +159,7 @@ export function MatchCard({
                 {teamName}
               </div>
               <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">
-                {isLive ? 'Home' : 'Us'}
+                {isLive ? t('games.home') : t('gameWizard.us')}
               </div>
             </div>
 
@@ -177,7 +180,7 @@ export function MatchCard({
                 </span>
               </div>
               <div className="text-[10px] text-ghost-400 uppercase tracking-[0.06em] mt-0.5">
-                {isLive && currentSet ? `Set ${currentSet.setNumber}` : 'Sets'}
+                {isLive && currentSet ? t('liveLog.set', { number: currentSet.setNumber }) : t('games.sets')}
               </div>
             </div>
 
@@ -186,10 +189,10 @@ export function MatchCard({
                 'text-[13px] font-bold leading-tight mb-0.5 truncate max-w-[120px]',
                 isCompleted && won ? 'text-ghost-300' : isCompleted && !won ? 'text-bubb-400' : '',
               )}>
-                {match.opponent || 'TBD'}
+                {match.opponent || t('games.tbd')}
               </div>
               <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">
-                {isLive ? 'Away' : 'Them'}
+                {isLive ? t('games.away') : t('gameWizard.them')}
               </div>
             </div>
           </div>
@@ -202,16 +205,16 @@ export function MatchCard({
               <div className="text-[13px] font-bold leading-tight mb-0.5 truncate max-w-[120px]">
                 {teamName}
               </div>
-              <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">Home</div>
+              <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">{t('games.home')}</div>
             </div>
             <div className="flex flex-col items-center flex-shrink-0">
               <div className="text-lg font-semibold text-ghost-400 tracking-[0.05em]">vs</div>
             </div>
             <div className="flex-1 flex flex-col items-end text-right">
               <div className="text-[13px] font-bold leading-tight mb-0.5 truncate max-w-[120px]">
-                {match.opponent || 'TBD'}
+                {match.opponent || t('games.tbd')}
               </div>
-              <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">Away</div>
+              <div className="text-[9px] text-ghost-400 uppercase tracking-[0.06em]">{t('games.away')}</div>
             </div>
           </div>
         )}
@@ -269,7 +272,7 @@ export function MatchCard({
               onClick={e => { e.stopPropagation(); navigate(`/games/${match.id}/log`) }}
               className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-turq-500"
             >
-              <Radio size={12} /> Log
+              <Radio size={12} /> {t('games.actionLog')}
             </button>
           )}
           {isPlaying && isCompleted && (
@@ -277,14 +280,14 @@ export function MatchCard({
               to={`/games/${match.id}/stats`}
               className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ghost-300"
             >
-              <BarChart2 size={12} /> Stats
+              <BarChart2 size={12} /> {t('games.actionStats')}
             </Link>
           )}
           <button
             onClick={e => { e.stopPropagation(); navigate(`/games/${match.id}/edit`) }}
             className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-ghost-300"
           >
-            <Edit3 size={12} /> Edit
+            <Edit3 size={12} /> {t('games.actionEdit')}
           </button>
           <div className="flex-1" />
           {onDelete && (
@@ -303,7 +306,7 @@ export function MatchCard({
             to={`/games/${match.id}/stats`}
             className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-turq-500"
           >
-            <BarChart2 size={12} /> View stats
+            <BarChart2 size={12} /> {t('games.actionStats')}
           </Link>
         </div>
       )}

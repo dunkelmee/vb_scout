@@ -171,7 +171,12 @@ router.patch('/:id', requireManager, async (req: Request, res: Response) => {
     // Trigger analysis when match is completed
     if (status === 'completed' && existing.status !== 'completed') {
       try {
-        await fetch(`${ANALYSIS_SERVICE_URL}/analyse/${id}`, { method: 'POST' })
+        const actor = await prisma.user.findUnique({ where: { id: req.user!.id }, select: { locale: true } })
+        await fetch(`${ANALYSIS_SERVICE_URL}/analyse/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ locale: actor?.locale ?? 'de' }),
+        })
       } catch (e) {
         console.error('Failed to trigger analysis:', e)
       }

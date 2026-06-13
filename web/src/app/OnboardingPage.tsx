@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { playersApi, seasonsApi } from '../lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 
 export function OnboardingPage() {
+  const { t }     = useTranslation()
   const user      = useAuthStore(s => s.user)
   const patchMe   = useAuthStore(s => s.patchMe)
   const navigate  = useNavigate()
@@ -78,7 +80,7 @@ export function OnboardingPage() {
     setPlayerDraft({ firstName: '', lastName: '', jersey: '', position: '' })
   }
 
-  const title = user?.firstName ? `Hi, ${user.firstName}!` : 'Welcome!'
+  const title = user?.firstName ? t('onboarding.greeting', { firstName: user.firstName }) : t('onboarding.welcome')
 
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: '#070600' }}>
@@ -88,7 +90,7 @@ export function OnboardingPage() {
       }}>
         <p className="text-[12px] font-bold tracking-[0.18em] uppercase text-white/40 mb-1">courtside</p>
         <h1 className="text-[24px] font-black text-white">{title}</h1>
-        <p className="text-[13px] text-[#8A8A9A]">Let's get your team set up.</p>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.setupSubtitle')}</p>
 
         {/* Step progress */}
         <div className="flex items-center gap-2 mt-5">
@@ -114,8 +116,8 @@ export function OnboardingPage() {
                   <span className="text-[10px] font-semibold hidden sm:block"
                     style={{ color: current ? '#23B5D3' : done ? '#8A8A9A' : '#4A4A5A' }}>
                     {isManager
-                      ? ['Team', 'Players', 'Season', 'Done'][i]
-                      : ['Welcome', 'Profile', 'Done'][i]}
+                      ? [t('onboarding.chipTeam'), t('onboarding.chipPlayers'), t('onboarding.chipSeason'), t('onboarding.chipDone')][i]
+                      : [t('onboarding.chipWelcome'), t('onboarding.chipProfile'), t('onboarding.chipDone')][i]}
                   </span>
                 </div>
                 {i < steps - 1 && (
@@ -188,6 +190,7 @@ export function OnboardingPage() {
 // ── Step components ───────────────────────────────────────────────────────────
 
 function ManagerStep1({ teamId, onNext }: { teamId: string | null; onNext: () => void }) {
+  const { t } = useTranslation()
   const [teamName, setTeamName] = React.useState<string | null>(null)
 
   React.useEffect(() => {
@@ -201,8 +204,8 @@ function ManagerStep1({ teamId, onNext }: { teamId: string | null; onNext: () =>
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[20px] font-bold text-white mb-1">Team confirmed</h2>
-        <p className="text-[13px] text-[#8A8A9A]">Your team is set up and ready.</p>
+        <h2 className="text-[20px] font-bold text-white mb-1">{t('onboarding.stepTeam')}</h2>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.teamReady')}</p>
       </div>
 
       {teamName && (
@@ -214,14 +217,14 @@ function ManagerStep1({ teamId, onNext }: { teamId: string | null; onNext: () =>
           </div>
           <div>
             <p className="text-[15px] font-bold text-white">{teamName}</p>
-            <p className="text-[11px] text-[#8A8A9A]">Head Coach · Team Manager</p>
+            <p className="text-[11px] text-[#8A8A9A]">{t('onboarding.headCoachManager')}</p>
           </div>
           <span className="ml-auto text-[11px] font-bold px-2 py-0.5 rounded"
-            style={{ background: 'rgba(35,181,211,0.15)', color: '#23B5D3' }}>Manager</span>
+            style={{ background: 'rgba(35,181,211,0.15)', color: '#23B5D3' }}>{t('teamSwitcher.roleManager')}</span>
         </div>
       )}
 
-      <OnboardingButton onClick={onNext}>Next — Add players →</OnboardingButton>
+      <OnboardingButton onClick={onNext}>{t('onboarding.nextAddPlayers')}</OnboardingButton>
     </div>
   )
 }
@@ -236,11 +239,12 @@ function ManagerStep2({
   onNext: () => void
   onSkip: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[20px] font-bold text-white mb-1">Add first players</h2>
-        <p className="text-[13px] text-[#8A8A9A]">You can always add more later.</p>
+        <h2 className="text-[20px] font-bold text-white mb-1">{t('onboarding.addPlayers')}</h2>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.addLater')}</p>
       </div>
 
       {players.length > 0 && (
@@ -250,7 +254,7 @@ function ManagerStep2({
               style={{ background: '#161412', border: '1px solid #2F2D28' }}>
               <span className="text-[12px] font-bold text-white flex-1">{p.firstName} {p.lastName}</span>
               {p.jersey && <span className="text-[11px] text-[#8A8A9A]">#{p.jersey}</span>}
-              {p.position && <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(35,181,211,0.12)', color: '#23B5D3' }}>{p.position}</span>}
+              {p.position && <span className="text-[10px] px-2 py-0.5 rounded" style={{ background: 'rgba(35,181,211,0.12)', color: '#23B5D3' }}>{t(`positions.${p.position}`, { defaultValue: p.position })}</span>}
             </div>
           ))}
         </div>
@@ -258,26 +262,26 @@ function ManagerStep2({
 
       <div className="space-y-2 rounded-[14px] p-3" style={{ background: '#161412', border: '1px solid #2F2D28' }}>
         <div className="grid grid-cols-2 gap-2">
-          <OnboardingInput value={draft.firstName} onChange={v => onDraftChange({ ...draft, firstName: v })} placeholder="First name" />
-          <OnboardingInput value={draft.lastName} onChange={v => onDraftChange({ ...draft, lastName: v })} placeholder="Last name" />
+          <OnboardingInput value={draft.firstName} onChange={v => onDraftChange({ ...draft, firstName: v })} placeholder={t('players.firstName')} />
+          <OnboardingInput value={draft.lastName} onChange={v => onDraftChange({ ...draft, lastName: v })} placeholder={t('players.lastName')} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <OnboardingInput value={draft.jersey} onChange={v => onDraftChange({ ...draft, jersey: v })} placeholder="Jersey #" type="number" />
+          <OnboardingInput value={draft.jersey} onChange={v => onDraftChange({ ...draft, jersey: v })} placeholder={t('players.jersey')} type="number" />
           <select value={draft.position} onChange={e => onDraftChange({ ...draft, position: e.target.value })}
             className="rounded-[8px] px-2.5 py-2 text-[13px] text-white outline-none"
             style={{ background: 'rgba(7,6,0,0.6)', border: '1px solid #2F2D28' }}>
-            <option value="">Position</option>
-            {['Setter','Outside','Opposite','Middle','Libero','DS'].map(p => <option key={p} value={p}>{p}</option>)}
+            <option value="">{t('onboarding.position')}</option>
+            {['Setter','Outside','Opposite','Middle','Libero','DS'].map(p => <option key={p} value={p}>{t(`positions.${p}`, { defaultValue: p })}</option>)}
           </select>
         </div>
         <button type="button" onClick={onAddPlayer}
           className="w-full py-2 rounded-[8px] text-[12px] font-bold text-[#23B5D3]"
           style={{ background: 'rgba(35,181,211,0.08)', border: '1px solid rgba(35,181,211,0.20)' }}>
-          + Add player
+          {t('onboarding.addPlayerBtn')}
         </button>
       </div>
 
-      <OnboardingButton onClick={onNext}>Continue →</OnboardingButton>
+      <OnboardingButton onClick={onNext}>{t('onboarding.continue')}</OnboardingButton>
       <SkipButton onClick={onSkip} />
     </div>
   )
@@ -286,27 +290,29 @@ function ManagerStep2({
 function ManagerStep3({ seasonName, onChange, onNext, onSkip }: {
   seasonName: string; onChange: (v: string) => void; onNext: () => void; onSkip: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-[20px] font-bold text-white mb-1">Create first season</h2>
-        <p className="text-[13px] text-[#8A8A9A]">Track your team's progress over time.</p>
+        <h2 className="text-[20px] font-bold text-white mb-1">{t('onboarding.stepSeason')}</h2>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.seasonSub')}</p>
       </div>
-      <OnboardingInput value={seasonName} onChange={onChange} placeholder="e.g. 2025/26" />
-      <OnboardingButton onClick={onNext}>Create season →</OnboardingButton>
+      <OnboardingInput value={seasonName} onChange={onChange} placeholder={t('seasons.namePlaceholder')} />
+      <OnboardingButton onClick={onNext}>{t('onboarding.createSeason')}</OnboardingButton>
       <SkipButton onClick={onSkip} />
     </div>
   )
 }
 
 function PlayerStep1({ onNext }: { onNext: () => void }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-[20px] font-bold text-white mb-1">Welcome to the team!</h2>
-        <p className="text-[13px] text-[#8A8A9A]">Your coach has added you to the squad.</p>
+        <h2 className="text-[20px] font-bold text-white mb-1">{t('onboarding.welcomeTeam')}</h2>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.coachAdded')}</p>
       </div>
-      <OnboardingButton onClick={onNext}>Set up profile →</OnboardingButton>
+      <OnboardingButton onClick={onNext}>{t('onboarding.setupProfile')}</OnboardingButton>
     </div>
   )
 }
@@ -318,6 +324,7 @@ function PlayerStep2({ birthday, onBirthday, heightM, onHeight, positions, onPos
   jersey: string; onJersey: (v: string) => void
   allPositions: string[]; onNext: () => void; onSkip: () => void
 }) {
+  const { t } = useTranslation()
   const toggle = (pos: string) => {
     onPositions(positions.includes(pos) ? positions.filter(p => p !== pos) : [...positions, pos])
   }
@@ -325,12 +332,12 @@ function PlayerStep2({ birthday, onBirthday, heightM, onHeight, positions, onPos
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-[20px] font-bold text-white mb-1">Your profile</h2>
-        <p className="text-[13px] text-[#8A8A9A]">All fields are optional.</p>
+        <h2 className="text-[20px] font-bold text-white mb-1">{t('onboarding.yourProfile')}</h2>
+        <p className="text-[13px] text-[#8A8A9A]">{t('onboarding.allOptional')}</p>
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">Positions</label>
+        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">{t('players.positions')}</label>
         <div className="flex flex-wrap gap-2">
           {allPositions.map(pos => (
             <button key={pos} type="button" onClick={() => toggle(pos)}
@@ -340,7 +347,7 @@ function PlayerStep2({ birthday, onBirthday, heightM, onHeight, positions, onPos
                 border: `1px solid ${positions.includes(pos) ? 'rgba(35,181,211,0.40)' : '#2F2D28'}`,
                 color: positions.includes(pos) ? '#23B5D3' : '#8A8A9A',
               }}>
-              {pos}
+              {t(`positions.${pos}`, { defaultValue: pos })}
             </button>
           ))}
         </div>
@@ -348,36 +355,37 @@ function PlayerStep2({ birthday, onBirthday, heightM, onHeight, positions, onPos
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">Jersey #</label>
-          <OnboardingInput value={jersey} onChange={onJersey} placeholder="e.g. 7" type="number" />
+          <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">{t('players.jersey')}</label>
+          <OnboardingInput value={jersey} onChange={onJersey} placeholder={t('players.jerseyEg')} type="number" />
         </div>
         <div>
-          <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">Height (m)</label>
-          <OnboardingInput value={heightM} onChange={onHeight} placeholder="e.g. 1.85" type="number" />
+          <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">{t('players.height')}</label>
+          <OnboardingInput value={heightM} onChange={onHeight} placeholder={t('players.heightEg')} type="number" />
         </div>
       </div>
 
       <div>
-        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">Birthday</label>
+        <label className="block text-[10px] font-semibold uppercase tracking-widest text-[#8A8A9A] mb-1.5">{t('players.birthday')}</label>
         <OnboardingInput value={birthday} onChange={onBirthday} placeholder="" type="date" />
       </div>
 
-      <OnboardingButton onClick={onNext}>Save profile →</OnboardingButton>
+      <OnboardingButton onClick={onNext}>{t('onboarding.saveProfile')}</OnboardingButton>
       <SkipButton onClick={onSkip} />
     </div>
   )
 }
 
 function DoneStep({ firstName, onFinish, saving }: { firstName: string; onFinish: () => void; saving: boolean }) {
+  const { t } = useTranslation()
   return (
     <div className="text-center space-y-6 pt-8">
       <div className="text-[64px]">🏐</div>
       <div>
-        <h2 className="text-[24px] font-black text-white mb-2">You're all set{firstName ? `, ${firstName}` : ''}!</h2>
-        <p className="text-[14px] text-[#8A8A9A]">Track every rally, rotation, and momentum shift — live on the court.</p>
+        <h2 className="text-[24px] font-black text-white mb-2">{firstName ? t('onboarding.allSet', { firstName }) : t('onboarding.allSetNoName')}</h2>
+        <p className="text-[14px] text-[#8A8A9A]">{t('onboarding.doneSub')}</p>
       </div>
       <OnboardingButton onClick={onFinish} disabled={saving}>
-        {saving ? 'Setting up…' : 'Go to dashboard →'}
+        {saving ? t('onboarding.settingUp') : `${t('onboarding.goToDashboard')} →`}
       </OnboardingButton>
     </div>
   )
@@ -396,9 +404,10 @@ function OnboardingButton({ children, onClick, disabled }: { children: React.Rea
 }
 
 function SkipButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation()
   return (
     <button type="button" onClick={onClick} className="w-full py-2 text-[12px] text-[#4A4A5A]">
-      Skip for now
+      {t('onboarding.skipForNow')}
     </button>
   )
 }
