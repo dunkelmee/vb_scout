@@ -770,6 +770,11 @@
     "queued_other": " — {{count}} Aktionen in Warteschlange"
   },
 
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "empty": "Noch keine Benachrichtigungen"
+  },
+
   "court": {
     "net": "NETZ",
     "ourBaseline": "GRUNDLINIE",

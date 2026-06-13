@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bell, ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { useTeamSeasonStore } from '../../store/teamSeasonStore'
 import { TeamSwitcherSheet } from './TeamSwitcherSheet'
+import { NotificationsBell } from './NotificationsBell'
 
 export function DashboardHeader() {
   const { t }      = useTranslation()
@@ -56,10 +57,7 @@ export function DashboardHeader() {
           </div>
 
           {/* Notification bell */}
-          <button className="w-9 h-9 rounded-full flex items-center justify-center text-[#8A8A9A] hover:text-white transition-colors shrink-0"
-            style={{ background: 'rgba(247,247,255,0.06)', border: '1px solid rgba(247,247,255,0.08)' }}>
-            <Bell size={16} />
-          </button>
+          <NotificationsBell />
         </div>
 
         {/* Team + season bar */}

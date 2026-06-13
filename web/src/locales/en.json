@@ -770,6 +770,11 @@
     "queued_other": " — {{count}} actions queued"
   },
 
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet"
+  },
+
   "court": {
     "net": "NET",
     "ourBaseline": "OUR BASELINE",

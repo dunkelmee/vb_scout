@@ -87,6 +87,7 @@ router.post('/', async (req: Request, res: Response) => {
         roles:          ['manager'],
         excludeUserId:  req.user!.id,
         notifPrefField: 'notifRsvpResponses',
+        log:            { type: 'rsvp_response', entityType, entityId },
       })
     }
 

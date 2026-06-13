@@ -13,5 +13,6 @@ export async function notifyAnalysisReady(matchId: string, teamId: string) {
   }, {
     roles:          ['manager'],
     notifPrefField: 'notifAnalysisReady',
+    log:            { type: 'analysis_ready', entityType: 'game', entityId: matchId },
   })
 }

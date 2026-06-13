@@ -280,6 +280,19 @@ export const notificationsApi = {
   }) => api.post<{ sent: number }>('/api/notifications/reminder', data),
   lastReminder: (entityType: string, entityId: string) =>
     api.get<{ sentAt: string | null }>(`/api/notifications/last-reminder?entityType=${entityType}&entityId=${entityId}`),
+  list:     () => api.get<{ items: AppNotification[]; unreadCount: number }>('/api/notifications'),
+  markRead: (ids?: string[]) => api.post('/api/notifications/read', ids ? { ids } : {}),
+}
+
+export interface AppNotification {
+  id: string
+  type: string
+  entityType: string | null
+  entityId: string | null
+  title: string
+  body: string
+  sentAt: string
+  readAt: string | null
 }
 
 // ── Dashboard & stats ─────────────────────────────────────────────────────────

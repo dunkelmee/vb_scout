@@ -332,9 +332,11 @@ model NotificationLog {
   body           String
   sentAt         DateTime @default(now()) @map("sent_at")
   deliveryStatus String   @default("sent") @map("delivery_status") // sent | failed | stale
+  readAt         DateTime? @map("read_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, sentAt])
   @@map("notification_logs")
 }
 

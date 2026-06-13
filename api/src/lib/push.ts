@@ -68,6 +68,8 @@ export async function sendPushToTeam(
     roles?:          ('manager' | 'player')[]
     excludeUserId?:  string
     notifPrefField?: NotifPrefField
+    /** When set, also persists an in-app NotificationLog for every eligible recipient. */
+    log?:            { type: string; entityType?: string | null; entityId?: string | null }
   }
 ): Promise<void> {
   const members = await prisma.teamMember.findMany({
@@ -82,6 +84,21 @@ export async function sendPushToTeam(
   const eligible = options?.notifPrefField
     ? members.filter(m => m.user[options.notifPrefField!] === true)
     : members
+
+  // In-app log for every eligible recipient — independent of push delivery, so the
+  // bell shows the notification even for users who haven't enabled push.
+  if (options?.log && eligible.length > 0) {
+    await prisma.notificationLog.createMany({
+      data: eligible.map(m => ({
+        userId:     m.userId,
+        type:       options.log!.type,
+        entityType: options.log!.entityType ?? null,
+        entityId:   options.log!.entityId ?? null,
+        title:      payload.title,
+        body:       payload.body,
+      })),
+    })
+  }
 
   await Promise.all(eligible.map(m => sendPushToUser(m.userId, payload)))
 }
