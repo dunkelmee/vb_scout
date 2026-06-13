@@ -33,7 +33,8 @@
     "trainings": "Trainings",
     "players": "Players",
     "settings": "Settings",
-    "teams": "Teams"
+    "teams": "Teams",
+    "users": "Users"
   },
   "auth": {
     "login": {
@@ -700,7 +701,17 @@
     "deleteTeam": "Delete team",
     "resendEmail": "Resend email",
     "copyInviteId": "Copy invite ID",
-    "revoke": "Revoke"
+    "revoke": "Revoke",
+    "usersTitle": "Users",
+    "noUsers": "No users yet.",
+    "editUser": "Edit user",
+    "resetPasswordTitle": "Reset password",
+    "newPassword": "New password",
+    "role": "Role",
+    "userUpdated": "User updated",
+    "userUpdateFailed": "Failed to update user",
+    "passwordResetDone": "Password reset",
+    "passwordResetFailed": "Failed to reset password"
   },
   "teamSwitcher": {
     "title": "Switch team",

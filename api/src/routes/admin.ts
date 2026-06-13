@@ -1,8 +1,38 @@
 import { Router, Request, Response } from 'express'
+import bcrypt from 'bcrypt'
 import prisma from '../lib/prisma'
 import { requireSuperAdmin } from '../middleware/requireSuperAdmin'
+import { sendPushToUser } from '../lib/push'
 
 const router = Router()
+
+const SALT_ROUNDS = 12
+const ROLES = ['superadmin', 'manager', 'player']
+
+// Notify a user (in-app log + push) that an admin changed their account.
+async function notifyAccountChange(
+  userId: string,
+  locale: string | null,
+  kind: 'account_updated' | 'password_reset',
+): Promise<void> {
+  const de = locale === 'de'
+  const content = kind === 'password_reset'
+    ? (de
+        ? { title: 'Passwort zurückgesetzt', body: 'Ein Administrator hat dein Passwort zurückgesetzt.' }
+        : { title: 'Password reset', body: 'An administrator reset your password.' })
+    : (de
+        ? { title: 'Konto aktualisiert', body: 'Ein Administrator hat deine Kontodaten aktualisiert.' }
+        : { title: 'Account updated', body: 'An administrator updated your account details.' })
+
+  try {
+    await prisma.notificationLog.create({
+      data: { userId, type: kind, title: content.title, body: content.body },
+    })
+    await sendPushToUser(userId, { ...content, url: '/settings', tag: kind })
+  } catch (err) {
+    console.error('[admin notifyAccountChange]', err)
+  }
+}
 
 // All routes require superadmin
 router.use(requireSuperAdmin)
@@ -122,6 +152,83 @@ router.get('/users', async (_req: Request, res: Response) => {
   } catch (err) {
     console.error('[admin/users GET]', err)
     return res.status(500).json({ error: 'Failed to fetch users' })
+  }
+})
+
+// PATCH /api/admin/users/:id — edit a user's details (notifies the user)
+router.patch('/users/:id', async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { firstName, lastName, email, role } = req.body as {
+    firstName?: string; lastName?: string; email?: string; role?: string
+  }
+
+  if (role !== undefined && !ROLES.includes(role)) {
+    return res.status(400).json({ error: 'role must be superadmin, manager or player' })
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { id } })
+    if (!existing) return res.status(404).json({ error: 'User not found' })
+
+    const nextEmail = email?.trim().toLowerCase()
+    if (nextEmail && nextEmail !== existing.email) {
+      const taken = await prisma.user.findUnique({ where: { email: nextEmail } })
+      if (taken) return res.status(409).json({ error: 'An account with this email already exists' })
+    }
+
+    const data: Record<string, unknown> = {}
+    if (firstName !== undefined) data.firstName = firstName.trim()
+    if (lastName !== undefined) data.lastName = lastName.trim()
+    if (nextEmail) data.email = nextEmail
+    if (role !== undefined) data.role = role
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' })
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true, email: true, firstName: true, lastName: true,
+        role: true, onboardingDone: true, createdAt: true, locale: true,
+        teamMemberships: {
+          select: { teamId: true, role: true, isDefault: true, team: { select: { name: true } } },
+        },
+      },
+    })
+
+    await notifyAccountChange(id, updated.locale, 'account_updated')
+
+    return res.json(updated)
+  } catch (err) {
+    console.error('[admin/users PATCH]', err)
+    return res.status(500).json({ error: 'Failed to update user' })
+  }
+})
+
+// POST /api/admin/users/:id/reset-password — set a new password (notifies the user)
+router.post('/users/:id/reset-password', async (req: Request, res: Response) => {
+  const { id } = req.params
+  const { password } = req.body as { password?: string }
+
+  if (!password || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters' })
+  }
+
+  try {
+    const existing = await prisma.user.findUnique({ where: { id }, select: { id: true, locale: true } })
+    if (!existing) return res.status(404).json({ error: 'User not found' })
+
+    const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
+    await prisma.user.update({ where: { id }, data: { passwordHash } })
+
+    await notifyAccountChange(id, existing.locale, 'password_reset')
+
+    return res.json({ success: true })
+  } catch (err) {
+    console.error('[admin/users reset-password]', err)
+    return res.status(500).json({ error: 'Failed to reset password' })
   }
 })
 

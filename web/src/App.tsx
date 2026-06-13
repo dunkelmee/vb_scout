@@ -27,6 +27,7 @@ import { SettingsPage } from './app/SettingsPage'
 import { SeasonPerformancePage } from './app/SeasonPerformancePage'
 import { CreateGameWizard } from './components/game/CreateGameWizard'
 import { AdminTeamsPage } from './app/admin/AdminTeamsPage'
+import { AdminUsersPage } from './app/admin/AdminUsersPage'
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -69,6 +70,11 @@ function AppWithSeasonLoader() {
         <Route path="/admin/teams" element={
           <RequireAuth>
             <SuperAdminOnly><AppShell><AdminTeamsPage /></AppShell></SuperAdminOnly>
+          </RequireAuth>
+        } />
+        <Route path="/admin/users" element={
+          <RequireAuth>
+            <SuperAdminOnly><AppShell><AdminUsersPage /></AppShell></SuperAdminOnly>
           </RequireAuth>
         } />
 

@@ -154,6 +154,10 @@ export const adminApi = {
   deleteTeam:  (id: string) => api.delete(`/api/admin/teams/${id}`),
   users:       () => api.get<AdminUser[]>('/api/admin/users'),
   invites:     () => api.get<AdminInvite[]>('/api/admin/invites'),
+  updateUser:  (id: string, data: { firstName?: string; lastName?: string; email?: string; role?: 'superadmin' | 'manager' | 'player' }) =>
+    api.patch<AdminUser>(`/api/admin/users/${id}`, data),
+  resetPassword: (id: string, password: string) =>
+    api.post<{ success: boolean }>(`/api/admin/users/${id}/reset-password`, { password }),
 }
 
 // ── Players ───────────────────────────────────────────────────────────────────

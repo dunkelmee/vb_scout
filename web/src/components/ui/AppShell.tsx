@@ -30,6 +30,7 @@ const PLAYER_NAV = [
 const SUPERADMIN_NAV = [
   { to: '/dashboard',    icon: LayoutGrid, labelKey: 'nav.home' },
   { to: '/admin/teams',  icon: Shield,     labelKey: 'nav.teams' },
+  { to: '/admin/users',  icon: Users,      labelKey: 'nav.users' },
   { to: '/settings',     icon: Settings,   labelKey: 'nav.settings' },
 ]
 
