@@ -2,6 +2,7 @@
 .claude/
 .vscode/
 node_modules/
+docs/
 dist/
 build/
 __pycache__/

@@ -166,6 +166,9 @@ export function GameLogPage() {
   }
 
   const startTimeoutCountdown = (calledBy: 'us' | 'them') => {
+    // Collapse the pick sheet — the countdown now lives in a non-blocking
+    // header pill so the coach can still score, check stats, or open tactics.
+    setShowTimeoutModal(false)
     setTimeoutCaller(calledBy)
     setTimeoutStep('timing')
     setTimeoutSeconds(60)
@@ -366,6 +369,28 @@ export function GameLogPage() {
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.10) 50%, transparent 100%)' }} />
         </div>
         <OfflineBanner pendingCount={pendingCount} isOnline={isOnline} />
+
+        {/* Active-timeout pill — non-blocking; persists across tabs so the coach
+            can keep scoring / checking stats / opening tactics while it runs. */}
+        {timeoutStep === 'timing' && (
+          <div className="flex items-center gap-3 px-4 py-2 border-t border-outline/10 bg-secondary-container/10">
+            <Clock size={16} className="shrink-0 text-secondary-container" />
+            <span className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+              {t('liveLog.timeoutTitle')} · {timeoutCaller === 'us' ? t('liveLog.timeoutUs') : t('liveLog.timeoutThem')}
+            </span>
+            <span className="ml-auto font-display font-black tabular-nums text-secondary-container text-lg leading-none">
+              {timeoutSeconds > 0
+                ? `${Math.floor(timeoutSeconds / 60)}:${String(timeoutSeconds % 60).padStart(2, '0')}`
+                : t('liveLog.backToCourt')}
+            </span>
+            <button
+              onClick={closeTimeoutModal}
+              className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-on-surface-variant hover:text-on-surface px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors"
+            >
+              {timeoutSeconds > 0 ? t('liveLog.dismissEarly') : t('liveLog.backToCourt')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Rotation toast */}
@@ -472,7 +497,7 @@ export function GameLogPage() {
             {[
               { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
               { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
-              { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0, action: () => setShowTimeoutModal(true) },
+              { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0 || timeoutStep === 'timing', action: () => setShowTimeoutModal(true) },
               { id: 'endSet', icon: <Flag size={18} />, label: t('liveLog.actionEndSet'), badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
             ].map(({ id, icon, label, badge, disabled, action }) => (
               <button
@@ -544,61 +569,30 @@ export function GameLogPage() {
         />
       </BottomSheet>
 
-      {/* Timeout Modal */}
+      {/* Timeout Modal — only the quick "who called it?" pick. Once started, the
+          countdown moves to the non-blocking header pill (see above). */}
       <BottomSheet
         open={showTimeoutModal}
         onClose={closeTimeoutModal}
         title={t('liveLog.timeoutTitle')}
       >
-        {timeoutStep === 'pick' ? (
-          /* Step 1 — who called it? */
-          <div className="space-y-3">
-            <Button
-              fullWidth
-              onClick={() => timeoutMutation.mutate('us')}
-              loading={timeoutMutation.isPending}
-            >
-              {t('liveLog.timeoutUs')}
-            </Button>
-            <Button
-              fullWidth
-              variant="outline"
-              onClick={() => timeoutMutation.mutate('them')}
-              loading={timeoutMutation.isPending}
-            >
-              {t('liveLog.timeoutThem')}
-            </Button>
-          </div>
-        ) : (
-          /* Step 2 — 60 s countdown */
-          <div className="flex flex-col items-center gap-5 py-4">
-            {/* Who called it */}
-            <p className="text-xs text-on-surface-variant uppercase tracking-widest font-bold">
-              {timeoutCaller === 'us' ? t('liveLog.timeoutUs') : t('liveLog.timeoutThem')}
-            </p>
-
-            {/* Timer or "Back to court" */}
-            {timeoutSeconds > 0 ? (
-              <p className="font-display font-black text-secondary-container"
-                style={{ fontSize: '4.5rem', lineHeight: 1 }}>
-                {Math.floor(timeoutSeconds / 60)}:{String(timeoutSeconds % 60).padStart(2, '0')}
-              </p>
-            ) : (
-              <p className="font-display font-bold text-2xl text-secondary-container tracking-wide">
-                {t('liveLog.backToCourt')}
-              </p>
-            )}
-
-            {/* Dismiss / confirm button */}
-            <Button
-              fullWidth
-              variant={timeoutSeconds === 0 ? 'secondary' : 'ghost'}
-              onClick={closeTimeoutModal}
-            >
-              {timeoutSeconds > 0 ? t('liveLog.dismissEarly') : t('liveLog.backToCourt')}
-            </Button>
-          </div>
-        )}
+        <div className="space-y-3">
+          <Button
+            fullWidth
+            onClick={() => timeoutMutation.mutate('us')}
+            loading={timeoutMutation.isPending}
+          >
+            {t('liveLog.timeoutUs')}
+          </Button>
+          <Button
+            fullWidth
+            variant="outline"
+            onClick={() => timeoutMutation.mutate('them')}
+            loading={timeoutMutation.isPending}
+          >
+            {t('liveLog.timeoutThem')}
+          </Button>
+        </div>
       </BottomSheet>
 
       {/* End Set Modal */}
