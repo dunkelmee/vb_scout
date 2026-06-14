@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, useLocation } from 'react-router-dom'
-import { LayoutGrid, CalendarDays, Dumbbell, Users, Settings, Shield, type LucideIcon } from 'lucide-react'
+import { LayoutGrid, Volleyball, Dumbbell, Users, Settings, Shield, type LucideIcon } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { cn } from './cn'
 import { useRole } from '../../hooks/useRole'
@@ -14,7 +14,7 @@ interface AppShellProps {
 
 const MANAGER_NAV = [
   { to: '/dashboard',  icon: LayoutGrid,  labelKey: 'nav.home' },
-  { to: '/games',      icon: CalendarDays, labelKey: 'nav.games' },
+  { to: '/games',      icon: Volleyball,  labelKey: 'nav.games' },
   { to: '/trainings',  icon: Dumbbell,     labelKey: 'nav.trainings' },
   { to: '/players',    icon: Users,        labelKey: 'nav.players' },
   { to: '/settings',   icon: Settings,     labelKey: 'nav.settings' },
@@ -22,7 +22,7 @@ const MANAGER_NAV = [
 
 const PLAYER_NAV = [
   { to: '/dashboard',  icon: LayoutGrid,  labelKey: 'nav.home' },
-  { to: '/games',      icon: CalendarDays, labelKey: 'nav.games' },
+  { to: '/games',      icon: Volleyball,  labelKey: 'nav.games' },
   { to: '/trainings',  icon: Dumbbell,     labelKey: 'nav.trainings' },
   { to: '/settings',   icon: Settings,     labelKey: 'nav.settings' },
 ]
@@ -95,7 +95,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
         ref={mainRef}
         className={cn(
           'flex-1 overflow-y-auto',
-          showNav && 'pb-[72px] md:pb-0 md:ml-[72px]',
+          showNav && 'pb-[96px] md:pb-0 md:ml-[72px]',
         )}
       >
         {children}
@@ -103,34 +103,36 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
 
       {showNav && (
         <>
-          {/* Mobile: bottom nav */}
-          <nav className="fixed bottom-0 left-0 right-0 z-30 h-[72px] flex items-end pb-2 px-2 bg-pitch-800/95 backdrop-blur-sm border-t border-pitch-400/40 md:hidden">
-            <div className="w-full flex justify-around items-center max-w-lg mx-auto">
+          {/* Mobile: floating bottom nav */}
+          <nav className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-4 right-4 z-30 md:hidden">
+            <div className="h-[64px] flex items-stretch px-3 bg-pitch-800/55 backdrop-blur-[72px] backdrop-saturate-150 border border-white/10 rounded-full shadow-2xl shadow-black/50">
+              <div className="w-full flex justify-around items-stretch max-w-sm mx-auto">
               {NAV_ITEMS.map(({ to, icon: Icon, labelKey }) => (
                 <NavLink
                   key={to}
                   to={to}
                   className={({ isActive }) =>
                     cn(
-                      'flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all min-w-[56px]',
-                      isActive ? 'text-turq-500' : 'text-ghost-400 hover:text-ghost-300'
+                      'relative flex flex-col items-center min-w-[56px] transition-colors',
+                      isActive ? 'justify-end pb-2 text-turq-500' : 'justify-center text-ghost-400 hover:text-ghost-300'
                     )
                   }
                 >
-                  {({ isActive }) => (
-                    <>
-                      <Icon
-                        size={22}
-                        className={cn(isActive && 'drop-shadow-[0_0_6px_rgba(35,181,211,0.60)]')}
-                      />
-                      <span className="text-[10px] font-bold uppercase tracking-wide">{t(labelKey)}</span>
-                      {isActive && (
-                        <span className="absolute bottom-2 w-1 h-1 rounded-full bg-turq-500" />
-                      )}
-                    </>
-                  )}
+                  {({ isActive }) =>
+                    isActive ? (
+                      <>
+                        <span className="absolute left-1/2 -translate-x-1/2 -top-5 flex h-12 w-12 items-center justify-center rounded-full bg-turq-500 text-pitch-900 ring-4 ring-pitch-800 shadow-lg shadow-turq-500/30">
+                          <Icon size={24} />
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide">{t(labelKey)}</span>
+                      </>
+                    ) : (
+                      <Icon size={22} />
+                    )
+                  }
                 </NavLink>
-              ))}
+                ))}
+              </div>
             </div>
           </nav>
 

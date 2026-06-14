@@ -492,33 +492,35 @@ export function GameLogPage() {
             </button>
           </div>
 
-          {/* Bottom action icons — pinned to bottom */}
-          <div className="shrink-0 flex justify-around items-center px-4 py-2 border-t border-outline/10">
-            {[
-              { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
-              { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
-              { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0 || timeoutStep === 'timing', action: () => setShowTimeoutModal(true) },
-              { id: 'endSet', icon: <Flag size={18} />, label: t('liveLog.actionEndSet'), badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
-            ].map(({ id, icon, label, badge, disabled, action }) => (
-              <button
-                key={id}
-                onClick={action}
-                disabled={disabled}
-                className={cn(
-                  'flex flex-col items-center gap-1 p-3 rounded-xl transition-all',
-                  disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/[0.06] hover:shadow-[0_2px_12px_rgba(0,0,0,0.25)]'
-                )}
-              >
-                <span className={cn('text-on-surface-variant', id === 'endSet' && setWon && 'text-turq-500')}>{icon}</span>
-                <span className={cn(
-                  'text-[10px] font-bold uppercase',
-                  id === 'endSet' && setWon ? 'text-turq-500' : 'text-on-surface-variant'
-                )}>{label}</span>
-                {badge !== null && (
-                  <span className="text-[9px] text-on-surface-variant/50 font-bold -mt-0.5">{badge}</span>
-                )}
-              </button>
-            ))}
+          {/* Bottom action icons — floating pill */}
+          <div className="shrink-0 px-4 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="mx-auto max-w-sm flex justify-around items-center h-[64px] px-3 bg-pitch-800/55 backdrop-blur-[72px] backdrop-saturate-150 border border-white/10 rounded-full shadow-2xl shadow-black/50">
+              {[
+                { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
+                { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
+                { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0 || timeoutStep === 'timing', action: () => setShowTimeoutModal(true) },
+                { id: 'endSet', icon: <Flag size={18} />, label: t('liveLog.actionEndSet'), badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
+              ].map(({ id, icon, label, badge, disabled, action }) => (
+                <button
+                  key={id}
+                  onClick={action}
+                  disabled={disabled}
+                  className={cn(
+                    'flex flex-col items-center gap-0.5 px-2 py-1 rounded-full transition-all',
+                    disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/[0.06]'
+                  )}
+                >
+                  <span className={cn('text-on-surface-variant', id === 'endSet' && setWon && 'text-turq-500')}>{icon}</span>
+                  <span className={cn(
+                    'text-[10px] font-bold uppercase',
+                    id === 'endSet' && setWon ? 'text-turq-500' : 'text-on-surface-variant'
+                  )}>{label}</span>
+                  {badge !== null && (
+                    <span className="text-[9px] text-on-surface-variant/50 font-bold -mt-0.5">{badge}</span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       ) : activeTab === 'tactics' ? (
