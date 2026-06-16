@@ -4,17 +4,18 @@ import type { TFunction } from 'i18next'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { gamesApi, setsApi, MatchStats, MatchAnalysis, GameSet } from '../lib/api'
-import { DonutChart } from '../components/ui/DonutChart'
 import { useMatchAnalysis } from '../hooks/useMatchAnalysis'
 import { useRole } from '../hooks/useRole'
 import {
-  ComposedChart, Area, ReferenceLine,
-  XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip,
-} from 'recharts'
+  pointSource, errorMix, selfGeneratedPct, netGifts, serveRisk, earnedVsUnforced, scoringTimeline,
+} from '../lib/pointStats'
+import {
+  MultiDonut, CatBars, StackedBySet, RotationMatrix, AnnotatedTimeline,
+  InsightCard as StatInsight,
+} from '../components/stats/pointCharts'
 import { ArrowLeft, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
-import { chartTheme } from '../lib/chartTheme'
 
 // ── Colour helpers ────────────────────────────────────────────────────────────
 
@@ -23,12 +24,6 @@ function perfColor(value: number, target: number, higherBetter: boolean): string
   if (meets) return '#23B5D3'  // turq-500
   const close = higherBetter ? value >= target - 0.05 : value <= target + 0.05
   return close ? '#279AF1' : '#EA526F'  // bell-500 : bubb-500
-}
-
-function rotationColor(winRate: number): { bg: string; text: string } {
-  if (winRate >= 0.60) return { bg: 'rgba(35,181,211,0.22)',  text: '#23B5D3' }
-  if (winRate >= 0.40) return { bg: 'rgba(39,154,241,0.15)',  text: '#279AF1' }
-  return                       { bg: 'rgba(234,82,111,0.22)', text: '#EA526F' }
 }
 
 // ── KPI tile ─────────────────────────────────────────────────────────────────
@@ -64,16 +59,7 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
     queryFn: () => setsApi.get(matchId, set.id),
   })
 
-  const chartData = useMemo(() => {
-    const rallies = setData?.rallies ?? []
-    const pts: { rally: number; pos: number; neg: number }[] = [{ rally: 0, pos: 0, neg: 0 }]
-    rallies.forEach(r => {
-      const diff = r.scoreUs - r.scoreThem
-      pts.push({ rally: r.rallyIndex + 1, pos: Math.max(0, diff), neg: Math.min(0, diff) })
-    })
-    return pts
-  }, [setData])
-
+  const timeline = useMemo(() => scoringTimeline(setData?.rallies ?? []), [setData])
   const timeouts = setData?.timeouts ?? []
 
   if (isLoading) {
@@ -88,43 +74,7 @@ function SetScoreTimeline({ matchId, set }: { matchId: string; set: GameSet }) {
 
   return (
     <div>
-      <ResponsiveContainer width="100%" height={130}>
-        <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
-          <XAxis
-            dataKey="rally"
-            tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v: number) => v > 0 ? `+${v}` : `${v}`}
-          />
-          <Tooltip
-            contentStyle={{ background: chartTheme.tooltip.backgroundColor, border: '1px solid rgba(47,45,40,0.90)', borderRadius: 8, fontSize: 11 }}
-            labelFormatter={(v) => `Rally ${v}`}
-            formatter={(value: number, name: string) => [
-              value > 0 ? `+${value}` : `${value}`,
-              name === 'pos' ? t('postMatch.leading') : t('postMatch.trailing'),
-            ]}
-          />
-          <ReferenceLine y={0} stroke={chartTheme.gridColor} />
-          {timeouts.map(t => (
-            <ReferenceLine
-              key={t.id}
-              x={t.rallyIndex + 1}
-              stroke={t.calledBy === 'us' ? 'rgba(35,181,211,0.55)' : 'rgba(234,82,111,0.55)'}
-              strokeDasharray="4 3"
-              strokeWidth={1.5}
-            />
-          ))}
-          <Area dataKey="pos" fill={chartTheme.turqFill} stroke={chartTheme.turq} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-          <Area dataKey="neg" fill={chartTheme.pinkFill} stroke={chartTheme.pink} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-        </ComposedChart>
-      </ResponsiveContainer>
+      <AnnotatedTimeline data={timeline} timeouts={timeouts} height={130} />
       <div className="flex justify-between text-[11px] text-on-surface-variant/40 mt-1 px-1">
         <span>{t('postMatch.final')}: {setData.scoreUs}–{setData.scoreThem}</span>
         <span>{t('postMatch.rallies', { count: setData.rallies.length })}</span>
@@ -313,15 +263,28 @@ export function GameStatsPage() {
     })),
   })
 
-  const pointCounts = useMemo(() => {
+  const matchAgg = useMemo(() => {
     const allRallies = setQueries.flatMap(q => q.data?.rallies ?? [])
+    const ps = pointSource(allRallies)
+    const em = errorMix(allRallies)
+    const perSetSource = sets.map((s, i) => {
+      const p = pointSource(setQueries[i]?.data?.rallies ?? [])
+      return { label: `S${s.setNumber}`, kill: p.kill, oppErr: p.oppErr, block: p.block, ace: p.ace }
+    })
+    const perSetErrors = sets.map((s, i) => {
+      const e = errorMix(setQueries[i]?.data?.rallies ?? [])
+      return { label: `S${s.setNumber}`, reception: e.reception, serve: e.serve, attack: e.attack, other: e.other }
+    })
     return {
-      ourPos:  allRallies.filter(r => r.pointType === 'us_positive').length,
-      ourErr:  allRallies.filter(r => r.pointType === 'them_error').length,
-      themPos: allRallies.filter(r => r.pointType === 'them_positive').length,
-      themErr: allRallies.filter(r => r.pointType === 'us_error').length,
+      ps, em,
+      selfGen: selfGeneratedPct(allRallies),
+      gifts: netGifts(allRallies),
+      serve: serveRisk(allRallies),
+      eu: earnedVsUnforced(allRallies),
+      perSetSource, perSetErrors,
+      hasData: ps.total + em.total > 0,
     }
-  }, [setQueries])
+  }, [setQueries, sets])
 
   // Default active set for timeline: first set
   const activeTimelineSetId = timelineSetId ?? sets[0]?.id ?? null
@@ -461,13 +424,24 @@ export function GameStatsPage() {
           </div>
         )}
 
-        {isCompleted && (pointCounts.ourPos + pointCounts.ourErr + pointCounts.themPos + pointCounts.themErr) > 0 && (
+        {isCompleted && matchAgg.hasData && (
           <>
-            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('setSummary.pointOrigin')}</p>
-            <div className="grid grid-cols-2 gap-3">
-              <DonutChart teamName={ourTeam}   ownPoints={pointCounts.ourPos}  opponentErrors={pointCounts.ourErr}  variant="us" />
-              <DonutChart teamName={theirTeam} ownPoints={pointCounts.themPos} opponentErrors={pointCounts.themErr} variant="them" />
-            </div>
+            <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('stats.pointSource')}</p>
+            <MultiDonut data={[
+              { key: 'kill', value: matchAgg.ps.kill },
+              { key: 'oppErr', value: matchAgg.ps.oppErr },
+              { key: 'block', value: matchAgg.ps.block },
+              { key: 'ace', value: matchAgg.ps.ace },
+            ]} />
+            <CatBars title={t('stats.errorMix')} data={[
+              { key: 'reception', value: matchAgg.em.reception },
+              { key: 'serve', value: matchAgg.em.serve },
+              { key: 'attack', value: matchAgg.em.attack },
+              { key: 'other', value: matchAgg.em.other },
+            ]} />
+            <StatInsight tone={won ? 'good' : 'bad'}>
+              {t(won ? 'postMatch.verdictWon' : 'postMatch.verdictLost', { pct: Math.round(matchAgg.selfGen * 100) })}
+            </StatInsight>
           </>
         )}
 
@@ -518,7 +492,43 @@ export function GameStatsPage() {
                 barValue={stats.errorClustering < 0 ? 0 : Math.min(1, stats.errorClustering)}
                 sub={stats.errorClustering < 0 ? '' : stats.errorClustering >= 0.5 ? t('stats.clearBurstPattern') : t('stats.mildClustering')}
               />
+              <KpiTile
+                label={t('stats.selfGenerated')}
+                display={`${(matchAgg.selfGen * 100).toFixed(0)}%`}
+                color={matchAgg.selfGen >= 0.65 ? '#23B5D3' : matchAgg.selfGen >= 0.55 ? '#279AF1' : '#EA526F'}
+                barValue={matchAgg.selfGen}
+              />
+              <KpiTile
+                label={t('stats.netGifts')}
+                display={matchAgg.gifts.net > 0 ? `+${matchAgg.gifts.net}` : `${matchAgg.gifts.net}`}
+                color={matchAgg.gifts.net >= 0 ? '#23B5D3' : '#EA526F'}
+                barValue={Math.min(1, Math.abs(matchAgg.gifts.net) / 10)}
+                sub={`${matchAgg.gifts.oppErr} : ${matchAgg.gifts.ourErr}`}
+              />
+              <KpiTile
+                label={t('stats.serveRisk')}
+                display={`${matchAgg.serve.aces}:${matchAgg.serve.serveErr}`}
+                color={matchAgg.serve.ratio != null && matchAgg.serve.ratio >= 0.5 ? '#23B5D3' : '#EA526F'}
+                barValue={matchAgg.serve.ratio ?? 0}
+              />
+              <KpiTile
+                label={t('stats.earnedVsUnforced')}
+                display={`${(matchAgg.eu.winnerPct * 100).toFixed(0)}%`}
+                color={matchAgg.eu.winnerPct >= 0.5 ? '#23B5D3' : '#279AF1'}
+                barValue={matchAgg.eu.winnerPct}
+                sub={`${matchAgg.eu.winners} / ${matchAgg.eu.errors}`}
+              />
             </div>
+
+            {/* ── Point source & errors by set ── */}
+            {matchAgg.hasData && sets.length > 0 && (
+              <>
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.sourceBySet')}</p>
+                <StackedBySet data={matchAgg.perSetSource} keys={['kill', 'oppErr', 'block', 'ace']} />
+                <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.errorsBySet')}</p>
+                <StackedBySet data={matchAgg.perSetErrors} keys={['reception', 'serve', 'attack', 'other']} />
+              </>
+            )}
 
             {/* ── Set comparison ── */}
             {stats.perSetStats.length > 0 && (
@@ -627,24 +637,10 @@ export function GameStatsPage() {
             {stats.rotationStats.length > 0 && (
               <>
                 <p className="text-[10px] text-on-surface-variant/60 uppercase tracking-widest font-bold">{t('postMatch.rotationPerf')}</p>
-                <div className="card p-4">
-                  <div className="grid grid-cols-6 gap-2">
-                    {stats.rotationStats.map(rot => {
-                      const total = rot.wins + rot.losses
-                      const winRate = total > 0 ? rot.wins / total : 0
-                      const { bg, text } = rotationColor(winRate)
-                      return (
-                        <div key={rot.rotation} className="rounded-xl p-2 text-center" style={{ background: bg }}>
-                          <p className="text-[9px] text-on-surface-variant/60 mb-1">R{rot.rotation}</p>
-                          <p className="text-xs font-bold leading-none" style={{ color: text }}>
-                            {total > 0 ? `${Math.round(winRate * 100)}%` : '–'}
-                          </p>
-                          <p className="text-[8px] text-on-surface-variant/40 mt-1">{total}R</p>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
+                <RotationMatrix rows={stats.rotationStats.map(r => ({
+                  rotation: r.rotation, wins: r.wins, losses: r.losses,
+                  serveRate: r.breakPct, receiveRate: r.sideoutPct,
+                }))} />
               </>
             )}
           </>

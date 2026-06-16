@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -13,9 +13,8 @@ import { CourtView } from '../components/court/CourtView'
 import { LiveStatsTab } from '../components/stats/LiveStatsTab'
 import { TimelineTab } from '../components/timeline/TimelineTab'
 import { RotationToast } from '../components/court/RotationToast'
-import { ProgressBar } from '../components/ui/ProgressBar'
 import { Select } from '../components/ui/Select'
-import { ArrowLeft, RotateCcw, Clock, Flag, RefreshCw, ChevronDown } from 'lucide-react'
+import { ArrowLeft, RotateCcw, Clock, Flag, RefreshCw, ChevronDown, Target, ChevronsDown, Shield, HandHelping, Gift, CircleAlert } from 'lucide-react'
 import { cn } from '../components/ui/cn'
 import { Lineup, Zone } from '../lib/rotation'
 import { CourtLineupSetup } from '../components/court/CourtLineupSetup'
@@ -29,6 +28,52 @@ function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): b
   if (scoreUs >= target && scoreUs - scoreThem >= 2) return true
   if (scoreThem >= target && scoreThem - scoreUs >= 2) return true
   return false
+}
+
+/** Palette-only tones for the classification buttons (winners cool, errors pink, neutral white). */
+const CAT_TONE = {
+  turq:    'border-turq-500 text-turq-400 bg-turq-500/[0.12] hover:bg-turq-500/20',
+  bell:    'border-bell-500 text-bell-400 bg-bell-500/[0.12] hover:bg-bell-500/20',
+  turq300: 'border-turq-300 text-turq-300 bg-turq-300/[0.12] hover:bg-turq-300/20',
+  bubb700: 'border-bubb-700 text-bubb-400 bg-bubb-700/[0.18] hover:bg-bubb-700/30',
+  bubb500: 'border-bubb-500 text-bubb-400 bg-bubb-500/[0.12] hover:bg-bubb-500/20',
+  bubb400: 'border-bubb-400 text-bubb-400 bg-bubb-400/[0.12] hover:bg-bubb-400/20',
+  neutral: 'border-white/20 text-on-surface-variant bg-white/[0.04] hover:bg-white/[0.08]',
+} as const
+
+/** "or" divider between the classification groups. */
+function OrSep({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 py-0.5">
+      <span className="flex-1 h-px bg-white/10" />
+      <span className="text-[10px] text-on-surface-variant/70 uppercase tracking-widest">{label}</span>
+      <span className="flex-1 h-px bg-white/10" />
+    </div>
+  )
+}
+
+/** Glass-morphism classification button used in the live-log step 2. */
+function CatBtn({ icon, label, onClick, tone, wide = false }: {
+  icon: ReactNode
+  label: string
+  onClick: () => void
+  tone: keyof typeof CAT_TONE
+  wide?: boolean
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'w-full rounded-2xl border-2 font-display font-bold uppercase tracking-wide transition-all active:scale-95 flex items-center justify-center',
+        'backdrop-blur-[20px] backdrop-saturate-[180%] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]',
+        wide ? 'flex-row gap-2 h-12 text-sm' : 'flex-col gap-1 h-[52px] text-[11px]',
+        CAT_TONE[tone],
+      )}
+    >
+      {icon}
+      <span className="leading-none">{label}</span>
+    </button>
+  )
 }
 
 export function GameLogPage() {
@@ -61,7 +106,6 @@ export function GameLogPage() {
   const [timeoutSeconds, setTimeoutSeconds] = useState(60)
   const [timeoutCaller, setTimeoutCaller] = useState<'us' | 'them' | null>(null)
   const timeoutIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [autoFallbackProgress, setAutoFallbackProgress] = useState(0)
 
   const store = useMatchStore()
   const { pendingCount, isOnline } = useSyncQueue()
@@ -82,22 +126,6 @@ export function GameLogPage() {
       }
     }
   }, [store.rallies.length])
-
-  // Auto-fallback progress bar
-  useEffect(() => {
-    if (store.scoringStep !== 'awaiting_type') {
-      setAutoFallbackProgress(0)
-      return
-    }
-    const start = Date.now()
-    const duration = 4000
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - start
-      setAutoFallbackProgress(Math.min(1, elapsed / duration))
-      if (elapsed >= duration) clearInterval(interval)
-    }, 50)
-    return () => clearInterval(interval)
-  }, [store.scoringStep, store.pendingScorer])
 
   const { data: match } = useQuery({
     queryKey: ['game', matchId],
@@ -347,7 +375,7 @@ export function GameLogPage() {
                 <p className="text-[11px] md:text-base font-bold uppercase tracking-wide text-white/60 text-center px-1 leading-tight">
                   {match?.opponent ?? store.opponentInitials}
                 </p>
-                <span className="font-display font-black text-white leading-none text-[2.75rem] md:text-[4rem]">
+                <span className="font-display font-black text-bubb-500 leading-none text-[2.75rem] md:text-[4rem]">
                   {store.scoreThem}
                 </span>
               </div>
@@ -416,7 +444,7 @@ export function GameLogPage() {
                so the court never shifts when the step changes. */}
           <div className="shrink-0 px-4 pt-2 pb-1 flex flex-col gap-2">
             {/* Fixed-height slot — both states rendered inside it */}
-            <div className="min-h-[120px] flex flex-col justify-center">
+            <div className="min-h-[260px] flex flex-col justify-center">
               {store.scoringStep === 'idle' ? (
                 /* Step 1: Who scored? */
                 <div className="flex gap-3">
@@ -436,7 +464,7 @@ export function GameLogPage() {
                     disabled={store.isCommitting || setWon}
                     className={cn(
                       'flex-1 h-14 rounded-full border-2 font-display font-bold text-base uppercase tracking-wide transition-all active:scale-95',
-                      'border-white/20 text-on-surface backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]',
+                      'border-bubb-500 text-bubb-500 backdrop-blur-[20px] backdrop-saturate-[180%] bg-bubb-500/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)] hover:bg-bubb-500/10',
                       (store.isCommitting || setWon) && 'opacity-50'
                     )}
                   >
@@ -444,34 +472,38 @@ export function GameLogPage() {
                   </button>
                 </div>
               ) : (
-                /* Step 2: How was the point earned? */
+                /* Step 2: classify the point — required (no auto-commit) */
                 <div className="space-y-2">
                   <p className="text-xs text-center text-on-surface-variant font-bold uppercase tracking-wide">
                     {store.pendingScorer === 'us' ? t('liveLog.ourPointHow') : t('liveLog.theirPointHow')}
                   </p>
-                  <ProgressBar value={autoFallbackProgress} color="orange" height="sm" className="mb-2" />
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => store.tapPointType('positive')}
-                      className={cn(
-                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95 backdrop-blur-[20px] backdrop-saturate-[180%] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.10)]',
-                        store.pendingScorer === 'us'
-                          ? 'border-turq-500 text-turq-400 bg-turq-500/[0.12] hover:bg-turq-500/20'
-                          : 'border-bubb-500 text-bubb-400 bg-bubb-500/[0.12] hover:bg-bubb-500/20'
-                      )}
-                    >
-                      {store.pendingScorer === 'us' ? `✓ ${t('timeline.ownPlay')}` : `✓ ${t('timeline.theirPlay')}`}
-                    </button>
-                    <button
-                      onClick={() => store.tapPointType('error')}
-                      className={cn(
-                        'flex-1 h-14 rounded-full border-2 font-display font-bold text-sm uppercase tracking-wide transition-all active:scale-95',
-                        'border-white/20 text-on-surface-variant backdrop-blur-[20px] backdrop-saturate-[180%] bg-white/[0.04] shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.08)] hover:bg-white/[0.08]'
-                      )}
-                    >
-                      {store.pendingScorer === 'us' ? `✗ ${t('timeline.theirError')}` : `✗ ${t('timeline.ourError')}`}
-                    </button>
-                  </div>
+
+                  {store.pendingScorer === 'us' ? (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-center text-on-surface-variant uppercase tracking-widest">{t('liveLog.byOurOwn')}</p>
+                      <div className="grid grid-cols-3 gap-2">
+                        <CatBtn tone="turq" icon={<Target size={18} />}       label={t('subtype.ace')}   onClick={() => store.tapOutcome('us_positive', 'ace')} />
+                        <CatBtn tone="turq" icon={<ChevronsDown size={18} />} label={t('subtype.kill')}  onClick={() => store.tapOutcome('us_positive', 'kill')} />
+                        <CatBtn tone="turq" icon={<Shield size={18} />}       label={t('subtype.block')} onClick={() => store.tapOutcome('us_positive', 'block')} />
+                      </div>
+                      <OrSep label={t('liveLog.or')} />
+                      <CatBtn tone="bubb500" wide icon={<Gift size={16} />} label={t('liveLog.catOppErr')} onClick={() => store.tapOutcome('them_error')} />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] text-center text-on-surface-variant uppercase tracking-widest">{t('liveLog.by')}</p>
+                      <CatBtn tone="bubb500" wide icon={<ChevronsDown size={16} />} label={t('liveLog.catTheirPoint')} onClick={() => store.tapOutcome('them_positive')} />
+                      <OrSep label={t('liveLog.or')} />
+                      <p className="text-[10px] text-center text-on-surface-variant uppercase tracking-widest">{t('liveLog.ourErrorIn')}</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <CatBtn tone="turq" icon={<Target size={18} />}      label={t('subtype.serve')}     onClick={() => store.tapOutcome('us_error', 'serve')} />
+                        <CatBtn tone="turq" icon={<HandHelping size={18} />} label={t('subtype.reception')} onClick={() => store.tapOutcome('us_error', 'reception')} />
+                        <CatBtn tone="turq" icon={<ChevronsDown size={18} />} label={t('subtype.attack')}   onClick={() => store.tapOutcome('us_error', 'attack')} />
+                        <CatBtn tone="turq" icon={<CircleAlert size={18} />} label={t('subtype.other')}     onClick={() => store.tapOutcome('us_error', 'other')} />
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     onClick={store.cancelScoring}
                     className="w-full text-xs text-on-surface-variant py-1"

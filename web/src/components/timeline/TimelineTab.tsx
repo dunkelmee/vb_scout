@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { GameSet, ralliesApi } from '../../lib/api'
 import { cn } from '../ui/cn'
 import { Clock, RotateCw } from 'lucide-react'
+import { CAT_ICON, catLabel } from '../stats/pointCharts'
+import { chartTheme } from '../../lib/chartTheme'
 
 interface TimelineTabProps {
   set: GameSet
@@ -12,7 +14,7 @@ interface TimelineTabProps {
 }
 
 type TimelineEntry =
-  | { type: 'rally'; rallyIndex: number; scorer: string; pointType: string; scoreUs: number; scoreThem: number; rotated: boolean; setNumber: number; id: string }
+  | { type: 'rally'; rallyIndex: number; scorer: string; pointType: string; pointSubtype?: string | null; scoreUs: number; scoreThem: number; rotated: boolean; setNumber: number; id: string }
   | { type: 'timeout'; rallyIndex: number; calledBy: string; atScoreUs: number; atScoreThem: number; id: string }
   | { type: 'substitution'; rallyIndex: number; playerOutName: string; playerInName: string; id: string }
 
@@ -29,6 +31,7 @@ export function TimelineTab({ set, matchId }: TimelineTabProps) {
       rallyIndex: r.rallyIndex,
       scorer: r.scorer,
       pointType: r.pointType,
+      pointSubtype: r.pointSubtype,
       scoreUs: r.scoreUs,
       scoreThem: r.scoreThem,
       rotated: r.rotated,
@@ -134,7 +137,11 @@ function TimelineEntry({
   }
 
   const ourPoint = entry.scorer === 'us'
-  const isPositive = entry.pointType === 'us_positive' || entry.pointType === 'them_positive'
+  const cat = entry.scorer === 'us'
+    ? (entry.pointType === 'them_error' ? 'oppErr' : (entry.pointSubtype ?? null))
+    : (entry.pointType === 'us_error' ? (entry.pointSubtype ?? null) : 'theirPoint')
+  const CatIcon = cat ? CAT_ICON[cat] : null
+  const catColor = cat ? chartTheme.categories[cat] : undefined
 
   return (
     <div className="relative">
@@ -172,8 +179,9 @@ function TimelineEntry({
           </div>
         </div>
         <div className="flex items-center justify-between mt-1">
-          <p className="text-sm text-ghost-100">
-            {pointTypeLabel[entry.pointType] || entry.pointType}
+          <p className="text-sm text-ghost-100 flex items-center gap-1.5">
+            {CatIcon && <CatIcon size={14} style={{ color: catColor }} />}
+            {cat ? catLabel(t, cat) : (pointTypeLabel[entry.pointType] || entry.pointType)}
           </p>
           {entry.rotated && (
             <span className="text-xs text-bell-500 flex items-center gap-1">

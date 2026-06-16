@@ -5,6 +5,27 @@ import { addPoint, Lineup } from '../lib/rotation'
 
 const router = Router({ mergeParams: true })
 
+const WINNER_SUBTYPES = ['ace', 'kill', 'block']
+const ERROR_SUBTYPES = ['serve', 'reception', 'attack', 'other']
+
+/**
+ * Validate the granular subtype against the pointType.
+ * Required for our own terminal actions (us_positive / us_error); rejected for
+ * opponent-side points (they stay unclassified). Returns the value to store or throws.
+ */
+function resolveSubtype(pointType: string, pointSubtype: unknown): string | null {
+  if (pointType === 'us_positive') {
+    if (typeof pointSubtype === 'string' && WINNER_SUBTYPES.includes(pointSubtype)) return pointSubtype
+    throw new Error('pointSubtype must be one of ace|kill|block for us_positive')
+  }
+  if (pointType === 'us_error') {
+    if (typeof pointSubtype === 'string' && ERROR_SUBTYPES.includes(pointSubtype)) return pointSubtype
+    throw new Error('pointSubtype must be one of serve|reception|attack|other for us_error')
+  }
+  // them_positive / them_error — no subtype.
+  return null
+}
+
 function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
   const target = setNumber === 5 ? 15 : 25
   if (scoreUs >= target && scoreUs - scoreThem >= 2) return true
@@ -38,9 +59,16 @@ router.get('/', async (req: Request, res: Response) => {
 // POST /api/sets/:setId/rallies — add rally (manager only)
 router.post('/', requireManager, async (req: Request, res: Response) => {
   const { setId } = req.params
-  const { scorer, pointType } = req.body
+  const { scorer, pointType, pointSubtype } = req.body
 
   if (!scorer || !pointType) return res.status(400).json({ error: 'scorer and pointType are required' })
+
+  let subtype: string | null
+  try {
+    subtype = resolveSubtype(pointType, pointSubtype)
+  } catch (e) {
+    return res.status(400).json({ error: e instanceof Error ? e.message : 'Invalid pointSubtype' })
+  }
 
   try {
     const set = await prisma.set.findUnique({
@@ -89,6 +117,7 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
         rallyIndex,
         scorer,
         pointType,
+        pointSubtype: subtype,
         scoreUs: newScoreUs,
         scoreThem: newScoreThem,
         servingTeam: currentServer,
