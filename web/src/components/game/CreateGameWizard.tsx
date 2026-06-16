@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -69,6 +69,15 @@ export function CreateGameWizard() {
     queryKey: ['seasons'],
     queryFn: seasonsApi.list,
   })
+
+  // Preselect the team's active season (there is at most one) once seasons load,
+  // unless the user has already picked one.
+  useEffect(() => {
+    if (!state.seasonId) {
+      const active = seasons.find(s => s.isActive)
+      if (active) update({ seasonId: active.id })
+    }
+  }, [seasons])
 
   const createMutation = useMutation({
     mutationFn: (data: Parameters<typeof gamesApi.create>[0]) => gamesApi.create(data),
