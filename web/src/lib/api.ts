@@ -230,7 +230,7 @@ export const setsApi = {
 
 export const ralliesApi = {
   list:     (setId: string) => api.get<Rally[]>(`/api/sets/${setId}/rallies`),
-  add:      (setId: string, data: { scorer: string; pointType: string }) =>
+  add:      (setId: string, data: { scorer: string; pointType: string; pointSubtype?: string | null }) =>
     api.post<Rally>(`/api/sets/${setId}/rallies`, data),
   undoLast: (setId: string) => api.delete<{ restoredRally: Rally | null }>(`/api/sets/${setId}/rallies/last`),
 }
@@ -524,6 +524,8 @@ export interface Rally {
   rallyIndex: number
   scorer: 'us' | 'them'
   pointType: string
+  /** Granular attribution. us_positive → ace|kill|block · us_error → serve|reception|attack|other. Null for opponent-side points. */
+  pointSubtype?: string | null
   scoreUs: number
   scoreThem: number
   servingTeam: 'us' | 'them'
@@ -533,6 +535,11 @@ export interface Rally {
   loggedAt: string
   isOffline?: boolean
 }
+
+/** Canonical subtype identifiers + their bucket. */
+export type PointSubtype = 'ace' | 'kill' | 'block' | 'serve' | 'reception' | 'attack' | 'other'
+export const WINNER_SUBTYPES: PointSubtype[] = ['ace', 'kill', 'block']
+export const ERROR_SUBTYPES: PointSubtype[]  = ['serve', 'reception', 'attack', 'other']
 
 export interface Substitution {
   id: string
@@ -695,7 +702,17 @@ export interface SeasonPerformanceData {
     errorRatio: number
     errorClustering: number | null
     rotations: Array<{ rotation: number; winPct: number | null }>
+    // Granular point-attribution shares (0–1)
+    killShare: number
+    blockShare: number
+    aceShare: number
+    receptErrPct: number
+    serveErrPct: number
   }>
+  /** Season point-source totals (counts). */
+  pointSourceTotals: { ace: number; kill: number; block: number; oppErr: number }
+  /** Season error totals (counts). */
+  errorTotals: { serve: number; reception: number; attack: number; other: number }
 }
 
 export interface DashboardData {

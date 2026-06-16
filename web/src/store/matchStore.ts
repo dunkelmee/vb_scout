@@ -38,8 +38,9 @@ interface MatchState {
   // Actions
   initMatch: (matchId: string) => Promise<void>
   tapScore: (scorer: 'us' | 'them') => void
-  tapPointType: (type: 'positive' | 'error') => void
-  commitRally: (scorer: 'us' | 'them', pointType: string) => Promise<void>
+  /** Step 2: commit the rally with an explicit pointType + (required for our own actions) subtype. */
+  tapOutcome: (pointType: string, subtype?: string | null) => void
+  commitRally: (scorer: 'us' | 'them', pointType: string, subtype?: string | null) => Promise<void>
   undoLastRally: () => Promise<void>
   cancelScoring: () => void
   refreshFromDB: () => Promise<void>
@@ -114,38 +115,20 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   tapScore: (scorer: 'us' | 'them') => {
     const state = get()
     if (state.scoringStep !== 'idle') return
-
     if (state.autoFallbackTimer) clearTimeout(state.autoFallbackTimer)
-
-    const timer = setTimeout(() => {
-      const s = get()
-      if (s.scoringStep === 'awaiting_type' && s.pendingScorer === scorer) {
-        get().commitRally(scorer, scorer === 'us' ? 'us_positive' : 'them_positive')
-      }
-    }, 4000)
-
-    set({ scoringStep: 'awaiting_type', pendingScorer: scorer, autoFallbackTimer: timer })
+    // Classification is required — no auto-commit fallback. The coach must pick a
+    // point/error subtype in step 2 (or cancel).
+    set({ scoringStep: 'awaiting_type', pendingScorer: scorer, autoFallbackTimer: null })
   },
 
-  tapPointType: (type: 'positive' | 'error') => {
+  tapOutcome: (pointType: string, subtype: string | null = null) => {
     const state = get()
     if (state.scoringStep !== 'awaiting_type' || !state.pendingScorer) return
-
     if (state.autoFallbackTimer) clearTimeout(state.autoFallbackTimer)
-
-    const scorer = state.pendingScorer
-    let pointType: string
-
-    if (scorer === 'us') {
-      pointType = type === 'positive' ? 'us_positive' : 'them_error'
-    } else {
-      pointType = type === 'positive' ? 'them_positive' : 'us_error'
-    }
-
-    get().commitRally(scorer, pointType)
+    get().commitRally(state.pendingScorer, pointType, subtype)
   },
 
-  commitRally: async (scorer: 'us' | 'them', pointType: string) => {
+  commitRally: async (scorer: 'us' | 'them', pointType: string, subtype: string | null = null) => {
     const state = get()
     if (!state.currentSetId || state.isCommitting) return
 
@@ -170,7 +153,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     })
 
     try {
-      const rally = await ralliesApi.add(state.currentSetId, { scorer, pointType })
+      const rally = await ralliesApi.add(state.currentSetId, { scorer, pointType, pointSubtype: subtype })
       set((s) => ({ rallies: [...s.rallies, rally], isCommitting: false }))
     } catch (err) {
       if (!navigator.onLine) {
@@ -181,7 +164,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
           setId: state.currentSetId!,
           method: 'POST',
           url: `/api/sets/${state.currentSetId}/rallies`,
-          body: { scorer, pointType },
+          body: { scorer, pointType, pointSubtype: subtype },
         })
         // Build a local rally object so the timeline and undo logic stay consistent.
         const offlineRally: Rally = {
@@ -190,6 +173,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
           rallyIndex: state.rallyCount,
           scorer,
           pointType,
+          pointSubtype: subtype,
           scoreUs: newScoreUs,
           scoreThem: newScoreThem,
           servingTeam: state.servingTeam,

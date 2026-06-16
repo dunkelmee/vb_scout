@@ -220,6 +220,11 @@ model Rally {
   rallyIndex    Int      @map("rally_index")
   scorer        String   // us | them
   pointType     String   @map("point_type") // us_positive | us_error | them_positive | them_error
+  // Granular point attribution (nullable — only set for our own terminal actions):
+  //   us_positive -> ace | kill | block
+  //   us_error    -> serve | reception | attack | other
+  // them_positive / them_error stay unclassified (we don't see opponent mechanics).
+  pointSubtype  String?  @map("point_subtype")
   scoreUs       Int      @map("score_us")
   scoreThem     Int      @map("score_them")
   servingTeam   String   @map("serving_team")

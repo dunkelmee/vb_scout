@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import { seasonPerfApi, SeasonPerformanceData } from '../lib/api'
 import { chartTheme } from '../lib/chartTheme'
+import { MultiDonut, CatBars } from '../components/stats/pointCharts'
 
 type MatchRow = SeasonPerformanceData['matches'][number]
 
@@ -235,7 +236,16 @@ export function SeasonPerformancePage() {
     pointsUs:   m.pointsUs,
     pointsThem: m.pointsThem,
     clustering: m.errorClustering,
+    killShare:  Math.round(m.killShare  * 100),
+    blockShare: Math.round(m.blockShare * 100),
+    aceShare:   Math.round(m.aceShare   * 100),
+    receptErr:  Math.round(m.receptErrPct * 100),
+    serveErr:   Math.round(m.serveErrPct  * 100),
   }))
+
+  const psTotals = data.pointSourceTotals ?? { ace: 0, kill: 0, block: 0, oppErr: 0 }
+  const etTotals = data.errorTotals ?? { serve: 0, reception: 0, attack: 0, other: 0 }
+  const hasAttribution = (psTotals.ace + psTotals.kill + psTotals.block + psTotals.oppErr + etTotals.serve + etTotals.reception + etTotals.attack + etTotals.other) > 0
 
   const setsRatio = data.setsRecord.losses > 0
     ? (data.setsRecord.wins / data.setsRecord.losses).toFixed(1)
@@ -297,6 +307,24 @@ export function SeasonPerformancePage() {
           </div>
         </div>
 
+        {/* Season point source & error mix (identity) */}
+        {hasAttribution && (
+          <>
+            <MultiDonut title={t('stats.pointSource')} data={[
+              { key: 'kill', value: psTotals.kill },
+              { key: 'oppErr', value: psTotals.oppErr },
+              { key: 'block', value: psTotals.block },
+              { key: 'ace', value: psTotals.ace },
+            ]} />
+            <CatBars title={t('stats.errorMix')} data={[
+              { key: 'reception', value: etTotals.reception },
+              { key: 'serve', value: etTotals.serve },
+              { key: 'attack', value: etTotals.attack },
+              { key: 'other', value: etTotals.other },
+            ]} />
+          </>
+        )}
+
         {/* 2. Sideout % vs Break % */}
         {chartData.length > 1 && (
           <div className="card p-4">
@@ -343,6 +371,52 @@ export function SeasonPerformancePage() {
             <div className="flex gap-4 mt-2">
               <LegendDot color={chartTheme.turq} label={t('seasonPerf.legendPosPlay')} />
               <LegendDot color={chartTheme.pink} label={t('seasonPerf.legendErrorRatio')} />
+            </div>
+          </div>
+        )}
+
+        {/* Scoring profile trend */}
+        {hasAttribution && chartData.length > 1 && (
+          <div className="card p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-0.5">{t('seasonPerf.scoringProfile')}</p>
+            <p className="text-[9px] text-on-surface-variant/60 mb-3">{t('seasonPerf.perMatch')}</p>
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={chartData} margin={{ top: 6, right: 12, left: -16, bottom: 4 }}>
+                <CartesianGrid vertical={false} stroke={chartTheme.gridColor} />
+                <XAxis dataKey="label" tick={{ fill: chartTheme.tickColor, fontSize: 9 }} {...axisBase} interval={0} />
+                <YAxis tick={{ fill: chartTheme.tickColor, fontSize: 9 }} {...axisBase} tickFormatter={v => `${v}%`} />
+                <Tooltip {...sharedTooltip} formatter={(v: number, name: string) => [`${v}%`, name]} />
+                <Line dataKey="killShare"  name={t('subtype.kill')}  stroke={chartTheme.categories.kill}  strokeWidth={2} dot={{ r: 3, fill: chartTheme.categories.kill,  strokeWidth: 0 }} connectNulls />
+                <Line dataKey="blockShare" name={t('subtype.block')} stroke={chartTheme.categories.block} strokeWidth={2} dot={{ r: 3, fill: chartTheme.categories.block, strokeWidth: 0 }} connectNulls />
+                <Line dataKey="aceShare"   name={t('subtype.ace')}   stroke={chartTheme.categories.ace}   strokeWidth={2} dot={{ r: 3, fill: chartTheme.categories.ace,   strokeWidth: 0 }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex gap-4 mt-2 flex-wrap">
+              <LegendDot color={chartTheme.categories.kill}  label={t('subtype.kill')} />
+              <LegendDot color={chartTheme.categories.block} label={t('subtype.block')} />
+              <LegendDot color={chartTheme.categories.ace}   label={t('subtype.ace')} />
+            </div>
+          </div>
+        )}
+
+        {/* Error-type trend */}
+        {hasAttribution && chartData.length > 1 && (
+          <div className="card p-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant mb-0.5">{t('seasonPerf.errorTypeTrend')}</p>
+            <p className="text-[9px] text-on-surface-variant/60 mb-3">{t('seasonPerf.errorTypeHint')}</p>
+            <ResponsiveContainer width="100%" height={150}>
+              <LineChart data={chartData} margin={{ top: 6, right: 12, left: -16, bottom: 4 }}>
+                <CartesianGrid vertical={false} stroke={chartTheme.gridColor} />
+                <XAxis dataKey="label" tick={{ fill: chartTheme.tickColor, fontSize: 9 }} {...axisBase} interval={0} />
+                <YAxis tick={{ fill: chartTheme.tickColor, fontSize: 9 }} {...axisBase} tickFormatter={v => `${v}%`} />
+                <Tooltip {...sharedTooltip} formatter={(v: number, name: string) => [`${v}%`, name]} />
+                <Line dataKey="receptErr" name={t('subtype.reception')} stroke={chartTheme.categories.reception} strokeWidth={2} dot={{ r: 3, fill: chartTheme.categories.reception, strokeWidth: 0 }} connectNulls />
+                <Line dataKey="serveErr"  name={t('subtype.serve')}     stroke={chartTheme.categories.serve}     strokeWidth={2} dot={{ r: 3, fill: chartTheme.categories.serve,     strokeWidth: 0 }} connectNulls />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex gap-4 mt-2 flex-wrap">
+              <LegendDot color={chartTheme.categories.reception} label={t('subtype.reception')} />
+              <LegendDot color={chartTheme.categories.serve}     label={t('subtype.serve')} />
             </div>
           </div>
         )}

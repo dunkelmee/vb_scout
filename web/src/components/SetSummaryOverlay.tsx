@@ -1,17 +1,13 @@
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
-import {
-  ComposedChart, Area, ReferenceLine,
-  XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip,
-} from 'recharts'
 import { X, BarChart2 } from 'lucide-react'
 import { Rally, GameSet, setsApi } from '../lib/api'
 import { computeLiveStats } from '../lib/statistics'
-import { DonutChart } from './ui/DonutChart'
+import { pointSource, errorMix, scoringTimeline, selfGeneratedPct, netGifts, serveRisk } from '../lib/pointStats'
+import { MultiDonut, CatBars, AnnotatedTimeline, RotationMatrix, KpiTile, InsightCard } from './stats/pointCharts'
 import { Button } from './ui/Button'
 import { cn } from './ui/cn'
-import { chartTheme } from '../lib/chartTheme'
 
 interface SetSummaryOverlayProps {
   matchId: string
@@ -34,14 +30,6 @@ function statColor(value: number, higherIsBetter: boolean): string {
   if (v >= 0.60) return '#23B5D3'  // turq-500
   if (v >= 0.40) return '#279AF1'  // bell-500
   return '#EA526F'                  // bubb-500
-}
-
-// §2.4 Rotation grid colours
-function rotationColor(winRate: number): { bg: string; text: string } {
-  if (winRate >= 0.70) return { bg: 'rgba(35,181,211,0.22)',  text: '#23B5D3' }
-  if (winRate >= 0.55) return { bg: 'rgba(39,154,241,0.15)',  text: '#5BB4F5' }
-  if (winRate >= 0.40) return { bg: 'rgba(234,82,111,0.12)',  text: '#F07A90' }
-  return                           { bg: 'rgba(234,82,111,0.22)',  text: '#EA526F' }
 }
 
 function StatTile({
@@ -144,21 +132,25 @@ export function SetSummaryOverlay({
     )
   }, [prevSetData, setterPlayerId])
 
-  const chartData = useMemo(() => {
-    const pts: { rally: number; pos: number; neg: number }[] = [
-      { rally: 0, pos: 0, neg: 0 },
-    ]
-    rallies.forEach(r => {
-      const diff = r.scoreUs - r.scoreThem
-      pts.push({ rally: r.rallyIndex + 1, pos: Math.max(0, diff), neg: Math.min(0, diff) })
-    })
-    return pts
-  }, [rallies])
+  const timeline = useMemo(() => scoringTimeline(rallies), [rallies])
+  const ps = useMemo(() => pointSource(rallies), [rallies])
+  const em = useMemo(() => errorMix(rallies), [rallies])
+  const selfGen = selfGeneratedPct(rallies)
+  const gifts = netGifts(rallies)
+  const serve = serveRisk(rallies)
 
-  const ourPos   = rallies.filter(r => r.pointType === 'us_positive').length
-  const ourErr   = rallies.filter(r => r.pointType === 'them_error').length
-  const themPos  = rallies.filter(r => r.pointType === 'them_positive').length
-  const themErr  = rallies.filter(r => r.pointType === 'us_error').length
+  const sourceData = [
+    { key: 'kill', value: ps.kill },
+    { key: 'oppErr', value: ps.oppErr },
+    { key: 'block', value: ps.block },
+    { key: 'ace', value: ps.ace },
+  ]
+  const errorData = [
+    { key: 'reception', value: em.reception },
+    { key: 'serve', value: em.serve },
+    { key: 'attack', value: em.attack },
+    { key: 'other', value: em.other },
+  ]
 
   const completed   = sets.filter(s => s.status === 'completed')
   const setsWonUs   = completed.filter(s => s.scoreUs > s.scoreThem).length + (scoreUs > scoreThem ? 1 : 0)
@@ -260,12 +252,10 @@ export function SetSummaryOverlay({
           </div>
         </div>
 
-        {/* Point origin donuts */}
+        {/* Point source + error mix */}
         <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.pointOrigin')}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <DonutChart teamName={teamName}     ownPoints={ourPos}  opponentErrors={ourErr}  variant="us" />
-          <DonutChart teamName={opponentName} ownPoints={themPos} opponentErrors={themErr} variant="them" />
-        </div>
+        {ps.total > 0 && <MultiDonut title={t('stats.pointSource')} data={sourceData} />}
+        {em.total > 0 && <CatBars title={t('stats.errorMix')} data={errorData} />}
 
         {/* Key stats */}
         <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.thisSet')}</p>
@@ -276,68 +266,29 @@ export function SetSummaryOverlay({
           <StatTile label={t('stats.positivePlay')}    value={stats.positivePlayPct}      prevValue={prevStats?.positivePlayPct}      higherIsBetter />
         </div>
 
-        {/* Score timeline — §2.9 */}
-        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.scoreTimeline')}</p>
-        <div className="card p-3">
-          <ResponsiveContainer width="100%" height={140}>
-            <ComposedChart data={chartData} margin={{ top: 8, right: 8, left: -24, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={chartTheme.gridColor} vertical={false} />
-              <XAxis
-                dataKey="rally"
-                tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                tick={{ fill: chartTheme.tickColor, fontSize: 9 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => v > 0 ? `+${v}` : `${v}`}
-              />
-              <Tooltip
-                contentStyle={{ background: chartTheme.tooltip.backgroundColor, border: '1px solid rgba(47,45,40,0.90)', borderRadius: 8, fontSize: 11 }}
-                labelFormatter={(v) => `Rally ${v}`}
-                formatter={(value: number, name: string) => [
-                  value > 0 ? `+${value}` : `${value}`,
-                  name === 'pos' ? t('postMatch.leading') : t('postMatch.trailing'),
-                ]}
-              />
-              <ReferenceLine y={0} stroke={chartTheme.gridColor} />
-              {timeouts.map(t => (
-                <ReferenceLine
-                  key={t.id}
-                  x={t.rallyIndex + 1}
-                  stroke={t.calledBy === 'us' ? 'rgba(35,181,211,0.55)' : 'rgba(234,82,111,0.55)'}
-                  strokeDasharray="4 3"
-                  strokeWidth={1.5}
-                />
-              ))}
-              <Area dataKey="pos" fill={chartTheme.turqFill} stroke={chartTheme.turq} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-              <Area dataKey="neg" fill={chartTheme.pinkFill} stroke={chartTheme.pink} strokeWidth={1.5} baseValue={0} isAnimationActive={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
+        {/* Quality KPIs */}
+        <div className="grid grid-cols-3 gap-3">
+          <KpiTile label={t('stats.selfGenerated')} value={`${Math.round(selfGen * 100)}%`} color="#23B5D3" />
+          <KpiTile label={t('stats.netGifts')} value={gifts.net > 0 ? `+${gifts.net}` : `${gifts.net}`}
+            sub={`${gifts.oppErr}/${gifts.ourErr}`} color={gifts.net >= 0 ? '#23B5D3' : '#EA526F'} />
+          <KpiTile label={t('stats.serveRisk')} value={`${serve.aces}:${serve.serveErr}`}
+            color={serve.ratio != null && serve.ratio >= 0.5 ? '#23B5D3' : '#EA526F'} />
         </div>
 
-        {/* Rotation performance — §2.4 */}
+        {/* Score timeline (annotated by point type) */}
+        <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.scoreTimeline')}</p>
+        <AnnotatedTimeline data={timeline} timeouts={timeouts} height={140} />
+
+        {/* Rotation sideout/break matrix */}
         <p className="text-[10px] text-ghost-400/70 uppercase tracking-widest font-bold">{t('setSummary.rotationPerf')}</p>
-        <div className="card p-4">
-          <div className="grid grid-cols-6 gap-2">
-            {stats.rotationStats.map(rot => {
-              const total = rot.wins + rot.losses
-              const winRate = total > 0 ? rot.wins / total : 0
-              const { bg, text } = rotationColor(winRate)
-              return (
-                <div key={rot.rotation} className="rounded-sm p-2 text-center" style={{ background: bg }}>
-                  <p className="text-[9px] text-ghost-400/60 mb-1">R{rot.rotation}</p>
-                  <p className="text-xs font-bold leading-none" style={{ color: text }}>
-                    {total > 0 ? `${Math.round(winRate * 100)}%` : '–'}
-                  </p>
-                  <p className="text-[8px] text-ghost-400/40 mt-1">{total}R</p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <RotationMatrix rows={stats.rotationStats} />
+
+        {/* Insight */}
+        {em.total > 0 && em.reception >= 2 && em.reception >= em.serve && em.reception >= em.attack && (
+          <InsightCard tone="warn">
+            {t('setSummary.insightReception', { count: em.reception })}
+          </InsightCard>
+        )}
 
       </div>
 

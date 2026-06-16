@@ -2,6 +2,7 @@ import React from 'react'
 import { Player } from '../../lib/api'
 import { Lineup, Zone } from '../../lib/rotation'
 import { PlayerToken } from './PlayerToken'
+import { PlayerAvatar } from '../players/PlayerAvatar'
 import { cn } from '../ui/cn'
 
 interface CourtViewProps {
@@ -20,6 +21,14 @@ const OUR_ZONES: Zone[][] = [
 
 const SUB: Record<string, string> = {
   '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆',
+}
+
+const POSITION_ABBREV: Record<string, string> = {
+  Setter: 'S', Outside: 'OH', Opposite: 'OPP', Middle: 'MB', Libero: 'L', DS: 'DS',
+}
+const TEXT_COLOR: Record<string, string> = {
+  Setter: 'text-bell-500', Outside: 'text-turq-500', Opposite: 'text-bubb-400',
+  Middle: 'text-bell-400', Libero: 'text-bubb-500', DS: 'text-ghost-300',
 }
 
 export function CourtView({
@@ -115,25 +124,39 @@ function ZoneCell({
 }) {
   const playerId = lineup?.[zone]
   const player   = playerId ? playerMap.get(playerId) : null
-  const isServer = playerId === serverPlayerId
-  const position = (playerId && playerSetRoles?.[playerId]) ?? player?.positions[0]
+  const isServer = !!playerId && playerId === serverPlayerId
+
+  if (!player) {
+    return <div />
+  }
+
+  const position = (playerSetRoles?.[player.id]) ?? player.positions[0]
+
+  // The serving player keeps the bordered square (shown only while we serve).
+  if (isServer) {
+    return (
+      <div className="flex justify-center">
+        <PlayerToken player={player} position={position} isServer className="w-full" />
+      </div>
+    )
+  }
+
+  // Every other player: borderless token (tactic-board style — no container).
+  const abbrev = POSITION_ABBREV[position ?? ''] ?? position?.slice(0, 3).toUpperCase()
+  const textColor = TEXT_COLOR[position ?? ''] ?? 'text-ghost-300'
+  const firstName = player.firstName.length > 9 ? player.firstName.slice(0, 8) + '…' : player.firstName
 
   return (
     <div className="flex justify-center">
-      {player ? (
-        <PlayerToken
-          player={player}
-          position={position}
-          isServer={isServer}
-          className="w-full"
-        />
-      ) : (
-        <div className="w-full min-h-[96px] rounded-lg border border-dashed border-pitch-400/30 flex items-center justify-center">
-          <span className="text-[9px] text-ghost-400/40 font-bold">
-            {zone.replace('zone', 'Z')}
-          </span>
-        </div>
-      )}
+      <div className="flex flex-col items-center gap-0.5 select-none">
+        <PlayerAvatar player={player} size="md" showJerseyBadge />
+        <span className="text-ghost-100 text-[10px] font-bold leading-tight text-center" style={{ maxWidth: 64 }}>
+          {firstName}
+        </span>
+        {abbrev && (
+          <span className={cn('text-[9px] font-bold uppercase tracking-wide', textColor)}>{abbrev}</span>
+        )}
+      </div>
     </div>
   )
 }

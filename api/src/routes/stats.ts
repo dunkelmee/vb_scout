@@ -204,12 +204,20 @@ router.get('/season-performance', async (req: Request, res: Response) => {
 
     const matchData = matches.map(m => {
       const allRallies = m.sets.flatMap((s: { rallies: unknown[] }) => s.rallies) as Array<{
-        scorer: string; pointType: string; servingTeam: string; rotated: boolean
+        scorer: string; pointType: string; pointSubtype: string | null; servingTeam: string; rotated: boolean
       }>
 
       const receive = allRallies.filter(r => r.servingTeam === 'them')
       const serve   = allRallies.filter(r => r.servingTeam === 'us')
       const ourPoints = allRallies.filter(r => r.scorer === 'us')
+      const ourErrors = allRallies.filter(r => r.pointType === 'us_error')
+
+      const sub = (rs: typeof allRallies, st: string) => rs.filter(r => r.pointSubtype === st).length
+      const killShare    = ourPoints.length ? sub(ourPoints, 'kill') / ourPoints.length : 0
+      const blockShare   = ourPoints.length ? sub(ourPoints, 'block') / ourPoints.length : 0
+      const aceShare     = ourPoints.length ? sub(ourPoints, 'ace') / ourPoints.length : 0
+      const receptErrPct = allRallies.length ? sub(ourErrors, 'reception') / allRallies.length : 0
+      const serveErrPct  = allRallies.length ? sub(ourErrors, 'serve') / allRallies.length : 0
 
       const sideoutPct    = receive.length > 0 ? receive.filter(r => r.scorer === 'us').length / receive.length : 0
       const breakPct      = serve.length   > 0 ? serve.filter(r => r.scorer === 'us').length / serve.length : 0
@@ -219,7 +227,7 @@ router.get('/season-performance', async (req: Request, res: Response) => {
         ? allRallies.filter(r => r.pointType === 'us_error' || r.pointType === 'them_positive').length / allRallies.length
         : 0
 
-      const clusteringRaw = computeErrorClustering(allRallies as Parameters<typeof computeErrorClustering>[0])
+      const clusteringRaw = computeErrorClustering(allRallies as unknown as Parameters<typeof computeErrorClustering>[0])
       const errorClustering = clusteringRaw >= 0 ? clusteringRaw : null
 
       const pointsUs   = m.sets.reduce((s: number, set: { scoreUs: number }) => s + set.scoreUs, 0)
@@ -258,8 +266,33 @@ router.get('/season-performance', async (req: Request, res: Response) => {
         errorRatio,
         errorClustering,
         rotations,
+        killShare,
+        blockShare,
+        aceShare,
+        receptErrPct,
+        serveErrPct,
       }
     })
+
+    // Season point-source / error totals (identity)
+    const seasonRallies = matches.flatMap(m => m.sets.flatMap((s: { rallies: unknown[] }) => s.rallies)) as Array<{
+      scorer: string; pointType: string; pointSubtype: string | null
+    }>
+    const seasonOur = seasonRallies.filter(r => r.scorer === 'us')
+    const seasonErr = seasonRallies.filter(r => r.pointType === 'us_error')
+    const cnt = (rs: typeof seasonRallies, st: string) => rs.filter(r => r.pointSubtype === st).length
+    const pointSourceTotals = {
+      ace: cnt(seasonOur, 'ace'),
+      kill: cnt(seasonOur, 'kill'),
+      block: cnt(seasonOur, 'block'),
+      oppErr: seasonOur.filter(r => r.pointType === 'them_error').length,
+    }
+    const errorTotals = {
+      serve: cnt(seasonErr, 'serve'),
+      reception: cnt(seasonErr, 'reception'),
+      attack: cnt(seasonErr, 'attack'),
+      other: seasonErr.length - cnt(seasonErr, 'serve') - cnt(seasonErr, 'reception') - cnt(seasonErr, 'attack'),
+    }
 
     const totalWins      = matchData.filter(m => m.result === 'W').length
     const totalPointsUs  = matchData.reduce((s, m) => s + m.pointsUs, 0)
@@ -275,6 +308,8 @@ router.get('/season-performance', async (req: Request, res: Response) => {
       pointsUs:    totalPointsUs,
       pointsThem:  totalPointsThem,
       matches:     matchData,
+      pointSourceTotals,
+      errorTotals,
     })
   } catch (err) {
     console.error(err)
