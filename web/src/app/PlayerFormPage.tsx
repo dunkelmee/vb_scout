@@ -169,7 +169,7 @@ export function PlayerFormPage() {
         {isManager && (
           <div className="flex flex-col items-center gap-3 py-2">
             <div className="relative">
-              <PlayerAvatar player={displayedPlayer} size="xl" showJerseyBadge />
+              <PlayerAvatar player={displayedPlayer} size="xl" />
 
               {/* Camera overlay button */}
               <button
@@ -230,10 +230,11 @@ export function PlayerFormPage() {
           <Input label={t('players.lastName')}  value={lastName}  onChange={e => setLastName(e.target.value)}  required />
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
-          <Input label={t('players.jersey')}   type="number" value={jersey}   onChange={e => setJersey(e.target.value)}   placeholder="7" />
-          <Input label={t('players.height')} type="number" value={heightM}  onChange={e => setHeightM(e.target.value)}  step="0.01" placeholder="1.85" />
-          <Input label={t('players.birthday')}   type="date"   value={birthday} onChange={e => setBirthday(e.target.value)} />
+        <Input label={t('players.birthday')} type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input label={t('players.jersey')} type="number" value={jersey}  onChange={e => setJersey(e.target.value)}  placeholder="7" />
+          <Input label={t('players.height')} type="number" value={heightM} onChange={e => setHeightM(e.target.value)} step="0.01" placeholder="1.85" />
         </div>
 
         <ChipGroup

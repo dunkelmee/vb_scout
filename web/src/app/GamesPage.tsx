@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -19,6 +19,11 @@ export function GamesPage() {
   ]
   const qc = useQueryClient()
   const navigate = useNavigate()
+
+  // Reset the scroll position to the top whenever the filter tab changes
+  useEffect(() => {
+    window.scrollTo({ top: 0 })
+  }, [filter])
 
   const { data: matches = [], isLoading } = useQuery<Match[]>({
     queryKey: ['games', filter],

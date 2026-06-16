@@ -90,6 +90,8 @@ export function GameLogPage() {
   ]
 
   const [activeTab, setActiveTab] = useState('log')
+  // Always show the top of the page when switching tabs (the page scrolls on the window)
+  useEffect(() => { window.scrollTo(0, 0) }, [activeTab])
   const [showSubModal, setShowSubModal] = useState(false)
   const [showTimeoutModal, setShowTimeoutModal] = useState(false)
   const [showEndSetModal, setShowEndSetModal] = useState(false)

@@ -51,8 +51,10 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
   const spinnerProgress = Math.min(pullY / threshold, 1)
   const showIndicator = pullY > 0 || refreshing
 
+  // The page scrolls on the window, so reset the window (not <main>) to the top
+  // on every route change. Tapping an already-active nav item is handled inline below.
   useEffect(() => {
-    if (mainRef.current) mainRef.current.scrollTo(0, 0)
+    window.scrollTo(0, 0)
   }, [location.pathname])
 
   return (
@@ -111,6 +113,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                 <NavLink
                   key={to}
                   to={to}
+                  onClick={() => window.scrollTo({ top: 0 })}
                   className={({ isActive }) =>
                     cn(
                       'relative flex flex-col items-center min-w-[56px] transition-colors',
@@ -146,6 +149,7 @@ export function AppShell({ children, hideNav = false }: AppShellProps) {
                 <NavLink
                   key={to}
                   to={to}
+                  onClick={() => window.scrollTo({ top: 0 })}
                   className={({ isActive }) =>
                     cn(
                       'relative flex flex-col items-center gap-1 py-2.5 w-full rounded-xl transition-all',
