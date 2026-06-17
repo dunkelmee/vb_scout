@@ -4,14 +4,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { gamesApi, Match } from '../lib/api'
 import { useRole } from '../hooks/useRole'
+import { useTeamSeasonStore } from '../store/teamSeasonStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Tabs } from '../components/ui/Tabs'
-import { Plus } from 'lucide-react'
+import { EmptyState } from '../components/ui/EmptyState'
+import { Plus, CalendarDays, Flag, BarChart3, Sparkles } from 'lucide-react'
 import { MatchCard } from '../components/game/MatchCard'
 
 export function GamesPage() {
   const { t } = useTranslation()
   const { isManager } = useRole()
+  const hasSeason = useTeamSeasonStore(s => s.allSeasons.length > 0)
   const [filter, setFilter] = useState('playing')
   const FILTER_TABS = [
     { id: 'playing', label: t('games.playing') },
@@ -112,20 +115,39 @@ export function GamesPage() {
         )}
 
         {!isLoading && matches.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <div className="w-16 h-16 rounded-full bg-pitch-600 flex items-center justify-center">
-              <CalendarDays size={28} className="text-ghost-400" />
+          isManager ? (
+            <EmptyState
+              icon={CalendarDays}
+              title={t('games.emptyTitle')}
+              description={t('games.emptyDesc')}
+              features={[
+                { icon: Flag, title: t('games.emptyFeatLiveTitle'), desc: t('games.emptyFeatLiveDesc') },
+                { icon: BarChart3, title: t('games.emptyFeatStatsTitle'), desc: t('games.emptyFeatStatsDesc') },
+                { icon: Sparkles, title: t('games.emptyFeatAnalysisTitle'), desc: t('games.emptyFeatAnalysisDesc') },
+              ]}
+              actions={[
+                { label: t('games.createFirst'), icon: Plus, onClick: () => navigate('/games/new') },
+              ]}
+              notice={!hasSeason && (
+                <div className="flex items-start gap-2.5 mt-3.5 px-3.5 py-3 rounded-xl bg-bubb-500/[0.07] border border-bubb-500/20">
+                  <CalendarDays size={16} className="text-bubb-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-on-surface-variant leading-snug">
+                    <span className="font-bold text-bubb-400">{t('games.noSeasonTitle')}</span> {t('games.emptyNoSeason')}{' '}
+                    <button onClick={() => navigate('/settings?manage=seasons')} className="text-turq-500 font-bold">
+                      {t('games.noSeasonCta')}
+                    </button>
+                  </p>
+                </div>
+              )}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="w-16 h-16 rounded-full bg-pitch-600 flex items-center justify-center">
+                <CalendarDays size={28} className="text-ghost-400" />
+              </div>
+              <p className="text-ghost-300 text-center">{t('games.empty')}</p>
             </div>
-            <p className="text-ghost-300 text-center">{t('games.empty')}</p>
-            {isManager && (
-              <button
-                onClick={() => navigate('/games/new')}
-                className="text-turq-500 font-bold text-sm border border-turq-500/30 rounded-full px-4 py-2"
-              >
-                {t('games.createFirst')}
-              </button>
-            )}
-          </div>
+          )
         )}
       </div>
     </div>
@@ -139,33 +161,5 @@ function GamesLoadingSkeleton() {
         <div key={i} className="h-24 rounded-2xl bg-pitch-700" />
       ))}
     </div>
-  )
-}
-
-function CalendarDays({ size, className }: { size: number; className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-      <line x1="16" x2="16" y1="2" y2="6" />
-      <line x1="8" x2="8" y1="2" y2="6" />
-      <line x1="3" x2="21" y1="10" y2="10" />
-      <path d="M8 14h.01" />
-      <path d="M12 14h.01" />
-      <path d="M16 14h.01" />
-      <path d="M8 18h.01" />
-      <path d="M12 18h.01" />
-      <path d="M16 18h.01" />
-    </svg>
   )
 }
