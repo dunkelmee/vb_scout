@@ -1,15 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
-import { dashboardApi, DashboardData } from '../lib/api'
+import { dashboardApi, playersApi, DashboardData, Player } from '../lib/api'
 import { useRole } from '../hooks/useRole'
+import { useTeamSeasonStore } from '../store/teamSeasonStore'
 import { DashboardHeader } from '../components/ui/DashboardHeader'
 import { Badge } from '../components/ui/Badge'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine,
   ResponsiveContainer,
 } from 'recharts'
-import { ChevronRight, CalendarDays, Users, Dumbbell } from 'lucide-react'
+import { ChevronRight, CalendarDays, Users, Dumbbell, Check } from 'lucide-react'
 import { format } from '../lib/dateUtils'
 import { chartTheme } from '../lib/chartTheme'
 import { MatchCard } from '../components/game/MatchCard'
@@ -18,10 +19,17 @@ export function DashboardPage() {
   const { t } = useTranslation()
   const { isManager } = useRole()
   const navigate = useNavigate()
+  const teamName = useTeamSeasonStore(s => s.allTeams.find(team => team.teamId === s.activeTeamId)?.teamName)
+  const hasSeason = useTeamSeasonStore(s => s.allSeasons.length > 0)
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: dashboardApi.get,
     refetchInterval: 30_000,
+  })
+  const { data: players = [] } = useQuery<Player[]>({
+    queryKey: ['players'],
+    queryFn: playersApi.list,
+    enabled: isManager,
   })
 
   if (isLoading) return <DashboardSkeleton />
@@ -30,6 +38,14 @@ export function DashboardPage() {
   const winLossTrend = data?.winLossTrend || []
   const seasonPerf = data?.seasonPerf ?? null
   const weakestRotation = data?.weakestRotation ?? null
+
+  // First-run setup state (manager only)
+  const hasPlayers = players.length > 0
+  const hasSchedule = (data?.upcomingGames?.length ?? 0) > 0
+    || (data?.upcomingTrainings?.length ?? 0) > 0
+    || (kpis?.totalMatches ?? 0) > 0
+  const hasMatches = (kpis?.totalMatches ?? 0) > 0
+  const setupComplete = hasSeason && hasPlayers && hasSchedule
 
   return (
     <div className="min-h-dvh bg-background">
@@ -73,8 +89,20 @@ export function DashboardPage() {
           )}
         </div>
 
+        {/* First-run setup checklist */}
+        {isManager && !setupComplete && (
+          <SetupChecklist
+            teamName={teamName}
+            hasSeason={hasSeason}
+            hasPlayers={hasPlayers}
+            hasSchedule={hasSchedule}
+            onNavigate={navigate}
+          />
+        )}
+
         {/* Season Snapshot */}
-        {kpis && <SeasonSnapshot kpis={kpis} seasonPerf={seasonPerf} />}
+        {kpis && (hasMatches || !isManager) && <SeasonSnapshot kpis={kpis} seasonPerf={seasonPerf} />}
+        {isManager && !hasMatches && <GhostSnapshot />}
 
         {/* Season Results */}
         {winLossTrend.length > 0 && <SeasonResults matches={winLossTrend} />}
@@ -184,6 +212,138 @@ export function DashboardPage() {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ---- Setup checklist (first-run) ----
+
+function SetupChecklist({
+  teamName,
+  hasSeason,
+  hasPlayers,
+  hasSchedule,
+  onNavigate,
+}: {
+  teamName?: string
+  hasSeason: boolean
+  hasPlayers: boolean
+  hasSchedule: boolean
+  onNavigate: (to: string) => void
+}) {
+  const { t } = useTranslation()
+
+  const steps = [
+    {
+      done: true,
+      title: t('dashboard.setupTeamDone'),
+      sub: teamName ? t('dashboard.setupTeamSub', { team: teamName }) : t('dashboard.setupTeamSubNoName'),
+      to: '/settings',
+    },
+    {
+      done: hasSeason,
+      title: t('dashboard.setupSeason'),
+      sub: t('dashboard.setupSeasonSub'),
+      to: '/settings?manage=seasons',
+    },
+    {
+      done: hasPlayers,
+      title: t('dashboard.setupPlayers'),
+      sub: t('dashboard.setupPlayersSub'),
+      to: '/players/new',
+    },
+    {
+      done: hasSchedule,
+      title: t('dashboard.setupSchedule'),
+      sub: t('dashboard.setupScheduleSub'),
+      to: '/games/new',
+    },
+  ]
+
+  const doneCount = steps.filter(s => s.done).length
+  const pct = Math.round((doneCount / steps.length) * 100)
+
+  return (
+    <div>
+      <h3 className="font-display font-bold text-xs uppercase tracking-widest text-turq-500 mb-3 flex items-center gap-2">
+        <span className="w-[3px] h-3.5 rounded-sm bg-turq-500 inline-block" />
+        {t('dashboard.setupTitle')}
+      </h3>
+      <div className="card p-4">
+        {/* Progress */}
+        <div className="mb-3.5">
+          <div className="flex justify-between text-[11px] font-bold text-on-surface-variant mb-1.5">
+            <span>{t('dashboard.setupProgress', { done: doneCount, total: steps.length })}</span>
+            <span>{pct}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+            <div className="h-full rounded-full bg-gradient-to-r from-turq-500 to-bell-500 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+
+        {steps.map((step, i) => {
+          const interactive = !step.done
+          return (
+            <button
+              key={step.title}
+              onClick={interactive ? () => onNavigate(step.to) : undefined}
+              disabled={!interactive}
+              className={cn(
+                'flex items-center gap-3 w-full text-left py-3 border-b border-white/[0.06] last:border-b-0',
+                interactive && 'active:opacity-70 transition-opacity',
+              )}
+            >
+              <span className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center text-[13px] font-black shrink-0',
+                step.done ? 'bg-turq-500 text-pitch-950' : 'bg-white/[0.06] border border-outline/40 text-on-surface-variant',
+              )}>
+                {step.done ? <Check size={13} strokeWidth={3} /> : i}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className={cn('block text-sm font-bold leading-tight', step.done ? 'text-on-surface-variant' : 'text-on-surface')}>
+                  {step.title}
+                </span>
+                <span className="block text-[11px] text-on-surface-variant">{step.sub}</span>
+              </span>
+              {interactive && <ChevronRight size={16} className="text-on-surface-variant/60 shrink-0" />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---- Ghosted snapshot (no matches yet) ----
+
+function GhostSnapshot() {
+  const { t } = useTranslation()
+  const boxes = [
+    { label: t('dashboard.record'), value: '0–0' },
+    { label: t('seasonOverview.kpiPoints'), value: '—' },
+    { label: t('dashboard.sideoutPct'), value: '—' },
+    { label: t('dashboard.breakPct'), value: '—' },
+  ]
+  return (
+    <div>
+      <h3 className="font-display font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+        {t('dashboard.seasonSnapshot')}
+      </h3>
+      <div className="card p-4 relative overflow-hidden">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 opacity-40 grayscale">
+          {boxes.map(b => (
+            <div key={b.label} className="rounded-xl bg-surface-high/40 border border-outline/20 p-3">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant">{b.label}</p>
+              <p className="font-display font-black text-2xl text-on-surface-variant mt-1">{b.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center px-7 text-center">
+          <span className="text-xs text-on-surface bg-background/70 border border-outline/30 rounded-[10px] px-3 py-2.5 backdrop-blur-[2px]">
+            {t('dashboard.snapshotEmptyHint')}
+          </span>
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { useRole } from '../hooks/useRole'
@@ -27,8 +27,19 @@ export function SettingsPage() {
   const { isManager, isSuperAdmin } = useRole()
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const [showSeasons, setShowSeasons] = useState(false)
+  const [searchParams] = useSearchParams()
+  const [showSeasons, setShowSeasons] = useState(searchParams.get('manage') === 'seasons')
+  const seasonsRef = useRef<HTMLDivElement>(null)
   const [showTUSWeights, setShowTUSWeights] = useState(false)
+
+  // Deep-link from the dashboard checklist / games no-season notice opens and
+  // scrolls to the seasons manager.
+  useEffect(() => {
+    if (searchParams.get('manage') === 'seasons') {
+      setShowSeasons(true)
+      seasonsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [searchParams])
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
@@ -129,6 +140,7 @@ export function SettingsPage() {
             </SettingsSection>
 
             {/* Seasons — hidden from main nav, accessible here */}
+            <div ref={seasonsRef} className="scroll-mt-4">
             <SettingsSection title={t('seasons.title')}>
               <button
                 onClick={() => setShowSeasons(!showSeasons)}
@@ -140,6 +152,7 @@ export function SettingsPage() {
 
               {showSeasons && <SeasonsManager />}
             </SettingsSection>
+            </div>
 
             {/* Danger zone */}
             <SettingsSection title={t('settings.dangerZone')} className="border-error/20">

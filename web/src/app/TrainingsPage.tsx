@@ -7,8 +7,9 @@ import { useRole } from '../hooks/useRole'
 import { useAuthStore } from '../store/authStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
 import { format, formatDuration, isUpcoming } from '../lib/dateUtils'
-import { Plus, MapPin, ChevronRight, Trash2, Edit3 } from 'lucide-react'
+import { Plus, MapPin, ChevronRight, Trash2, Edit3, Dumbbell, CalendarClock, UserCheck, Tags } from 'lucide-react'
 
 import type { BadgeVariant } from '../components/ui/Badge'
 import type { TFunction } from 'i18next'
@@ -117,17 +118,25 @@ export function TrainingsPage() {
         )}
 
         {!isLoading && sessions.length === 0 && (
-          <div className="flex flex-col items-center py-16 gap-3">
-            <p className="text-on-surface-variant">{t('trainings.empty')}</p>
-            {isManager && (
-              <Link
-                to="/trainings/new"
-                className="text-turq-500 font-bold text-sm border border-turq-500/30 rounded-full px-4 py-2"
-              >
-                {t('trainings.scheduleFirst')}
-              </Link>
-            )}
-          </div>
+          isManager ? (
+            <EmptyState
+              icon={Dumbbell}
+              title={t('trainings.emptyTitle')}
+              description={t('trainings.emptyDesc')}
+              features={[
+                { icon: CalendarClock, title: t('trainings.emptyFeatWhenTitle'), desc: t('trainings.emptyFeatWhenDesc') },
+                { icon: UserCheck, title: t('trainings.emptyFeatRsvpTitle'), desc: t('trainings.emptyFeatRsvpDesc') },
+                { icon: Tags, title: t('trainings.emptyFeatFocusTitle'), desc: t('trainings.emptyFeatFocusDesc') },
+              ]}
+              actions={[
+                { label: t('trainings.scheduleFirst'), icon: Plus, onClick: () => navigate('/trainings/new') },
+              ]}
+            />
+          ) : (
+            <div className="flex flex-col items-center py-16 gap-3">
+              <p className="text-on-surface-variant">{t('trainings.empty')}</p>
+            </div>
+          )
         )}
       </div>
 

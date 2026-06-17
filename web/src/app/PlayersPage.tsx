@@ -7,8 +7,9 @@ import { useRole } from '../hooks/useRole'
 import { useAuthStore } from '../store/authStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
+import { EmptyState } from '../components/ui/EmptyState'
 import { PlayerAvatar } from '../components/players/PlayerAvatar'
-import { Plus, Edit3, Trash2, ShieldCheck, UserPlus, Copy, Check, X } from 'lucide-react'
+import { Plus, Edit3, Trash2, ShieldCheck, UserPlus, Copy, Check, X, Users, Ticket, Volleyball } from 'lucide-react'
 import { cn } from '../components/ui/cn'
 
 export function PlayersPage() {
@@ -18,6 +19,7 @@ export function PlayersPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [invitePlayer, setInvitePlayer] = useState<Player | null>(null)
+  const [genericInvite, setGenericInvite] = useState(false)
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ['players'],
@@ -49,6 +51,25 @@ export function PlayersPage() {
       {isLoading && (
         <div className="px-5 md:px-8 grid grid-cols-1 gap-2 md:grid-cols-2 md:gap-3 animate-pulse">
           {[...Array(5)].map((_, i) => <div key={i} className="card h-16" />)}
+        </div>
+      )}
+
+      {!isLoading && players.length === 0 && isManager && (
+        <div className="px-5 md:px-8">
+          <EmptyState
+            icon={Users}
+            title={t('players.emptyTitle')}
+            description={t('players.emptyDesc')}
+            features={[
+              { icon: UserPlus, title: t('players.emptyFeatAddTitle'), desc: t('players.emptyFeatAddDesc') },
+              { icon: Ticket, title: t('players.emptyFeatInviteTitle'), desc: t('players.emptyFeatInviteDesc') },
+              { icon: Volleyball, title: t('players.emptyFeatLineupTitle'), desc: t('players.emptyFeatLineupDesc') },
+            ]}
+            actions={[
+              { label: t('players.addPlayer'), icon: Plus, onClick: () => navigate('/players/new') },
+              { label: t('players.generateInvites'), icon: Ticket, variant: 'secondary', onClick: () => setGenericInvite(true) },
+            ]}
+          />
         </div>
       )}
 
@@ -139,11 +160,15 @@ export function PlayersPage() {
           onClose={() => setInvitePlayer(null)}
         />
       )}
+
+      {genericInvite && (
+        <InvitePlayerModal onClose={() => setGenericInvite(false)} />
+      )}
     </div>
   )
 }
 
-function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string; playerName: string; onClose: () => void }) {
+function InvitePlayerModal({ playerId, playerName, onClose }: { playerId?: string; playerName?: string; onClose: () => void }) {
   const { t } = useTranslation()
   const [boundEmail, setBoundEmail] = useState('')
   const [loading, setLoading]       = useState(false)
@@ -215,8 +240,8 @@ function InvitePlayerModal({ playerId, playerName, onClose }: { playerId: string
           </div>
         ) : (
           <>
-            <h3 className="text-[16px] font-bold text-white mb-0.5">{t('players.inviteName', { name: playerName })}</h3>
-            <p className="text-[12px] text-[#8A8A9A] mb-4">{t('players.generateCodeFor', { name: playerName })}</p>
+            <h3 className="text-[16px] font-bold text-white mb-0.5">{playerName ? t('players.inviteName', { name: playerName }) : t('players.inviteGenericTitle')}</h3>
+            <p className="text-[12px] text-[#8A8A9A] mb-4">{playerName ? t('players.generateCodeFor', { name: playerName }) : t('players.inviteGenericSub')}</p>
             <form onSubmit={handleSubmit} className="space-y-3">
               <div>
                 <label className="block text-[10px] font-semibold uppercase tracking-[0.07em] text-[#8A8A9A] mb-1.5">{t('players.playerEmail')}</label>
