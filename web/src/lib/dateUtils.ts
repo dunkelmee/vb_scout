@@ -19,6 +19,17 @@ export function format(dateStr: string | Date, opts?: { time?: boolean }): strin
   return dateFormatted
 }
 
+export function dateChipParts(dateStr: string | Date): { dow: string; day: string; mon: string } {
+  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+  if (isNaN(d.getTime())) return { dow: '–', day: '–', mon: '' }
+  const locale = currentLocale()
+  return {
+    dow: d.toLocaleDateString(locale, { weekday: 'short' }),
+    day: d.toLocaleDateString(locale, { day: 'numeric' }),
+    mon: d.toLocaleDateString(locale, { month: 'short' }),
+  }
+}
+
 export function formatTime(timeStr: string): string {
   // Accepts HH:MM or HH:MM:SS
   if (!timeStr) return ''

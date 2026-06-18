@@ -19,7 +19,6 @@ import { GameEditPage } from './app/GameEditPage'
 import { GameStatsPage } from './app/GameStatsPage'
 import { GameDetailPage } from './app/GameDetailPage'
 import { TrainingsPage } from './app/TrainingsPage'
-import { TrainingDetailPage } from './app/TrainingDetailPage'
 import { TrainingFormPage } from './app/TrainingFormPage'
 import { PlayersPage } from './app/PlayersPage'
 import { PlayerFormPage } from './app/PlayerFormPage'
@@ -108,7 +107,8 @@ function AppWithSeasonLoader() {
             <ManagerOnly><TrainingFormPage /></ManagerOnly>
           </RequireAuth>
         } />
-        <Route path="/trainings/:id" element={<AppLayout><TrainingDetailPage /></AppLayout>} />
+        {/* Detail view removed — the card is self-contained. Redirect old/deep links (e.g. push notifications) to the list. */}
+        <Route path="/trainings/:id" element={<Navigate to="/trainings" replace />} />
         <Route path="/trainings/:id/edit" element={
           <RequireAuth>
             <ManagerOnly><TrainingFormPage /></ManagerOnly>

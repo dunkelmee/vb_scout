@@ -156,7 +156,7 @@ export function DashboardPage() {
                 return (
                   <Link
                     key={session.id}
-                    to={`/trainings/${session.id}`}
+                    to={`/trainings#training-${session.id}`}
                     className="card p-4 flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex-1 min-w-0">

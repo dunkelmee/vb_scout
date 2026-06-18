@@ -55,8 +55,8 @@ export function TrainingFormPage() {
     mutationFn: () => trainingsApi.update(id!, { title, date, startTime, endTime: endTime || undefined, location: location || undefined, notes: notes || undefined, focusTags }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trainings'] })
-      qc.invalidateQueries({ queryKey: ['training', id] })
-      navigate(`/trainings/${id}`)
+      qc.invalidateQueries({ queryKey: ['training-attendance', id] })
+      navigate('/trainings')
     },
   })
 
