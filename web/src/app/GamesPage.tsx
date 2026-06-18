@@ -8,7 +8,7 @@ import { useTeamSeasonStore } from '../store/teamSeasonStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Tabs } from '../components/ui/Tabs'
 import { EmptyState } from '../components/ui/EmptyState'
-import { Plus, CalendarDays, Flag, BarChart3, Sparkles } from 'lucide-react'
+import { Plus, CalendarDays, Flag, BarChart3, Sparkles, Activity, Bell } from 'lucide-react'
 import { MatchCard } from '../components/game/MatchCard'
 
 export function GamesPage() {
@@ -141,12 +141,22 @@ export function GamesPage() {
               )}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <div className="w-16 h-16 rounded-full bg-pitch-600 flex items-center justify-center">
-                <CalendarDays size={28} className="text-ghost-400" />
-              </div>
-              <p className="text-ghost-300 text-center">{t('games.empty')}</p>
-            </div>
+            <EmptyState
+              icon={CalendarDays}
+              title={t('games.playerEmptyTitle')}
+              description={t('games.playerEmptyDesc')}
+              features={[
+                { icon: CalendarDays, title: t('games.playerFeatScheduleTitle'), desc: t('games.playerFeatScheduleDesc') },
+                { icon: Activity, title: t('games.playerFeatLiveTitle'), desc: t('games.playerFeatLiveDesc') },
+                { icon: BarChart3, title: t('games.playerFeatStatsTitle'), desc: t('games.playerFeatStatsDesc') },
+              ]}
+              notice={
+                <div className="flex items-start gap-2.5 mt-3.5 px-3.5 py-3 rounded-xl bg-bell-500/[0.06] border border-bell-500/20">
+                  <Bell size={16} className="text-bell-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-on-surface-variant leading-snug">{t('games.playerNotifyHint')}</p>
+                </div>
+              }
+            />
           )
         )}
       </div>

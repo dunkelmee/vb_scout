@@ -210,9 +210,22 @@ export function TrainingsPage() {
               ]}
             />
           ) : (
-            <div className="flex flex-col items-center py-16 gap-3">
-              <p className="text-on-surface-variant">{t('trainings.empty')}</p>
-            </div>
+            <EmptyState
+              icon={Dumbbell}
+              title={t('trainings.playerEmptyTitle')}
+              description={t('trainings.playerEmptyDesc')}
+              features={[
+                { icon: CalendarClock, title: t('trainings.playerFeatWhenTitle'), desc: t('trainings.playerFeatWhenDesc') },
+                { icon: UserCheck, title: t('trainings.playerFeatRsvpTitle'), desc: t('trainings.playerFeatRsvpDesc') },
+                { icon: Tags, title: t('trainings.playerFeatFocusTitle'), desc: t('trainings.playerFeatFocusDesc') },
+              ]}
+              notice={
+                <div className="flex items-start gap-2.5 mt-3.5 px-3.5 py-3 rounded-xl bg-bell-500/[0.06] border border-bell-500/20">
+                  <Bell size={16} className="text-bell-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-on-surface-variant leading-snug">{t('trainings.playerRemindHint')}</p>
+                </div>
+              }
+            />
           )
         )}
       </div>
