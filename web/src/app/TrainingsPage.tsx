@@ -7,6 +7,7 @@ import { useRole } from '../hooks/useRole'
 import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { useToast } from '../components/ui/Toast'
 import { SendReminderSheet } from '../components/training/SendReminderSheet'
 import { formatTime, dateChipParts, isUpcoming } from '../lib/dateUtils'
@@ -83,6 +84,7 @@ export function TrainingsPage() {
   const qc = useQueryClient()
   const [showPast, setShowPast] = useState(false)
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<TrainingSession | null>(null)
 
   const { data: sessions = [], isLoading } = useQuery<TrainingSession[]>({
     queryKey: ['trainings'],
@@ -104,7 +106,10 @@ export function TrainingsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => trainingsApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['trainings'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trainings'] })
+      setDeleteTarget(null)
+    },
   })
 
   const byDate = (dir: 1 | -1) => (a: TrainingSession, b: TrainingSession) =>
@@ -113,9 +118,7 @@ export function TrainingsPage() {
   const upcoming = sessions.filter(s => isUpcoming(s.date)).sort(byDate(1))   // soonest first
   const past     = sessions.filter(s => !isUpcoming(s.date)).sort(byDate(-1)) // most recent first
 
-  const handleDelete = (session: TrainingSession) => {
-    if (confirm(t('trainings.deleteConfirm'))) deleteMutation.mutate(session.id)
-  }
+  const handleDelete = (session: TrainingSession) => setDeleteTarget(session)
 
   return (
     <div className="min-h-dvh bg-background">
@@ -229,6 +232,17 @@ export function TrainingsPage() {
           )
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={t('trainings.deleteTitle')}
+          message={t('trainings.deleteMsg', { title: deleteTarget.title })}
+          loading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }

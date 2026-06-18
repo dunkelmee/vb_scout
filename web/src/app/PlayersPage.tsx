@@ -8,6 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Badge } from '../components/ui/Badge'
 import { EmptyState } from '../components/ui/EmptyState'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { PlayerAvatar } from '../components/players/PlayerAvatar'
 import { Plus, Edit3, Trash2, ShieldCheck, UserPlus, Copy, Check, X, Users, Ticket, Volleyball } from 'lucide-react'
 import { cn } from '../components/ui/cn'
@@ -20,6 +21,7 @@ export function PlayersPage() {
   const qc = useQueryClient()
   const [invitePlayer, setInvitePlayer] = useState<Player | null>(null)
   const [genericInvite, setGenericInvite] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Player | null>(null)
 
   const { data: players = [], isLoading } = useQuery<Player[]>({
     queryKey: ['players'],
@@ -28,7 +30,10 @@ export function PlayersPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => playersApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['players'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['players'] })
+      setDeleteTarget(null)
+    },
   })
 
   const myPlayerId = user?.playerId
@@ -137,11 +142,7 @@ export function PlayersPage() {
                     <Edit3 size={16} />
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(t('players.deleteConfirm', { name: `${player.firstName} ${player.lastName}` }))) {
-                        deleteMutation.mutate(player.id)
-                      }
-                    }}
+                    onClick={() => setDeleteTarget(player)}
                     className="p-2 rounded-full hover:bg-white/[0.06] text-bubb-500/60"
                   >
                     <Trash2 size={16} />
@@ -163,6 +164,17 @@ export function PlayersPage() {
 
       {genericInvite && (
         <InvitePlayerModal onClose={() => setGenericInvite(false)} />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={t('players.deleteTitle', { name: `${deleteTarget.firstName} ${deleteTarget.lastName}` })}
+          message={t('players.deleteMsg', { name: deleteTarget.firstName })}
+          loading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   )

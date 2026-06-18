@@ -8,14 +8,17 @@ import { useTeamSeasonStore } from '../store/teamSeasonStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Tabs } from '../components/ui/Tabs'
 import { EmptyState } from '../components/ui/EmptyState'
-import { Plus, CalendarDays, Flag, BarChart3, Sparkles, Activity, Bell } from 'lucide-react'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { Plus, CalendarDays, Flag, BarChart3, Sparkles, Activity, Bell, Layers } from 'lucide-react'
 import { MatchCard } from '../components/game/MatchCard'
 
 export function GamesPage() {
   const { t } = useTranslation()
   const { isManager } = useRole()
   const hasSeason = useTeamSeasonStore(s => s.allSeasons.length > 0)
+  const teamName = useTeamSeasonStore(s => s.allTeams.find(team => team.teamId === s.activeTeamId)?.teamName)
   const [filter, setFilter] = useState('playing')
+  const [deleteTarget, setDeleteTarget] = useState<Match | null>(null)
   const FILTER_TABS = [
     { id: 'playing', label: t('games.playing') },
     { id: 'officiating', label: t('games.officiating') },
@@ -36,7 +39,10 @@ export function GamesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => gamesApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['games'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['games'] })
+      setDeleteTarget(null)
+    },
   })
 
   const upcoming = matches.filter(m => m.status === 'upcoming' || m.status === 'in_progress')
@@ -83,9 +89,7 @@ export function GamesPage() {
                   match={match}
                   isManager={isManager}
                   canLog={isManager && (isToday(match.date) || match.status === 'in_progress')}
-                  onDelete={() => {
-                    if (confirm(t('games.deleteConfirm'))) deleteMutation.mutate(match.id)
-                  }}
+                  onDelete={() => setDeleteTarget(match)}
                 />
               ))}
             </div>
@@ -105,9 +109,7 @@ export function GamesPage() {
                   match={match}
                   isManager={isManager}
                   canLog={false}
-                  onDelete={() => {
-                    if (confirm(t('games.deleteConfirm'))) deleteMutation.mutate(match.id)
-                  }}
+                  onDelete={() => setDeleteTarget(match)}
                 />
               ))}
             </div>
@@ -160,6 +162,30 @@ export function GamesPage() {
           )
         )}
       </div>
+
+      {deleteTarget && (() => {
+        const m = deleteTarget
+        const label = m.opponent || [m.homeTeam, m.guestTeam].filter(Boolean).join(' vs ') || t('games.tbd')
+        const hasData = (m.setsPlayed ?? 0) > 0
+        return (
+          <ConfirmDialog
+            open
+            title={t('games.deleteTitle')}
+            confirmName={hasData ? teamName : undefined}
+            message={hasData
+              ? t('games.deleteCascadeMsg', { label })
+              : t('games.deleteSimpleMsg', { label })}
+            items={hasData ? [
+              { icon: Layers, label: t('games.deleteItemSets', { count: m.setsPlayed }) },
+              { icon: BarChart3, label: t('games.deleteItemStats') },
+              { icon: Sparkles, label: t('games.deleteItemAnalysis') },
+            ] : undefined}
+            loading={deleteMutation.isPending}
+            onConfirm={() => deleteMutation.mutate(m.id)}
+            onClose={() => setDeleteTarget(null)}
+          />
+        )
+      })()}
     </div>
   )
 }

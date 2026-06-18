@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { adminApi, invitesApi, AdminTeam, AdminInvite } from '../../lib/api'
 import { currentLocale } from '../../lib/format'
 import { PageHeader } from '../../components/ui/AppShell'
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog'
 import {
-  Plus, Copy, Trash2, Mail, Users, Trophy, ChevronDown, ChevronUp, X, Check,
+  Plus, Copy, Trash2, Mail, Users, Trophy, ChevronDown, ChevronUp, X, Check, Volleyball,
 } from 'lucide-react'
 
 export function AdminTeamsPage() {
@@ -26,6 +27,7 @@ export function AdminTeamsPage() {
   const [showNewTeam, setShowNewTeam]       = useState(false)
   const [inviteTeam, setInviteTeam]         = useState<AdminTeam | null>(null)
   const [deleteTeam, setDeleteTeam]         = useState<AdminTeam | null>(null)
+  const [revokeTarget, setRevokeTarget]     = useState<AdminInvite | null>(null)
 
   const deleteTeamMutation = useMutation({
     mutationFn: (id: string) => adminApi.deleteTeam(id),
@@ -38,7 +40,10 @@ export function AdminTeamsPage() {
 
   const revokeInvite = useMutation({
     mutationFn: (id: string) => invitesApi.revoke(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'invites'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'invites'] })
+      setRevokeTarget(null)
+    },
   })
 
   const resendInvite = useMutation({
@@ -155,7 +160,7 @@ export function AdminTeamsPage() {
                       <InviteCodeRow
                         key={invite.id}
                         invite={invite}
-                        onRevoke={() => revokeInvite.mutate(invite.id)}
+                        onRevoke={() => setRevokeTarget(invite)}
                         onResend={() => resendInvite.mutate(invite.id)}
                         revoking={revokeInvite.isPending && revokeInvite.variables === invite.id}
                       />
@@ -194,37 +199,32 @@ export function AdminTeamsPage() {
       )}
 
       {deleteTeam && (
-        <ModalBackdrop onClose={() => !deleteTeamMutation.isPending && setDeleteTeam(null)}>
-          <div className="flex items-center justify-center w-10 h-10 rounded-full mx-auto mb-3"
-            style={{ background: 'rgba(234,82,111,0.12)' }}>
-            <Trash2 size={18} className="text-[#EA526F]" />
-          </div>
-          <h3 className="text-[16px] font-bold text-white text-center mb-1">{t('admin.deleteTeamTitle')}</h3>
-          <p className="text-[12px] text-[#8A8A9A] text-center mb-1">
-            {t('admin.deleteTeamBody', { name: deleteTeam.name })}
-          </p>
-          <p className="text-[11px] text-[#F07A90] text-center mb-5">
-            {t('admin.members', { count: deleteTeam.memberCount })} · {t('admin.games', { count: deleteTeam.matchCount })} · {t('admin.players', { count: deleteTeam.playerCount })}
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setDeleteTeam(null)}
-              disabled={deleteTeamMutation.isPending}
-              className="flex-1 py-[12px] rounded-[12px] text-[13px] font-semibold text-[#8A8A9A] disabled:opacity-50"
-              style={{ background: 'rgba(247,247,255,0.04)', border: '1px solid rgba(247,247,255,0.08)' }}
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={() => deleteTeamMutation.mutate(deleteTeam.id)}
-              disabled={deleteTeamMutation.isPending}
-              className="flex-1 py-[12px] rounded-[12px] text-[13px] font-bold text-white disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg, #EA526F, #C0392B)' }}
-            >
-              {deleteTeamMutation.isPending ? t('admin.deleting') : t('admin.deleteForever')}
-            </button>
-          </div>
-        </ModalBackdrop>
+        <ConfirmDialog
+          open
+          title={t('admin.deleteTeamTitle')}
+          confirmName={deleteTeam.name}
+          message={t('admin.deleteTeamBody', { name: deleteTeam.name })}
+          items={[
+            { icon: Users, label: t('admin.members', { count: deleteTeam.memberCount }) },
+            { icon: Volleyball, label: t('admin.players', { count: deleteTeam.playerCount }) },
+            { icon: Trophy, label: t('admin.games', { count: deleteTeam.matchCount }) },
+          ]}
+          loading={deleteTeamMutation.isPending}
+          onConfirm={() => deleteTeamMutation.mutate(deleteTeam.id)}
+          onClose={() => setDeleteTeam(null)}
+        />
+      )}
+
+      {revokeTarget && (
+        <ConfirmDialog
+          open
+          title={t('admin.revokeTitle')}
+          message={t('admin.revokeBody')}
+          confirmLabel={t('admin.revoke')}
+          loading={revokeInvite.isPending}
+          onConfirm={() => revokeInvite.mutate(revokeTarget.id)}
+          onClose={() => setRevokeTarget(null)}
+        />
       )}
     </div>
   )

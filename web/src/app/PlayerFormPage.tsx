@@ -8,6 +8,7 @@ import { Input } from '../components/ui/Input'
 import { ChipGroup } from '../components/ui/Select'
 import { PlayerAvatar } from '../components/players/PlayerAvatar'
 import { useToast } from '../components/ui/Toast'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { ArrowLeft, Camera, Trash2 } from 'lucide-react'
 import { useRole } from '../hooks/useRole'
 
@@ -28,6 +29,7 @@ export function PlayerFormPage() {
   const [birthday, setBirthday]             = useState('')
   const [heightM, setHeightM]               = useState('')
   const [positions, setPositions]           = useState<string[]>([])
+  const [confirmRemovePhoto, setConfirmRemovePhoto] = useState(false)
   const [isLibero, setIsLibero]             = useState(false)
   const [hasRefereeLicense, setHasRef]      = useState(false)
 
@@ -75,6 +77,7 @@ export function PlayerFormPage() {
       qc.invalidateQueries({ queryKey: ['player', id] })
       setPhotoPreview(null)
       setPendingPhoto(null)
+      setConfirmRemovePhoto(false)
       showToast(t('players.photoRemoved'), 'success')
     },
     onError: () => showToast(t('players.photoRemoveFailed'), 'error'),
@@ -213,7 +216,7 @@ export function PlayerFormPage() {
               {isEdit && hasPhoto && !pendingPhoto && (
                 <button
                   type="button"
-                  onClick={() => deletePhotoMutation.mutate()}
+                  onClick={() => setConfirmRemovePhoto(true)}
                   disabled={deletePhotoMutation.isPending}
                   className="text-xs text-error/70 font-bold flex items-center gap-1"
                 >
@@ -270,6 +273,18 @@ export function PlayerFormPage() {
           </Button>
         </div>
       </form>
+
+      {confirmRemovePhoto && (
+        <ConfirmDialog
+          open
+          title={t('players.removePhotoTitle')}
+          message={t('players.removePhotoMsg')}
+          confirmLabel={t('players.removePhoto')}
+          loading={deletePhotoMutation.isPending}
+          onConfirm={() => deletePhotoMutation.mutate()}
+          onClose={() => setConfirmRemovePhoto(false)}
+        />
+      )}
     </div>
   )
 }

@@ -7,8 +7,10 @@ import { LanguageSelector } from '../components/settings/LanguageSelector'
 import { useRole } from '../hooks/useRole'
 import { seasonsApi, teamApi, authApi, playersApi, pushApi, Season } from '../lib/api'
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed, shouldShowPushPrompt } from '../lib/pushSubscription'
+import { useTeamSeasonStore } from '../store/teamSeasonStore'
 import { PageHeader } from '../components/ui/AppShell'
 import { Button } from '../components/ui/Button'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Input } from '../components/ui/Input'
 import { BottomSheet } from '../components/ui/Modal' // eslint-disable-line @typescript-eslint/no-unused-vars
 import { Badge } from '../components/ui/Badge'
@@ -31,6 +33,8 @@ export function SettingsPage() {
   const [showSeasons, setShowSeasons] = useState(searchParams.get('manage') === 'seasons')
   const seasonsRef = useRef<HTMLDivElement>(null)
   const [showTUSWeights, setShowTUSWeights] = useState(false)
+  const [showResetData, setShowResetData] = useState(false)
+  const teamName = useTeamSeasonStore(s => s.allTeams.find(team => team.teamId === s.activeTeamId)?.teamName)
 
   // Deep-link from the dashboard checklist / games no-season notice opens and
   // scrolls to the seasons manager.
@@ -159,11 +163,7 @@ export function SettingsPage() {
               <Button
                 variant="danger"
                 size="sm"
-                onClick={() => {
-                  if (confirm(t('settings.deleteMatchData') + '?')) {
-                    showToast(t('settings.matchDataDeleted'), 'error')
-                  }
-                }}
+                onClick={() => setShowResetData(true)}
               >
                 {t('settings.deleteMatchData')}
               </Button>
@@ -189,6 +189,20 @@ export function SettingsPage() {
           {t('settings.version', { version: import.meta.env.VITE_APP_VERSION ?? 'dev' })}
         </p>
       </div>
+
+      {showResetData && (
+        <ConfirmDialog
+          open
+          title={t('settings.resetDataTitle')}
+          confirmName={teamName}
+          message={t('settings.resetDataMsg', { team: teamName ?? '' })}
+          onConfirm={() => {
+            showToast(t('settings.matchDataDeleted'), 'error')
+            setShowResetData(false)
+          }}
+          onClose={() => setShowResetData(false)}
+        />
+      )}
     </div>
   )
 }
@@ -204,6 +218,7 @@ function ProfileSection() {
   const { showToast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const playerInitialized = useRef(false)
+  const [confirmRemovePhoto, setConfirmRemovePhoto] = useState(false)
 
   const [firstName, setFirstName] = useState(user?.firstName ?? '')
   const [lastName,  setLastName]  = useState(user?.lastName  ?? '')
@@ -353,11 +368,11 @@ function ProfileSection() {
           <p className="text-xs text-on-surface-variant mb-2">{user?.email}</p>
           {avatarUrl && (
             <button
-              onClick={handleRemovePhoto}
+              onClick={() => setConfirmRemovePhoto(true)}
               disabled={uploading}
               className="flex items-center gap-1 text-xs text-error/70 disabled:opacity-40"
             >
-              <Trash2 size={11} /> Remove photo
+              <Trash2 size={11} /> {t('players.removePhoto')}
             </button>
           )}
         </div>
@@ -404,6 +419,18 @@ function ProfileSection() {
         <Button size="sm" onClick={handleSave} loading={saving}>
           {t('common.save')}
         </Button>
+      )}
+
+      {confirmRemovePhoto && (
+        <ConfirmDialog
+          open
+          title={t('players.removePhotoTitle')}
+          message={t('players.removePhotoMsg')}
+          confirmLabel={t('players.removePhoto')}
+          loading={uploading}
+          onConfirm={async () => { await handleRemovePhoto(); setConfirmRemovePhoto(false) }}
+          onClose={() => setConfirmRemovePhoto(false)}
+        />
       )}
     </div>
   )
@@ -628,6 +655,7 @@ function SeasonsManager() {
   const [name, setName] = useState('')
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10))
   const [endDate, setEndDate] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<Season | null>(null)
 
   const { data: seasons = [] } = useQuery<Season[]>({
     queryKey: ['seasons'],
@@ -665,7 +693,10 @@ function SeasonsManager() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => seasonsApi.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['seasons'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['seasons'] })
+      setDeleteTarget(null)
+    },
   })
 
   return (
@@ -725,9 +756,7 @@ function SeasonsManager() {
             )}
             {editId !== s.id && (
               <button
-                onClick={() => {
-                  if (confirm(`${t('common.delete')} "${s.name}"?`)) deleteMutation.mutate(s.id)
-                }}
+                onClick={() => setDeleteTarget(s)}
                 className="p-1.5 rounded hover:bg-white/[0.06] text-error/60"
               >
                 ✕
@@ -756,6 +785,17 @@ function SeasonsManager() {
             </Button>
           </div>
         </div>
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          open
+          title={t('seasons.deleteTitle')}
+          message={t('seasons.deleteMsg', { name: deleteTarget.name })}
+          loading={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate(deleteTarget.id)}
+          onClose={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   )
