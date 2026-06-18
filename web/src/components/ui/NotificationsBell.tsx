@@ -36,7 +36,7 @@ export function NotificationsBell() {
 
   const go = (n: AppNotification) => {
     setOpen(false)
-    if (n.entityType === 'training' && n.entityId) navigate(`/trainings/${n.entityId}`)
+    if (n.entityType === 'training' && n.entityId) navigate('/trainings')
     else if (n.entityType === 'game' && n.entityId) navigate(`/games/${n.entityId}`)
   }
 
