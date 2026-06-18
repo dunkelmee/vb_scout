@@ -13,7 +13,7 @@ import { formatTime, dateChipParts, isUpcoming } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
 import {
   Plus, MapPin, ChevronDown, ChevronUp, Trash2, Edit3, Dumbbell,
-  CalendarClock, UserCheck, Tags, Users, Check, X, HelpCircle, Bell, FileText,
+  CalendarClock, CalendarDays, Clock, UserCheck, Tags, Users, Check, X, HelpCircle, Bell, FileText,
 } from 'lucide-react'
 
 import type { BadgeVariant } from '../components/ui/Badge'
@@ -278,53 +278,17 @@ function TrainingCard({
     >
       <span className={cn('absolute left-0 top-0 bottom-0 w-1', railClass)} />
 
-      {/* Header — time column on the left, metadata on the right. The card is self-contained (no detail view). */}
-      <div className="flex gap-3 items-start">
-        {/* Time column: weekday · date · begin/end, divided from the metadata */}
-        <div className="flex gap-3 flex-shrink-0">
-          <div className="text-right">
-            <div className="text-[15px] font-extrabold text-on-surface leading-none">{chip.dow}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-turq-400 mt-1">{chip.day} {chip.mon}</div>
-            <div className="mt-2.5">
-              <div className="text-sm font-bold text-on-surface leading-none">{formatTime(session.startTime)}</div>
-              <div className="text-[9px] font-bold uppercase tracking-wide text-on-surface-variant mt-0.5">{t('trainings.begin')}</div>
-            </div>
-            {session.endTime && (
-              <div className="mt-1.5">
-                <div className="text-sm font-bold text-on-surface leading-none">{formatTime(session.endTime)}</div>
-                <div className="text-[9px] font-bold uppercase tracking-wide text-on-surface-variant mt-0.5">{t('trainings.end')}</div>
-              </div>
-            )}
-          </div>
-          <div className="w-px self-stretch bg-outline" />
+      {/* Time row — date + time range on one line; coach edit/delete to the right. Divider separates it from the metadata. */}
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="flex items-center gap-2 flex-wrap text-[13px] font-medium text-on-surface-variant">
+          <CalendarDays size={14} />
+          <span><span className="text-turq-400 font-bold">{chip.dow}</span>, {chip.day} {chip.mon}</span>
+          <span className="text-outline-variant">·</span>
+          <Clock size={14} />
+          <span className="text-on-surface font-bold">
+            {formatTime(session.startTime)}{session.endTime ? `–${formatTime(session.endTime)}` : ''}
+          </span>
         </div>
-
-        {/* Metadata: title · location · focus tags · coach-only notes */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-display font-bold text-base text-on-surface truncate">
-            {session.title}
-          </h3>
-          {session.location && (
-            <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
-              <MapPin size={11} /> {session.location}
-            </p>
-          )}
-          {session.focusTags && session.focusTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {session.focusTags.map(tag => (
-                <Badge key={tag} label={focusLabel(t, tag)} variant={FOCUS_VARIANTS[tag] || 'neutral'} size="sm" />
-              ))}
-            </div>
-          )}
-          {/* Internal session notes — coach-only for now (until the drill builder lands). */}
-          {isManager && session.notes && (
-            <div className="flex gap-2 mt-2.5 px-3 py-2 rounded-lg bg-surface-high border border-outline">
-              <FileText size={13} className="text-on-surface-variant shrink-0 mt-0.5" />
-              <p className="text-xs text-on-surface-variant leading-snug whitespace-pre-line">{session.notes}</p>
-            </div>
-          )}
-        </div>
-
         {isManager && (
           <div className="flex gap-1.5 flex-shrink-0">
             <button onClick={onEdit} className="w-8 h-8 rounded-lg border border-outline bg-surface-high flex items-center justify-center text-on-surface-variant hover:bg-white/[0.06] active:scale-95 transition-all">
@@ -336,6 +300,30 @@ function TrainingCard({
           </div>
         )}
       </div>
+
+      <div className="border-t border-outline my-3" />
+
+      {/* Metadata — title · location · focus tags · coach-only notes (all full-width) */}
+      <h3 className="font-display font-bold text-base text-on-surface">{session.title}</h3>
+      {session.location && (
+        <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
+          <MapPin size={11} /> {session.location}
+        </p>
+      )}
+      {session.focusTags && session.focusTags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {session.focusTags.map(tag => (
+            <Badge key={tag} label={focusLabel(t, tag)} variant={FOCUS_VARIANTS[tag] || 'neutral'} size="sm" />
+          ))}
+        </div>
+      )}
+      {/* Internal session notes — coach-only for now (until the drill builder lands). */}
+      {isManager && session.notes && (
+        <div className="flex gap-2 mt-2.5 px-3 py-2 rounded-lg bg-surface-high border border-outline">
+          <FileText size={13} className="text-on-surface-variant shrink-0 mt-0.5" />
+          <p className="text-xs text-on-surface-variant leading-snug whitespace-pre-line">{session.notes}</p>
+        </div>
+      )}
 
       {/* RSVP pills (players) or read-only count pills (managers) */}
       <div className="flex gap-2 mt-3">
