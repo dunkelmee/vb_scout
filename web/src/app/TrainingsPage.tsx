@@ -13,7 +13,7 @@ import { formatTime, dateChipParts, isUpcoming } from '../lib/dateUtils'
 import { cn } from '../components/ui/cn'
 import {
   Plus, MapPin, ChevronDown, ChevronUp, Trash2, Edit3, Dumbbell,
-  CalendarClock, CalendarDays, Clock, UserCheck, Tags, Users, Check, X, HelpCircle, Bell, FileText,
+  CalendarClock, CalendarDays, UserCheck, Tags, Users, Check, X, HelpCircle, Bell, FileText,
 } from 'lucide-react'
 
 import type { BadgeVariant } from '../components/ui/Badge'
@@ -280,12 +280,13 @@ function TrainingCard({
 
       {/* Time row — date + time range on one line; coach edit/delete to the right. Divider separates it from the metadata. */}
       <div className="flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 flex-wrap text-[13px] font-medium text-on-surface-variant">
-          <CalendarDays size={14} />
-          <span><span className="text-turq-400 font-bold">{chip.dow}</span>, {chip.day} {chip.mon}</span>
-          <span className="text-outline-variant">·</span>
-          <Clock size={14} />
-          <span className="text-on-surface font-bold">
+        <div className="flex items-center gap-2 flex-wrap">
+          <CalendarDays size={15} className="text-on-surface-variant" />
+          <span className="text-[17px] font-extrabold text-on-surface leading-none">
+            <span className="text-turq-400">{chip.dow}</span> {chip.day} {chip.mon}
+          </span>
+          <span className="text-outline-variant text-[15px]">·</span>
+          <span className="text-[15px] font-extrabold text-turq-400 leading-none">
             {formatTime(session.startTime)}{session.endTime ? `–${formatTime(session.endTime)}` : ''}
           </span>
         </div>
@@ -304,9 +305,9 @@ function TrainingCard({
       <div className="border-t border-outline my-3" />
 
       {/* Metadata — title · location · focus tags · coach-only notes (all full-width) */}
-      <h3 className="font-display font-bold text-base text-on-surface">{session.title}</h3>
+      <h3 className="text-[13px] font-semibold text-on-surface-variant">{session.title}</h3>
       {session.location && (
-        <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-0.5">
+        <p className="text-xs text-on-surface-variant flex items-center gap-1 mt-1.5">
           <MapPin size={11} /> {session.location}
         </p>
       )}
