@@ -309,7 +309,9 @@
     "stepOf": "Schritt {{current}} von {{total}}",
     "officialsFromRoster": "Schiedsgericht aus dem Kader",
     "createGame": "Spiel erstellen",
-    "noSeason": "Keine Saison"
+    "noSeason": "Keine Saison",
+    "liberoToggle": "Libero in diesem Spiel",
+    "liberoHint": "Tippe auf L, um bis zu {{max}} Liberos für dieses Spiel zu wählen. Liberos gehören nicht zur Grundaufstellung."
   },
   "liveLog": {
     "set": "Satz {{number}}",
@@ -378,7 +380,8 @@
       "libero_cannot_serve": "Der Libero darf den Aufschläger nicht ersetzen",
       "libero_rally_between": "Zwischen zwei Libero-Wechseln muss ein Ballwechsel liegen",
       "libero_wrong_return": "Der Libero kann nur durch den Spieler ersetzt werden, für den er kam (oder den zweiten Libero)"
-    }
+    },
+    "liberosForGame": "Liberos in diesem Spiel (max. {{max}})"
   },
   "subtype": {
     "ace": "Ass",

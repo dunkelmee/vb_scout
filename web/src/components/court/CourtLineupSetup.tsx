@@ -7,6 +7,8 @@ import { PlayerToken } from './PlayerToken'
 
 interface CourtLineupSetupProps {
   players: Player[]
+  /** Players designated as libero for this game — they can't be in a starting lineup */
+  liberoIds: string[]
   lineup: Partial<Lineup>
   setPositions: Record<Zone, string[]>
   onLineupChange: (lineup: Partial<Lineup>, setPositions: Record<Zone, string[]>) => void
@@ -24,8 +26,15 @@ const ZONE_GRID: Zone[][] = [
 ]
 
 export function CourtLineupSetup({
-  players, lineup, setPositions, onLineupChange
+  players, liberoIds, lineup, setPositions, onLineupChange
 }: CourtLineupSetupProps) {
+  const isLibero = (playerId: string) => liberoIds.includes(playerId)
+  // Roles a player can take in a starting lineup: never Libero, since this
+  // game's liberos come on through libero replacements instead.
+  const lineupRoles = (p: Player) => {
+    const roles = p.positions.filter(pos => pos !== 'Libero')
+    return roles.length > 0 ? roles : p.positions
+  }
   const { t } = useTranslation()
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null)
   const [positionPickerPlayer, setPositionPickerPlayer] = useState<{ playerId: string; zone: Zone } | null>(null)
@@ -47,13 +56,14 @@ export function CourtLineupSetup({
     const player = players.find(p => p.id === playerId)
     // The libero is not part of the starting lineup (FIVB 19.3) — they come on
     // later through a libero replacement.
-    if (player?.isLibero) return
-    if (player && player.positions.length > 1) {
+    if (isLibero(playerId)) return
+    const roles = player ? lineupRoles(player) : []
+    if (roles.length > 1) {
       setPositionPickerPlayer({ playerId, zone: selectedZone })
       return
     }
 
-    const pos = player?.positions[0] ? [player.positions[0]] : ['Unknown']
+    const pos = roles[0] ? [roles[0]] : ['Unknown']
     const newLineup = { ...lineup, [selectedZone]: playerId } as Partial<Lineup>
     const newSetPos = { ...setPositions, [selectedZone]: pos }
     onLineupChange(newLineup, newSetPos)
@@ -77,8 +87,8 @@ export function CourtLineupSetup({
   }
 
   const filledCount = ALL_ZONES.filter(z => lineup[z]).length
-  const hasLibero = players.some(p => p.isLibero)
-  const liberoInLineup = ALL_ZONES.some(z => players.find(p => p.id === lineup[z])?.isLibero)
+  const hasLibero = players.some(p => isLibero(p.id))
+  const liberoInLineup = ALL_ZONES.some(z => !!lineup[z] && isLibero(lineup[z]!))
 
   return (
     <div>
@@ -149,10 +159,10 @@ export function CourtLineupSetup({
                 <button
                   key={p.id}
                   onClick={() => handlePlayerTap(p.id)}
-                  disabled={p.isLibero || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)}
+                  disabled={isLibero(p.id) || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all',
-                    p.isLibero || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)
+                    isLibero(p.id) || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)
                       ? 'opacity-30'
                       : 'bg-surface-high hover:bg-surface-highest'
                   )}
@@ -178,7 +188,7 @@ export function CourtLineupSetup({
               {t('court.selectPosition')}
             </h3>
             <div className="flex flex-col gap-2">
-              {players.find(p => p.id === positionPickerPlayer.playerId)?.positions.map(pos => (
+              {(() => { const p = players.find(pl => pl.id === positionPickerPlayer.playerId); return p ? lineupRoles(p) : [] })().map(pos => (
                 <button
                   key={pos}
                   onClick={() => confirmPosition(pos)}

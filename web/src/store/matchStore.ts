@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { Lineup } from '../lib/rotation'
 import { Rally, ralliesApi, setsApi, gamesApi, playersApi } from '../lib/api'
 import { addPoint } from '../lib/rotation'
-import { NO_RALLY, SubEvent, applySub, currentLineup, liberoForcedExit, zonesOnly } from '../lib/substitutionRules'
+import { NO_RALLY, SubEvent, applySub, currentLineup, isGameLibero, liberoForcedExit, zonesOnly } from '../lib/substitutionRules'
 import { useOfflineStore } from './offlineStore'
 
 function deriveInitials(name?: string | null): string {
@@ -94,10 +94,11 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         isLiberoSwap: s.isLiberoSwap,
       }))
 
-      // Roster for this game (older games without a roster fall back to the whole team)
+      // Roster for this game with its designated liberos
+      // (older games without a roster fall back to the whole team)
       const roster = match.matchPlayers?.length
-        ? match.matchPlayers.map(mp => mp.player)
-        : await playersApi.list()
+        ? match.matchPlayers.map(mp => ({ id: mp.player.id, libero: isGameLibero(mp.isLibero, mp.player.positions) }))
+        : (await playersApi.list()).map(p => ({ id: p.id, libero: isGameLibero(null, p.positions) }))
 
       const startLineup = zonesOnly(currentSet.startingLineup)
       const startServer = currentSet.servingFirst as 'us' | 'them'
@@ -129,7 +130,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         setStartServingTeam: startServer,
         substitutions,
         rosterIds: roster.map(p => p.id),
-        liberoIds: roster.filter(p => p.isLibero).map(p => p.id),
+        liberoIds: roster.filter(p => p.libero).map(p => p.id),
         opponentInitials: match.opponentInitials || match.opponent?.slice(0, 3).toUpperCase() || 'OPP',
         teamName: match.team?.name || 'US',
         teamInitials: match.team?.initials || deriveInitials(match.team?.name),

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { requireManager } from '../middleware/requireRole'
 import { getMatchRoster } from '../lib/setState'
-import { validateStartingLineup } from '../lib/substitutionRules'
+import { MAX_LIBEROS, validateStartingLineup } from '../lib/substitutionRules'
 
 const router = Router({ mergeParams: true })
 
@@ -82,7 +82,7 @@ router.get('/:setId', async (req: Request, res: Response) => {
 router.patch('/:setId', requireManager, async (req: Request, res: Response) => {
   const matchId = getMatchId(req)
   const { setId } = req.params
-  const { status, scoreUs, scoreThem, startingLineup, servingFirst } = req.body
+  const { status, scoreUs, scoreThem, startingLineup, servingFirst, liberoIds } = req.body
 
   if (servingFirst !== undefined && servingFirst !== 'us' && servingFirst !== 'them') {
     return res.status(400).json({ error: "servingFirst must be 'us' or 'them'" })
@@ -97,22 +97,47 @@ router.patch('/:setId', requireManager, async (req: Request, res: Response) => {
 
     // The starting lineup and first server can only change before the first rally;
     // after that, changes go through substitutions.
-    const changesLineup = !!startingLineup || !!servingFirst
+    const changesLineup = !!startingLineup || !!servingFirst || liberoIds !== undefined
     if (changesLineup) {
       const rallyCount = await prisma.rally.count({ where: { setId } })
       if (rallyCount > 0) {
         return res.status(409).json({ error: 'The lineup cannot be changed after the first rally — use a substitution' })
       }
-      if (startingLineup) {
-        const { liberoIds } = await getMatchRoster(match.id, match.teamId)
-        const lineupError = validateStartingLineup(startingLineup, liberoIds)
-        if (lineupError) return res.status(400).json({ error: lineupError })
+    }
+
+    // Liberos are chosen per game, so they can only change before the game's first rally
+    const roster = await getMatchRoster(match.id, match.teamId)
+    let newLiberoIds: string[] | null = null
+    if (liberoIds !== undefined) {
+      if (!Array.isArray(liberoIds) || liberoIds.length > MAX_LIBEROS) {
+        return res.status(400).json({ error: `At most ${MAX_LIBEROS} liberos per game` })
       }
+      if (set.setNumber !== 1) {
+        return res.status(409).json({ error: 'Liberos are chosen per game and can only change before the first set starts' })
+      }
+      const rosterPlayers = await prisma.matchPlayer.count({ where: { matchId } })
+      if (rosterPlayers === 0) return res.status(400).json({ error: 'This game has no roster' })
+      if (liberoIds.some((id: unknown) => typeof id !== 'string' || !roster.rosterIds.includes(id))) {
+        return res.status(400).json({ error: 'Liberos must be on the roster for this game' })
+      }
+      newLiberoIds = liberoIds as string[]
+    }
+
+    if (startingLineup || newLiberoIds) {
+      const lineupError = validateStartingLineup(
+        startingLineup ?? set.startingLineup,
+        newLiberoIds ?? roster.liberoIds,
+      )
+      if (lineupError) return res.status(400).json({ error: lineupError })
     }
 
     const updatedSet = await prisma.$transaction(async (tx) => {
-      // Libero replacements made before the first serve refer to the old lineup
-      if (startingLineup) await tx.substitution.deleteMany({ where: { setId } })
+      if (newLiberoIds) {
+        await tx.matchPlayer.updateMany({ where: { matchId }, data: { isLibero: false } })
+        await tx.matchPlayer.updateMany({ where: { matchId, playerId: { in: newLiberoIds } }, data: { isLibero: true } })
+      }
+      // Libero replacements made before the first serve refer to the old lineup / liberos
+      if (startingLineup || newLiberoIds) await tx.substitution.deleteMany({ where: { setId } })
       return tx.set.update({
         where: { id: setId },
         data: {

@@ -1,34 +1,26 @@
 import prisma from './prisma'
 import type { Lineup } from './rotation'
-import { NO_RALLY, SubEvent, currentLineup, zonesOnly } from './substitutionRules'
+import { NO_RALLY, SubEvent, currentLineup, isGameLibero, zonesOnly } from './substitutionRules'
 
 /**
- * Roster and libero ids for a match. Falls back to the whole team when the
- * match has no explicit roster (older games).
+ * Roster and libero ids for a match. Liberos are the players designated for
+ * this game (see isGameLibero). Falls back to the whole team when the match
+ * has no explicit roster (older games).
  */
 export async function getMatchRoster(matchId: string, teamId: string) {
   const matchPlayers = await prisma.matchPlayer.findMany({
     where: { matchId },
-    include: { player: { select: { id: true, isLibero: true } } },
+    include: { player: { select: { id: true, positions: true } } },
   })
   const players = matchPlayers.length > 0
-    ? matchPlayers.map(mp => mp.player)
-    : await prisma.player.findMany({ where: { teamId }, select: { id: true, isLibero: true } })
+    ? matchPlayers.map(mp => ({ id: mp.player.id, libero: isGameLibero(mp.isLibero, mp.player.positions) }))
+    : (await prisma.player.findMany({ where: { teamId }, select: { id: true, positions: true } }))
+        .map(p => ({ id: p.id, libero: isGameLibero(null, p.positions) }))
 
   return {
     rosterIds: players.map(p => p.id),
-    liberoIds: players.filter(p => p.isLibero).map(p => p.id),
+    liberoIds: players.filter(p => p.libero).map(p => p.id),
   }
-}
-
-/** Libero ids among the given players (used to validate a starting lineup). */
-export async function getLiberoIds(playerIds: string[]) {
-  if (playerIds.length === 0) return []
-  const players = await prisma.player.findMany({
-    where: { id: { in: playerIds }, isLibero: true },
-    select: { id: true },
-  })
-  return players.map(p => p.id)
 }
 
 /**

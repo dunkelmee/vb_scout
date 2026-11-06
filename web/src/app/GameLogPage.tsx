@@ -22,7 +22,7 @@ import { TacticsTab } from '../components/court/TacticsTab'
 import { SetSummaryOverlay } from '../components/SetSummaryOverlay'
 import { useSyncQueue } from '../hooks/useSyncQueue'
 import { useToast } from '../components/ui/Toast'
-import { NO_RALLY, SUB_ERROR_MESSAGES, SubErrorCode, SubEvent, applySub, liberoReplacements, validateSub, zonesOnly } from '../lib/substitutionRules'
+import { MAX_LIBEROS, NO_RALLY, SUB_ERROR_MESSAGES, SubErrorCode, SubEvent, applySub, liberoReplacements, validateSub, zonesOnly } from '../lib/substitutionRules'
 
 /** Returns true when the set has a valid winner by volleyball rules */
 function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
@@ -105,6 +105,8 @@ export function GameLogPage() {
   // 'edit' = fix the current set's starting lineup (before its first rally);
   // 'next' = set up the next set after one ends
   const [lineupMode, setLineupMode] = useState<'edit' | 'next'>('next')
+  // Liberos are chosen per game; they can be changed in the set-1 lineup editor
+  const [draftLiberoIds, setDraftLiberoIds] = useState<string[]>([])
   const [newSetLineup, setNewSetLineup] = useState<Partial<Lineup>>({})
   const [newSetPositions, setNewSetPositions] = useState<Record<Zone, string[]>>({} as Record<Zone, string[]>)
   const [newSetServingFirst, setNewSetServingFirst] = useState<'us' | 'them'>('us')
@@ -197,6 +199,7 @@ export function GameLogPage() {
       setsApi.update(matchId!, store.currentSetId!, {
         startingLineup: { ...newSetLineup, setPositions: newSetPositions },
         servingFirst: newSetServingFirst,
+        ...(canEditLiberos && liberosChanged && { liberoIds: draftLiberoIds }),
       } as unknown as Partial<GameSet>),
     onSuccess: async () => {
       setShowNewSetSetup(false)
@@ -329,8 +332,17 @@ export function GameLogPage() {
   // Non-libero substitutions used this set (max 6)
   const nonLiberoSubs = store.substitutions.filter(s => !s.isLiberoSwap).length
 
+  // Liberos can be changed before the game's first rally (set 1 lineup editor)
+  const canEditLiberos = lineupMode === 'edit' && store.currentSetNumber === 1
+  const liberosChanged =
+    draftLiberoIds.length !== store.liberoIds.length || draftLiberoIds.some(id => !store.liberoIds.includes(id))
+  const overlayLiberoIds = canEditLiberos ? draftLiberoIds : store.liberoIds
+  const lineupHasLibero = Object.values(newSetLineup).some(id => !!id && overlayLiberoIds.includes(id))
+  const rosterPlayers: Player[] = match?.matchPlayers?.map((mp: { player: Player }) => mp.player) ?? players
+
   // Open the lineup overlay pre-filled with the current set's starting lineup
   const openLineupEditor = () => {
+    setDraftLiberoIds(store.liberoIds)
     setNewSetLineup(zonesOnly(rawStarting) as Partial<Lineup>)
     setNewSetPositions((startingSetPositions ?? {}) as Record<Zone, string[]>)
     setNewSetServingFirst(store.setStartServingTeam)
@@ -731,10 +743,49 @@ export function GameLogPage() {
             </div>
           </div>
 
+          {/* Liberos for this game — only before the game's first rally */}
+          {canEditLiberos && (
+            <div className="shrink-0 px-4 pb-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-on-surface-variant mb-2">
+                {t('liveLog.liberosForGame', { max: MAX_LIBEROS })}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {rosterPlayers.map(p => {
+                  const selected = draftLiberoIds.includes(p.id)
+                  const disabled = !selected && draftLiberoIds.length >= MAX_LIBEROS
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setDraftLiberoIds(selected ? draftLiberoIds.filter(id => id !== p.id) : [...draftLiberoIds, p.id])
+                        // A new libero can't stay in the starting lineup
+                        if (!selected) {
+                          setNewSetLineup(Object.fromEntries(
+                            Object.entries(newSetLineup).filter(([, id]) => id !== p.id)
+                          ) as Partial<Lineup>)
+                        }
+                      }}
+                      disabled={disabled}
+                      aria-pressed={selected}
+                      className={cn(
+                        'px-3 py-1.5 rounded-full border text-xs font-bold transition-all',
+                        selected ? 'border-orange bg-orange/15 text-orange' : 'border-outline/20 text-on-surface-variant',
+                        disabled && 'opacity-30'
+                      )}
+                    >
+                      #{p.jersey || '?'} {p.firstName}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Lineup setup */}
           <div className="flex-1 overflow-y-auto">
             <CourtLineupSetup
-              players={match?.matchPlayers?.map((mp: { player: Player }) => mp.player) ?? players}
+              players={rosterPlayers}
+              liberoIds={overlayLiberoIds}
               lineup={newSetLineup}
               setPositions={newSetPositions}
               onLineupChange={(lineup, setPositions) => {
@@ -750,7 +801,7 @@ export function GameLogPage() {
               fullWidth
               onClick={() => (lineupMode === 'edit' ? saveLineupMutation.mutate() : createSetMutation.mutate())}
               loading={lineupMode === 'edit' ? saveLineupMutation.isPending : createSetMutation.isPending}
-              disabled={Object.keys(newSetLineup).length < 6}
+              disabled={Object.keys(newSetLineup).length < 6 || lineupHasLibero}
             >
               {lineupMode === 'edit'
                 ? t('liveLog.saveLineup')
