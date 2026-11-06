@@ -961,7 +961,13 @@
     "pickPlayer": "Spieler wählen ↓",
     "selectPosition": "Position für diese Zone wählen",
     "liberoNotInLineup": "Der Libero gehört nicht zur Grundaufstellung – entferne ihn und wechsle ihn per Libero-Wechsel ein.",
-    "liberoEntersLater": "Liberos gehören nicht zur Grundaufstellung – wechsle sie vor dem ersten Aufschlag per Libero-Wechsel ein."
+    "liberoEntersLater": "Liberos gehören nicht zur Grundaufstellung – wechsle sie vor dem ersten Aufschlag per Libero-Wechsel ein.",
+    "tacticsMove": "Bewegen",
+    "tacticsDraw": "Zeichnen",
+    "tacticsColor": "Stiftfarbe",
+    "tacticsUndo": "Letzte Linie rückgängig",
+    "tacticsClear": "Zeichnung löschen",
+    "tacticsResetPositions": "Positionen zurücksetzen"
   },
   "matchStatus": {
     "upcoming": "Anstehend",

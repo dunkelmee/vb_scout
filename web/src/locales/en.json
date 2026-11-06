@@ -961,7 +961,13 @@
     "empty": "Empty",
     "pickPlayer": "Pick player ↓",
     "liberoNotInLineup": "The libero is not part of the starting lineup — remove them and bring them on with a libero replacement.",
-    "liberoEntersLater": "Liberos are not part of the starting lineup — bring them on with a libero replacement before the first serve."
+    "liberoEntersLater": "Liberos are not part of the starting lineup — bring them on with a libero replacement before the first serve.",
+    "tacticsMove": "Move",
+    "tacticsDraw": "Draw",
+    "tacticsColor": "Pen colour",
+    "tacticsUndo": "Undo last line",
+    "tacticsClear": "Clear drawing",
+    "tacticsResetPositions": "Reset positions"
   },
   "matchStatus": {
     "upcoming": "Upcoming",
