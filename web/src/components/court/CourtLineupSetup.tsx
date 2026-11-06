@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Player } from '../../lib/api'
-import { Zone, ALL_ZONES, ZONE_POSITIONS, isBackRow, Lineup } from '../../lib/rotation'
+import { Zone, ALL_ZONES, Lineup } from '../../lib/rotation'
 import { cn } from '../ui/cn'
 import { PlayerToken } from './PlayerToken'
 
@@ -45,6 +45,9 @@ export function CourtLineupSetup({
 
     // If player has multiple positions, show picker
     const player = players.find(p => p.id === playerId)
+    // The libero is not part of the starting lineup (FIVB 19.3) — they come on
+    // later through a libero replacement.
+    if (player?.isLibero) return
     if (player && player.positions.length > 1) {
       setPositionPickerPlayer({ playerId, zone: selectedZone })
       return
@@ -74,10 +77,8 @@ export function CourtLineupSetup({
   }
 
   const filledCount = ALL_ZONES.filter(z => lineup[z]).length
-  const liberoPlayer = players.find(p => p.isLibero)
-  const liberoId = liberoPlayer?.id
-  const liberoZone = liberoId ? Object.entries(lineup).find(([, id]) => id === liberoId)?.[0] as Zone | undefined : undefined
-  const liberoInFront = liberoZone && !isBackRow(liberoZone)
+  const hasLibero = players.some(p => p.isLibero)
+  const liberoInLineup = ALL_ZONES.some(z => players.find(p => p.id === lineup[z])?.isLibero)
 
   return (
     <div>
@@ -85,10 +86,13 @@ export function CourtLineupSetup({
         Tap a zone, then tap a player to assign. ({filledCount}/6 filled)
       </p>
 
-      {liberoInFront && (
+      {liberoInLineup && (
         <div className="mb-2 px-3 py-2 rounded-lg bg-error-container/20 border border-error/20 text-xs text-error">
-          Libero must be in a back-row zone (1, 5, or 6)
+          {t('court.liberoNotInLineup')}
         </div>
+      )}
+      {hasLibero && !liberoInLineup && (
+        <p className="mb-2 text-xs text-on-surface-variant">{t('court.liberoEntersLater')}</p>
       )}
 
       {/* Court grid */}
@@ -145,10 +149,10 @@ export function CourtLineupSetup({
                 <button
                   key={p.id}
                   onClick={() => handlePlayerTap(p.id)}
-                  disabled={assignedIds.has(p.id) && lineup[selectedZone] !== p.id}
+                  disabled={p.isLibero || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)}
                   className={cn(
                     'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-all',
-                    assignedIds.has(p.id) && lineup[selectedZone] !== p.id
+                    p.isLibero || (assignedIds.has(p.id) && lineup[selectedZone] !== p.id)
                       ? 'opacity-30'
                       : 'bg-surface-high hover:bg-surface-highest'
                   )}

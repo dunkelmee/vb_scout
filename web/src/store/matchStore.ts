@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { Lineup } from '../lib/rotation'
-import { Rally, ralliesApi, setsApi, gamesApi } from '../lib/api'
+import { Rally, ralliesApi, setsApi, gamesApi, playersApi } from '../lib/api'
 import { addPoint } from '../lib/rotation'
+import { NO_RALLY, SubEvent, applySub, currentLineup, liberoForcedExit, zonesOnly } from '../lib/substitutionRules'
 import { useOfflineStore } from './offlineStore'
 
 function deriveInitials(name?: string | null): string {
@@ -34,6 +35,11 @@ interface MatchState {
   setStartLineup: Lineup | null
   /** Who served first in this set — used alongside setStartLineup for restoration. */
   setStartServingTeam: 'us' | 'them'
+  /** Substitutions and libero replacements of the current set, in order. */
+  substitutions: SubEvent[]
+  /** Players on the roster for this game, and which of them are liberos. */
+  rosterIds: string[]
+  liberoIds: string[]
 
   // Actions
   initMatch: (matchId: string) => Promise<void>
@@ -44,7 +50,8 @@ interface MatchState {
   undoLastRally: () => Promise<void>
   cancelScoring: () => void
   refreshFromDB: () => Promise<void>
-  applySubstitution: (playerOutId: string, playerInId: string) => void
+  /** Record a substitution that the server accepted (or that was queued offline). */
+  applySubstitution: (sub: SubEvent) => void
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -66,6 +73,9 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   teamInitials: 'US',
   setStartLineup: null,
   setStartServingTeam: 'us',
+  substitutions: [],
+  rosterIds: [],
+  liberoIds: [],
 
   initMatch: async (matchId: string) => {
     try {
@@ -77,13 +87,27 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       const setData = await setsApi.get(matchId, currentSet.id)
       const rallies = setData.rallies || []
       const lastRally = rallies[rallies.length - 1]
+      const substitutions: SubEvent[] = (setData.substitutions || []).map(s => ({
+        rallyIndex: s.rallyIndex,
+        playerOutId: s.playerOutId ?? null,
+        playerInId: s.playerInId ?? null,
+        isLiberoSwap: s.isLiberoSwap,
+      }))
 
-      const startLineup = currentSet.startingLineup as unknown as Lineup
+      // Roster for this game (older games without a roster fall back to the whole team)
+      const roster = match.matchPlayers?.length
+        ? match.matchPlayers.map(mp => mp.player)
+        : await playersApi.list()
+
+      const startLineup = zonesOnly(currentSet.startingLineup)
       const startServer = currentSet.servingFirst as 'us' | 'them'
 
-      const lineup = lastRally
-        ? (lastRally.rotationAfter as unknown as Lineup)
-        : startLineup
+      // On court = last rally's rotation + substitutions made since then
+      const lineup = currentLineup(
+        lastRally ? zonesOnly(lastRally.rotationAfter) : startLineup,
+        lastRally ? lastRally.rallyIndex : NO_RALLY,
+        substitutions,
+      )
 
       const servingTeam = lastRally
         ? (lastRally.currentServer as 'us' | 'them')
@@ -103,6 +127,9 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         pendingScorer: null,
         setStartLineup: startLineup,
         setStartServingTeam: startServer,
+        substitutions,
+        rosterIds: roster.map(p => p.id),
+        liberoIds: roster.filter(p => p.isLibero).map(p => p.id),
         opponentInitials: match.opponentInitials || match.opponent?.slice(0, 3).toUpperCase() || 'OPP',
         teamName: match.team?.name || 'US',
         teamInitials: match.team?.initials || deriveInitials(match.team?.name),
@@ -144,8 +171,17 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     const newScoreUs = state.scoreUs + (scorer === 'us' ? 1 : 0)
     const newScoreThem = state.scoreThem + (scorer === 'them' ? 1 : 0)
 
+    // A libero who rotated into the front row leaves; the player they replaced returns.
+    // The server applies the same rule when it stores the rally.
+    const forcedExit = rotated ? liberoForcedExit(newLineup, state.substitutions, state.liberoIds) : null
+    const lineupAfter = forcedExit ? applySub(newLineup, forcedExit.playerOutId, forcedExit.playerInId) : newLineup
+    const substitutionsAfter = forcedExit
+      ? [...state.substitutions, { ...forcedExit, rallyIndex: state.rallyCount, isLiberoSwap: true }]
+      : state.substitutions
+
     set({
-      lineup: newLineup,
+      lineup: lineupAfter,
+      substitutions: substitutionsAfter,
       servingTeam: newServer,
       scoreUs: newScoreUs,
       scoreThem: newScoreThem,
@@ -177,7 +213,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
           scoreUs: newScoreUs,
           scoreThem: newScoreThem,
           servingTeam: state.servingTeam,
-          rotationAfter: newLineup as unknown as Record<string, string>,
+          rotationAfter: lineupAfter as unknown as Record<string, string>,
           rotated,
           currentServer: newServer,
           loggedAt: new Date().toISOString(),
@@ -189,6 +225,7 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         console.error('Failed to commit rally:', err)
         set({
           lineup: state.lineup,
+          substitutions: state.substitutions,
           servingTeam: state.servingTeam,
           scoreUs: state.scoreUs,
           scoreThem: state.scoreThem,
@@ -213,15 +250,18 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       if (!removed) return
 
       const newRallies = state.rallies.slice(0, -1)
+      // Substitutions made after the undone rally are undone with it
+      const substitutions = state.substitutions.filter(s => s.rallyIndex < lastRally.rallyIndex)
 
       if (newRallies.length === 0) {
         // All rallies in this set were offline — restore to the set's initial state.
         set({
           rallies: [],
+          substitutions,
           scoreUs: 0,
           scoreThem: 0,
           servingTeam: state.setStartServingTeam,
-          lineup: state.setStartLineup,
+          lineup: currentLineup(state.setStartLineup!, NO_RALLY, substitutions),
           rallyCount: 0,
           scoringStep: 'idle',
           pendingScorer: null,
@@ -230,10 +270,11 @@ export const useMatchStore = create<MatchState>((set, get) => ({
         const prev = newRallies[newRallies.length - 1]
         set({
           rallies: newRallies,
+          substitutions,
           scoreUs: prev.scoreUs,
           scoreThem: prev.scoreThem,
           servingTeam: prev.currentServer,
-          lineup: prev.rotationAfter as unknown as Lineup,
+          lineup: currentLineup(zonesOnly(prev.rotationAfter), prev.rallyIndex, substitutions),
           rallyCount: newRallies.length,
           scoringStep: 'idle',
           pendingScorer: null,
@@ -242,28 +283,11 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       return
     }
 
-    // Online path
+    // Online path — the server also removes substitutions made after the undone
+    // rally, so reload the canonical state.
     try {
-      const { restoredRally } = await ralliesApi.undoLast(state.currentSetId)
-
-      const newRallies = state.rallies.slice(0, -1)
-      const prev = restoredRally
-
-      if (prev) {
-        set({
-          rallies: newRallies,
-          scoreUs: prev.scoreUs,
-          scoreThem: prev.scoreThem,
-          servingTeam: prev.currentServer,
-          lineup: prev.rotationAfter as unknown as Lineup,
-          rallyCount: newRallies.length,
-          scoringStep: 'idle',
-          pendingScorer: null,
-        })
-      } else {
-        // Back to initial state of set
-        await get().refreshFromDB()
-      }
+      await ralliesApi.undoLast(state.currentSetId)
+      await get().refreshFromDB()
     } catch (err) {
       console.error('Failed to undo rally:', err)
     }
@@ -281,13 +305,12 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     await get().initMatch(state.matchId)
   },
 
-  applySubstitution: (playerOutId: string, playerInId: string) => {
-    const { lineup } = get()
+  applySubstitution: (sub: SubEvent) => {
+    const { lineup, substitutions } = get()
     if (!lineup) return
-    const updated: Record<string, string> = {}
-    for (const [zone, id] of Object.entries(lineup)) {
-      updated[zone] = id === playerOutId ? playerInId : id
-    }
-    set({ lineup: updated as Lineup })
+    set({
+      lineup: applySub(lineup, sub.playerOutId, sub.playerInId),
+      substitutions: [...substitutions, sub],
+    })
   },
 }))

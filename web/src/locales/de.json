@@ -348,13 +348,37 @@
     "assignZones": "Alle 6 Zonen zuweisen, dann bestätigen",
     "startSet": "Satz {{number}} starten",
     "confirmSub": "Wechsel bestätigen",
-    "liberoSwapNote": "Libero-Wechsel (zählt nicht zum Limit)",
+    "liberoSwapNote": "Libero-Wechsel – zählt nicht zu den 6 Wechseln",
     "catOppErr": "Geg. Fehler",
     "catTheirPoint": "Geg. Punkt",
     "byOurOwn": "Eigene Aktion",
     "by": "Durch",
     "or": "oder",
-    "ourErrorIn": "Eigener Fehler bei"
+    "ourErrorIn": "Eigener Fehler bei",
+    "saveLineup": "Aufstellung speichern",
+    "lineupSaveFailed": "Aufstellung konnte nicht gespeichert werden",
+    "subFailed": "Wechsel konnte nicht erfasst werden",
+    "noValidSubs": "Für diesen Spieler darf niemand eingewechselt werden",
+    "subErrors": {
+      "missing_player": "Wähle den Spieler, der raus geht, und den, der rein kommt",
+      "same_player": "Ein- und ausgewechselter Spieler müssen verschieden sein",
+      "player_out_not_on_court": "Der auszuwechselnde Spieler steht nicht auf dem Feld",
+      "player_in_on_court": "Der einzuwechselnde Spieler steht bereits auf dem Feld",
+      "player_in_not_in_roster": "Der einzuwechselnde Spieler ist nicht im Kader für dieses Spiel",
+      "player_replaced_by_libero": "Dieser Spieler ist durch den Libero ersetzt – wechsle zuerst den Libero aus",
+      "no_rally_yet": "Vor dem ersten Aufschlag die Aufstellung ändern statt zu wechseln",
+      "max_subs": "Maximal 6 Wechsel in diesem Satz erreicht",
+      "starter_already_left": "Ein Spieler der Grundaufstellung darf das Feld nur einmal pro Satz verlassen",
+      "starter_already_returned": "Dieser Spieler der Grundaufstellung ist in diesem Satz bereits zurückgekehrt",
+      "starter_wrong_position": "Ein Spieler der Grundaufstellung darf nur für den Spieler zurück, der ihn ersetzt hat",
+      "sub_already_played": "Ein Auswechselspieler darf nur einmal pro Satz eingewechselt werden",
+      "sub_must_be_replaced_by_starter": "Ein Auswechselspieler kann nur durch den Spieler ersetzt werden, für den er kam",
+      "libero_already_on_court": "Es steht bereits ein Libero auf dem Feld",
+      "libero_front_row": "Der Libero darf nur einen Hinterspieler ersetzen (Zonen 1, 5, 6)",
+      "libero_cannot_serve": "Der Libero darf den Aufschläger nicht ersetzen",
+      "libero_rally_between": "Zwischen zwei Libero-Wechseln muss ein Ballwechsel liegen",
+      "libero_wrong_return": "Der Libero kann nur durch den Spieler ersetzt werden, für den er kam (oder den zweiten Libero)"
+    }
   },
   "subtype": {
     "ace": "Ass",
@@ -845,7 +869,6 @@
     "deleteTeam": "Team löschen",
     "resendEmail": "E-Mail erneut senden",
     "copyInviteId": "Einladungs-ID kopieren",
-    "revoke": "Widerrufen",
     "usersTitle": "Benutzer",
     "noUsers": "Noch keine Benutzer.",
     "editUser": "Benutzer bearbeiten",
@@ -924,18 +947,18 @@
     "queued_one": " — {{count}} Aktion in Warteschlange",
     "queued_other": " — {{count}} Aktionen in Warteschlange"
   },
-
   "notifications": {
     "title": "Benachrichtigungen",
     "empty": "Noch keine Benachrichtigungen"
   },
-
   "court": {
     "net": "NETZ",
     "ourBaseline": "GRUNDLINIE",
     "empty": "Leer",
     "pickPlayer": "Spieler wählen ↓",
-    "selectPosition": "Position für diese Zone wählen"
+    "selectPosition": "Position für diese Zone wählen",
+    "liberoNotInLineup": "Der Libero gehört nicht zur Grundaufstellung – entferne ihn und wechsle ihn per Libero-Wechsel ein.",
+    "liberoEntersLater": "Liberos gehören nicht zur Grundaufstellung – wechsle sie vor dem ersten Aufschlag per Libero-Wechsel ein."
   },
   "matchStatus": {
     "upcoming": "Anstehend",

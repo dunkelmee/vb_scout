@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMatchStore } from '../store/matchStore'
 import { useOfflineStore } from '../store/offlineStore'
-import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet, Substitution } from '../lib/api'
+import { gamesApi, setsApi, subsApi, timeoutsApi, playersApi, Player, GameSet } from '../lib/api'
 import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
 import { BottomSheet } from '../components/ui/Modal'
@@ -21,6 +21,8 @@ import { CourtLineupSetup } from '../components/court/CourtLineupSetup'
 import { TacticsTab } from '../components/court/TacticsTab'
 import { SetSummaryOverlay } from '../components/SetSummaryOverlay'
 import { useSyncQueue } from '../hooks/useSyncQueue'
+import { useToast } from '../components/ui/Toast'
+import { NO_RALLY, SUB_ERROR_MESSAGES, SubErrorCode, SubEvent, applySub, liberoReplacements, validateSub, zonesOnly } from '../lib/substitutionRules'
 
 /** Returns true when the set has a valid winner by volleyball rules */
 function isSetComplete(scoreUs: number, scoreThem: number, setNumber: number): boolean {
@@ -100,6 +102,9 @@ export function GameLogPage() {
 
   // New-set lineup setup (shown after ending a non-final set)
   const [showNewSetSetup, setShowNewSetSetup] = useState(false)
+  // 'edit' = fix the current set's starting lineup (before its first rally);
+  // 'next' = set up the next set after one ends
+  const [lineupMode, setLineupMode] = useState<'edit' | 'next'>('next')
   const [newSetLineup, setNewSetLineup] = useState<Partial<Lineup>>({})
   const [newSetPositions, setNewSetPositions] = useState<Record<Zone, string[]>>({} as Record<Zone, string[]>)
   const [newSetServingFirst, setNewSetServingFirst] = useState<'us' | 'them'>('us')
@@ -110,6 +115,7 @@ export function GameLogPage() {
   const timeoutIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const store = useMatchStore()
+  const { showToast } = useToast()
   const { pendingCount, isOnline } = useSyncQueue()
 
   useEffect(() => {
@@ -182,6 +188,23 @@ export function GameLogPage() {
       setShowNewSetSetup(false)
       store.initMatch(matchId!)
     },
+    onError: (err: Error) => showToast(err.message || t('liveLog.lineupSaveFailed'), 'error'),
+  })
+
+  // ── Change the current set's starting lineup (only before its first rally) ─
+  const saveLineupMutation = useMutation({
+    mutationFn: () =>
+      setsApi.update(matchId!, store.currentSetId!, {
+        startingLineup: { ...newSetLineup, setPositions: newSetPositions },
+        servingFirst: newSetServingFirst,
+      } as unknown as Partial<GameSet>),
+    onSuccess: async () => {
+      setShowNewSetSetup(false)
+      await store.initMatch(matchId!)
+      qc.invalidateQueries({ queryKey: ['game', matchId] })
+      qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
+    },
+    onError: (err: Error) => showToast(err.message || t('liveLog.lineupSaveFailed'), 'error'),
   })
 
   const closeTimeoutModal = () => {
@@ -236,7 +259,8 @@ export function GameLogPage() {
   })
 
   // Parse the static starting-lineup blob (zone→playerID + nested setPositions)
-  const rawStarting = match?.sets?.[0]?.startingLineup as unknown as Record<string, unknown> | undefined
+  const currentSet = match?.sets?.find(s => s.id === store.currentSetId)
+  const rawStarting = currentSet?.startingLineup as unknown as Record<string, unknown> | undefined
   const startingSetPositions = rawStarting?.setPositions as Record<string, string[]> | undefined
   const startingZones = rawStarting
     ? {
@@ -303,7 +327,16 @@ export function GameLogPage() {
   }, [setWon])
 
   // Non-libero substitutions used this set (max 6)
-  const nonLiberoSubs = (setData?.substitutions ?? []).filter((s: Substitution) => !s.isLiberoSwap).length
+  const nonLiberoSubs = store.substitutions.filter(s => !s.isLiberoSwap).length
+
+  // Open the lineup overlay pre-filled with the current set's starting lineup
+  const openLineupEditor = () => {
+    setNewSetLineup(zonesOnly(rawStarting) as Partial<Lineup>)
+    setNewSetPositions((startingSetPositions ?? {}) as Record<Zone, string[]>)
+    setNewSetServingFirst(store.setStartServingTeam)
+    setLineupMode('edit')
+    setShowNewSetSetup(true)
+  }
 
   return (
     <div className="min-h-dvh bg-background flex flex-col">
@@ -530,8 +563,8 @@ export function GameLogPage() {
           <div className="shrink-0 px-4 pt-1 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             <div className="mx-auto max-w-sm flex justify-around items-center h-[64px] px-3 bg-pitch-800/55 backdrop-blur-[72px] backdrop-saturate-150 border border-white/10 rounded-full shadow-2xl shadow-black/50">
               {[
-                { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: () => setShowNewSetSetup(true) },
-                { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: store.rallies.length === 0, action: () => setShowSubModal(true) },
+                { id: 'lineup', icon: <RefreshCw size={18} />, label: t('liveLog.actionLineup'), badge: null, disabled: store.rallies.length > 0, action: openLineupEditor },
+                { id: 'sub', icon: <ChevronDown size={18} />, label: t('liveLog.actionSub'), badge: `${nonLiberoSubs}/6`, disabled: !store.lineup, action: () => setShowSubModal(true) },
                 { id: 'timeout', icon: <Clock size={18} />, label: t('liveLog.actionTimeout'), badge: null, disabled: store.rallies.length === 0 || timeoutStep === 'timing', action: () => setShowTimeoutModal(true) },
                 { id: 'endSet', icon: <Flag size={18} />, label: t('liveLog.actionEndSet'), badge: null, disabled: !setWon, action: () => setShowEndSetModal(true) },
               ].map(({ id, icon, label, badge, disabled, action }) => (
@@ -592,17 +625,18 @@ export function GameLogPage() {
         onClose={() => setShowSubModal(false)}
         title={`${t('liveLog.subTitle')} — ${nonLiberoSubs}/6`}
       >
-        <SubstitutionForm
-          setId={store.currentSetId || ''}
-          matchId={matchId || ''}
-          players={players}
-          lineup={store.lineup}
-          onSuccess={(playerOutId, playerInId) => {
-            store.applySubstitution(playerOutId, playerInId)
-            setShowSubModal(false)
-            qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
-          }}
-        />
+        {showSubModal && (
+          <SubstitutionForm
+            setId={store.currentSetId || ''}
+            matchId={matchId || ''}
+            players={players}
+            onSuccess={(sub) => {
+              store.applySubstitution(sub)
+              setShowSubModal(false)
+              qc.invalidateQueries({ queryKey: ['set', store.currentSetId] })
+            }}
+          />
+        )}
       </BottomSheet>
 
       {/* Timeout Modal — only the quick "who called it?" pick. Once started, the
@@ -670,7 +704,7 @@ export function GameLogPage() {
             </button>
             <div className="flex-1">
               <h1 className="font-display font-bold text-base text-on-surface">
-                {t('liveLog.set', { number: store.currentSetNumber + 1 })} — {t('liveLog.startingLineup')}
+                {t('liveLog.set', { number: lineupMode === 'edit' ? store.currentSetNumber : store.currentSetNumber + 1 })} — {t('liveLog.startingLineup')}
               </h1>
               <p className="text-xs text-on-surface-variant">{t('liveLog.assignZones')}</p>
             </div>
@@ -714,11 +748,13 @@ export function GameLogPage() {
           <div className="shrink-0 px-4 py-4 border-t border-outline/10">
             <Button
               fullWidth
-              onClick={() => createSetMutation.mutate()}
-              loading={createSetMutation.isPending}
+              onClick={() => (lineupMode === 'edit' ? saveLineupMutation.mutate() : createSetMutation.mutate())}
+              loading={lineupMode === 'edit' ? saveLineupMutation.isPending : createSetMutation.isPending}
               disabled={Object.keys(newSetLineup).length < 6}
             >
-              {t('liveLog.startSet', { number: store.currentSetNumber + 1 })}
+              {lineupMode === 'edit'
+                ? t('liveLog.saveLineup')
+                : t('liveLog.startSet', { number: store.currentSetNumber + 1 })}
             </Button>
           </div>
         </div>
@@ -740,8 +776,13 @@ export function GameLogPage() {
           onSetupNextSet={() => {
             setShowSetSummary(false)
             if (store.lineup) {
+              const replaced = liberoReplacements(store.substitutions, store.liberoIds)
+              const endLineup = Object.entries(replaced).reduce(
+                (l, [liberoId, playerId]) => applySub(l, liberoId, playerId),
+                store.lineup,
+              )
               const preFilledPositions = Object.fromEntries(
-                Object.entries(store.lineup).map(([zone, pid]) => {
+                Object.entries(endLineup).map(([zone, pid]) => {
                   const playerId = pid as string
                   return [
                     zone,
@@ -749,10 +790,11 @@ export function GameLogPage() {
                   ]
                 })
               ) as Record<Zone, string[]>
-              setNewSetLineup(store.lineup as Partial<Lineup>)
+              setNewSetLineup(endLineup as Partial<Lineup>)
               setNewSetPositions(preFilledPositions)
             }
             setNewSetServingFirst('us')
+            setLineupMode('next')
             setShowNewSetSetup(true)
           }}
           onViewStats={() => navigate(`/games/${matchId}/stats`)}
@@ -763,72 +805,128 @@ export function GameLogPage() {
 }
 
 function SubstitutionForm({
-  setId, matchId, players, lineup, onSuccess,
+  setId, matchId, players, onSuccess,
 }: {
   setId: string
   matchId: string
   players: Player[]
-  lineup: Lineup | null
-  onSuccess: (playerOutId: string, playerInId: string) => void
+  onSuccess: (sub: SubEvent) => void
 }) {
   const { t } = useTranslation()
+  const store = useMatchStore()
   const [playerOutId, setPlayerOutId] = useState('')
   const [playerInId, setPlayerInId] = useState('')
-  const [isLiberoSwap, setIsLiberoSwap] = useState(false)
+  const [serverError, setServerError] = useState<string | null>(null)
+
+  const lastRally = store.rallies[store.rallies.length - 1]
+  const lineup = store.lineup
+  const ctx = lineup && store.setStartLineup
+    ? {
+        startingLineup: store.setStartLineup,
+        lineup,
+        servingTeam: store.servingTeam,
+        lastRallyIndex: lastRally ? lastRally.rallyIndex : NO_RALLY,
+        subs: store.substitutions,
+        liberoIds: store.liberoIds,
+        rosterIds: store.rosterIds,
+      }
+    : null
+
+  const errorText = (code: SubErrorCode) =>
+    t(`liveLog.subErrors.${code}`, { defaultValue: SUB_ERROR_MESSAGES[code] })
+
+  const byId = (id: string) => players.find(p => p.id === id)
+  const label = (p: Player) =>
+    `#${p.jersey || '?'} ${p.firstName} ${p.lastName}${store.liberoIds.includes(p.id) ? ' (L)' : ''}`
+
+  // On court, in zone order
+  const onCourt = lineup
+    ? (['zone1', 'zone2', 'zone3', 'zone4', 'zone5', 'zone6'] as const)
+        .map(z => byId(lineup[z]))
+        .filter((p): p is Player => !!p)
+    : []
+  const bench = store.rosterIds
+    .filter(id => !onCourt.some(p => p.id === id))
+    .map(byId)
+    .filter((p): p is Player => !!p)
+
+  // Who may come on for the selected player under the rules
+  const candidates = ctx && playerOutId
+    ? bench.map(p => ({ player: p, result: validateSub(ctx, playerOutId, p.id) }))
+    : []
+  const allowed = candidates.filter(c => c.result.ok)
+  const firstBlocked = candidates.find(c => !c.result.ok)?.result
+  const selected = ctx && playerOutId && playerInId ? validateSub(ctx, playerOutId, playerInId) : null
+  const isLiberoSwap = !!selected && selected.ok && selected.isLiberoSwap
 
   const mutation = useMutation({
-    mutationFn: () => subsApi.add(setId, { playerOutId, playerInId, isLiberoSwap }),
-    onSuccess: () => onSuccess(playerOutId, playerInId),
-    onError: () => {
+    mutationFn: () => subsApi.add(setId, { playerOutId, playerInId }),
+    onSuccess: (sub) => onSuccess({
+      rallyIndex: sub.rallyIndex,
+      playerOutId: sub.playerOutId ?? playerOutId,
+      playerInId: sub.playerInId ?? playerInId,
+      isLiberoSwap: sub.isLiberoSwap,
+    }),
+    onError: (err: Error) => {
       if (!navigator.onLine) {
+        // Already validated locally against the same rules the server applies
         useOfflineStore.getState().enqueue({
           type: 'substitution',
           matchId,
           setId,
           method: 'POST',
           url: `/api/sets/${setId}/substitutions`,
-          body: { playerOutId, playerInId, isLiberoSwap },
+          body: { playerOutId, playerInId },
         })
-        onSuccess(playerOutId, playerInId)
+        onSuccess({
+          rallyIndex: lastRally ? lastRally.rallyIndex : NO_RALLY,
+          playerOutId,
+          playerInId,
+          isLiberoSwap,
+        })
+      } else {
+        setServerError(err.message || t('liveLog.subFailed'))
       }
     },
   })
-
-  const onCourtIds = lineup ? Object.values(lineup) : []
-  const onCourtPlayers = players.filter(p => onCourtIds.includes(p.id))
-  const benchPlayers = players.filter(p => !onCourtIds.includes(p.id))
-
-  const makeOpts = (pList: Player[]) =>
-    pList.map(p => ({ value: p.id, label: `#${p.jersey || '?'} ${p.firstName} ${p.lastName}` }))
 
   return (
     <div className="space-y-4">
       <Select
         label={t('liveLog.subPlayerOff')}
         value={playerOutId}
-        onChange={e => setPlayerOutId(e.target.value)}
-        options={[{ value: '', label: t('common.select') }, ...makeOpts(onCourtPlayers)]}
+        onChange={e => { setPlayerOutId(e.target.value); setPlayerInId(''); setServerError(null) }}
+        options={[{ value: '', label: t('common.select') }, ...onCourt.map(p => ({ value: p.id, label: label(p) }))]}
       />
       <Select
         label={t('liveLog.subPlayerOn')}
         value={playerInId}
-        onChange={e => setPlayerInId(e.target.value)}
-        options={[{ value: '', label: t('common.select') }, ...makeOpts(benchPlayers)]}
+        onChange={e => { setPlayerInId(e.target.value); setServerError(null) }}
+        disabled={!playerOutId || allowed.length === 0}
+        options={[
+          { value: '', label: t('common.select') },
+          ...allowed.map(c => ({ value: c.player.id, label: label(c.player) })),
+        ]}
       />
-      <label className="flex items-center gap-3 text-sm text-on-surface cursor-pointer">
-        <input
-          type="checkbox"
-          checked={isLiberoSwap}
-          onChange={e => setIsLiberoSwap(e.target.checked)}
-          className="w-4 h-4 accent-turq-500"
-        />
-        {t('liveLog.liberoSwapNote')}
-      </label>
+
+      {/* Why nobody can come on for this player */}
+      {playerOutId && allowed.length === 0 && (
+        <p className="text-xs text-error">
+          {firstBlocked && !firstBlocked.ok ? errorText(firstBlocked.code) : t('liveLog.noValidSubs')}
+        </p>
+      )}
+
+      {isLiberoSwap && (
+        <p className="text-xs text-turq-500">{t('liveLog.liberoSwapNote')}</p>
+      )}
+
+      {serverError && <p className="text-xs text-error">{serverError}</p>}
+
       <Button
         fullWidth
         onClick={() => mutation.mutate()}
         loading={mutation.isPending}
-        disabled={!playerOutId || !playerInId}
+        disabled={!selected || !selected.ok}
       >
         {t('liveLog.confirmSub')}
       </Button>

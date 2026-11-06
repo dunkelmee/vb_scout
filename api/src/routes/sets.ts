@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { requireManager } from '../middleware/requireRole'
+import { getMatchRoster } from '../lib/setState'
+import { validateStartingLineup } from '../lib/substitutionRules'
 
 const router = Router({ mergeParams: true })
 
@@ -24,6 +26,10 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
       include: { sets: true },
     })
     if (!match) return res.status(404).json({ error: 'Match not found' })
+
+    const { liberoIds } = await getMatchRoster(match.id, match.teamId)
+    const lineupError = validateStartingLineup(startingLineup, liberoIds)
+    if (lineupError) return res.status(400).json({ error: lineupError })
 
     const nextSetNumber = match.sets.length + 1
     const set = await prisma.set.create({
@@ -76,7 +82,11 @@ router.get('/:setId', async (req: Request, res: Response) => {
 router.patch('/:setId', requireManager, async (req: Request, res: Response) => {
   const matchId = getMatchId(req)
   const { setId } = req.params
-  const { status, scoreUs, scoreThem, startingLineup } = req.body
+  const { status, scoreUs, scoreThem, startingLineup, servingFirst } = req.body
+
+  if (servingFirst !== undefined && servingFirst !== 'us' && servingFirst !== 'them') {
+    return res.status(400).json({ error: "servingFirst must be 'us' or 'them'" })
+  }
 
   try {
     const match = await prisma.match.findFirst({ where: { id: matchId, teamId: req.user!.teamId! } })
@@ -85,14 +95,34 @@ router.patch('/:setId', requireManager, async (req: Request, res: Response) => {
     const set = await prisma.set.findFirst({ where: { id: setId, matchId } })
     if (!set) return res.status(404).json({ error: 'Set not found' })
 
-    const updatedSet = await prisma.set.update({
-      where: { id: setId },
-      data: {
-        ...(status              && { status }),
-        ...(scoreUs  !== undefined && { scoreUs }),
-        ...(scoreThem !== undefined && { scoreThem }),
-        ...(startingLineup     && { startingLineup }),
-      },
+    // The starting lineup and first server can only change before the first rally;
+    // after that, changes go through substitutions.
+    const changesLineup = !!startingLineup || !!servingFirst
+    if (changesLineup) {
+      const rallyCount = await prisma.rally.count({ where: { setId } })
+      if (rallyCount > 0) {
+        return res.status(409).json({ error: 'The lineup cannot be changed after the first rally — use a substitution' })
+      }
+      if (startingLineup) {
+        const { liberoIds } = await getMatchRoster(match.id, match.teamId)
+        const lineupError = validateStartingLineup(startingLineup, liberoIds)
+        if (lineupError) return res.status(400).json({ error: lineupError })
+      }
+    }
+
+    const updatedSet = await prisma.$transaction(async (tx) => {
+      // Libero replacements made before the first serve refer to the old lineup
+      if (startingLineup) await tx.substitution.deleteMany({ where: { setId } })
+      return tx.set.update({
+        where: { id: setId },
+        data: {
+          ...(status              && { status }),
+          ...(scoreUs  !== undefined && { scoreUs }),
+          ...(scoreThem !== undefined && { scoreThem }),
+          ...(startingLineup     && { startingLineup }),
+          ...(servingFirst       && { servingFirst }),
+        },
+      })
     })
 
     // When set is completed, update match score arrays and check for match completion

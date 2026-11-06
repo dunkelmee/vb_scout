@@ -348,13 +348,37 @@
     "assignZones": "Assign all 6 zones, then confirm",
     "startSet": "Start Set {{number}}",
     "confirmSub": "Confirm substitution",
-    "liberoSwapNote": "Libero swap (doesn't count against limit)",
+    "liberoSwapNote": "Libero replacement — doesn't count toward the 6 substitutions",
     "catOppErr": "Their error",
     "catTheirPoint": "Their point",
     "byOurOwn": "By our own",
     "by": "By",
     "or": "or",
-    "ourErrorIn": "Our error in"
+    "ourErrorIn": "Our error in",
+    "saveLineup": "Save lineup",
+    "lineupSaveFailed": "Could not save the lineup",
+    "subFailed": "Could not log the substitution",
+    "noValidSubs": "No player can come on for this player",
+    "subErrors": {
+      "missing_player": "Pick the player going off and the player coming on",
+      "same_player": "The player going off and coming on must be different",
+      "player_out_not_on_court": "The player going off is not on court",
+      "player_in_on_court": "The player coming on is already on court",
+      "player_in_not_in_roster": "The player coming on is not on the roster for this game",
+      "player_replaced_by_libero": "This player is replaced by the libero — swap the libero out first",
+      "no_rally_yet": "Before the first serve, change the lineup instead of substituting",
+      "max_subs": "Maximum of 6 substitutions in this set reached",
+      "starter_already_left": "A starting player may only leave the court once per set",
+      "starter_already_returned": "This starting player has already returned once in this set",
+      "starter_wrong_position": "A starting player may only return in place of the player who replaced them",
+      "sub_already_played": "A substitute may only enter once per set",
+      "sub_must_be_replaced_by_starter": "A substitute can only be replaced by the starting player they replaced",
+      "libero_already_on_court": "A libero is already on court",
+      "libero_front_row": "The libero may only replace a back-row player (zones 1, 5, 6)",
+      "libero_cannot_serve": "The libero cannot replace the server",
+      "libero_rally_between": "There must be a completed rally between two libero replacements",
+      "libero_wrong_return": "The libero can only be replaced by the player they replaced (or the other libero)"
+    }
   },
   "subtype": {
     "ace": "Ace",
@@ -845,7 +869,6 @@
     "deleteTeam": "Delete team",
     "resendEmail": "Resend email",
     "copyInviteId": "Copy invite ID",
-    "revoke": "Revoke",
     "usersTitle": "Users",
     "noUsers": "No users yet.",
     "editUser": "Edit user",
@@ -924,18 +947,18 @@
     "queued_one": " — {{count}} action queued",
     "queued_other": " — {{count}} actions queued"
   },
-
   "notifications": {
     "title": "Notifications",
     "empty": "No notifications yet"
   },
-
   "court": {
     "net": "NET",
     "ourBaseline": "OUR BASELINE",
     "selectPosition": "Select position for this zone",
     "empty": "Empty",
-    "pickPlayer": "Pick player ↓"
+    "pickPlayer": "Pick player ↓",
+    "liberoNotInLineup": "The libero is not part of the starting lineup — remove them and bring them on with a libero replacement.",
+    "liberoEntersLater": "Liberos are not part of the starting lineup — bring them on with a libero replacement before the first serve."
   },
   "matchStatus": {
     "upcoming": "Upcoming",

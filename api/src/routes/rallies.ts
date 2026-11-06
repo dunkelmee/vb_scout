@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { requireManager } from '../middleware/requireRole'
 import { addPoint, Lineup } from '../lib/rotation'
+import { loadSetState, getMatchRoster } from '../lib/setState'
+import { applySub, liberoForcedExit } from '../lib/substitutionRules'
 
 const router = Router({ mergeParams: true })
 
@@ -71,19 +73,13 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
   }
 
   try {
-    const set = await prisma.set.findUnique({
-      where: { id: setId },
-      include: {
-        match: true,
-        rallies: { orderBy: { rallyIndex: 'desc' }, take: 1 },
-      },
-    })
-    if (!set) return res.status(404).json({ error: 'Set not found' })
+    const state = await loadSetState(setId)
+    if (!state) return res.status(404).json({ error: 'Set not found' })
+    const { set, lastRally } = state
     if (set.match.teamId !== req.user!.teamId!) return res.status(403).json({ error: 'Access denied' })
     if (set.status === 'completed') return res.status(400).json({ error: 'Set is completed' })
 
     // Determine current state from last rally
-    const lastRally = set.rallies[0]
     const currentScoreUs = lastRally ? lastRally.scoreUs : 0
     const currentScoreThem = lastRally ? lastRally.scoreThem : 0
     const rallyIndex = lastRally ? lastRally.rallyIndex + 1 : 0
@@ -92,14 +88,9 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Set is already won' })
     }
 
-    // Determine serving team
-    let currentServer: 'us' | 'them' = set.servingFirst as 'us' | 'them'
-    let currentLineup: Lineup = (set.startingLineup as unknown) as Lineup
-
-    if (lastRally) {
-      currentServer = lastRally.currentServer as 'us' | 'them'
-      currentLineup = (lastRally.rotationAfter as unknown) as Lineup
-    }
+    // Lineup on court = last rally's rotation + substitutions made since then
+    const currentServer = state.servingTeam
+    const currentLineup: Lineup = state.lineup
 
     // Compute new state
     const { newLineup, rotated, newServer } = addPoint({
@@ -111,29 +102,54 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
     const newScoreUs = currentScoreUs + (scorer === 'us' ? 1 : 0)
     const newScoreThem = currentScoreThem + (scorer === 'them' ? 1 : 0)
 
-    const rally = await prisma.rally.create({
-      data: {
-        setId,
-        rallyIndex,
-        scorer,
-        pointType,
-        pointSubtype: subtype,
-        scoreUs: newScoreUs,
-        scoreThem: newScoreThem,
-        servingTeam: currentServer,
-        rotationAfter: newLineup as unknown as Record<string, string>,
-        rotated,
-        currentServer: newServer,
-      },
+    // A libero who rotated into the front row must leave; the player they replaced returns.
+    const { liberoIds } = await getMatchRoster(set.match.id, set.match.teamId)
+    const forcedExit = rotated ? liberoForcedExit(newLineup, state.subs, liberoIds) : null
+    const lineupAfter = forcedExit
+      ? applySub(newLineup, forcedExit.playerOutId, forcedExit.playerInId)
+      : newLineup
+
+    const { rally, liberoExit } = await prisma.$transaction(async (tx) => {
+      const rally = await tx.rally.create({
+        data: {
+          setId,
+          rallyIndex,
+          scorer,
+          pointType,
+          pointSubtype: subtype,
+          scoreUs: newScoreUs,
+          scoreThem: newScoreThem,
+          servingTeam: currentServer,
+          rotationAfter: lineupAfter as unknown as Record<string, string>,
+          rotated,
+          currentServer: newServer,
+        },
+      })
+
+      const liberoExit = forcedExit
+        ? await tx.substitution.create({
+            data: {
+              setId,
+              rallyIndex,
+              playerOutId: forcedExit.playerOutId,
+              playerInId: forcedExit.playerInId,
+              isLiberoSwap: true,
+              atScoreUs: newScoreUs,
+              atScoreThem: newScoreThem,
+            },
+          })
+        : null
+
+      // Update set score
+      await tx.set.update({
+        where: { id: setId },
+        data: { scoreUs: newScoreUs, scoreThem: newScoreThem },
+      })
+
+      return { rally, liberoExit }
     })
 
-    // Update set score
-    await prisma.set.update({
-      where: { id: setId },
-      data: { scoreUs: newScoreUs, scoreThem: newScoreThem },
-    })
-
-    res.status(201).json(rally)
+    res.status(201).json({ ...rally, liberoExit })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to add rally' })
@@ -158,7 +174,12 @@ router.delete('/last', requireManager, async (req: Request, res: Response) => {
     })
     if (!lastRally) return res.status(400).json({ error: 'No rallies to undo' })
 
-    await prisma.rally.delete({ where: { id: lastRally.id } })
+    // Substitutions logged after this rally (including a forced libero exit)
+    // belong to it, so undoing the rally removes them as well.
+    await prisma.$transaction([
+      prisma.substitution.deleteMany({ where: { setId, rallyIndex: { gte: lastRally.rallyIndex } } }),
+      prisma.rally.delete({ where: { id: lastRally.id } }),
+    ])
 
     // Restore set score from previous rally
     const prevRally = await prisma.rally.findFirst({
