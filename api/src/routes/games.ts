@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { requireManager } from '../middleware/requireRole'
+import { getLiberoIds } from '../lib/setState'
+import { validateStartingLineup, zonesOnly } from '../lib/substitutionRules'
 import { computeSetStats, computeRotationStats, computeErrorClustering, computePointQuality } from '../lib/statistics'
 
 const router = Router()
@@ -48,6 +50,11 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
   if (!date) return res.status(400).json({ error: 'date is required' })
 
   try {
+    if (matchType !== 'officiating' && startingLineup) {
+      const lineupError = validateStartingLineup(startingLineup, await getLiberoIds(Object.values(zonesOnly(startingLineup))))
+      if (lineupError) return res.status(400).json({ error: lineupError })
+    }
+
     const match = await prisma.$transaction(async (tx) => {
       const m = await tx.match.create({
         data: {

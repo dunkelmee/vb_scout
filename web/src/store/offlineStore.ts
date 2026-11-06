@@ -49,7 +49,12 @@ export const useOfflineStore = create<OfflineState>()(
           }
         }
         if (lastIdx === -1) return false
-        set(s => ({ queue: s.queue.filter((_, i) => i !== lastIdx) }))
+        // Substitutions queued after that rally are undone with it
+        set(s => ({
+          queue: s.queue.filter((op, i) =>
+            i !== lastIdx && !(i > lastIdx && op.setId === setId && op.type === 'substitution')
+          ),
+        }))
         return true
       },
 
