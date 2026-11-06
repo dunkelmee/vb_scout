@@ -309,7 +309,9 @@
     "stepOf": "Step {{current}} of {{total}}",
     "officialsFromRoster": "Officials from roster",
     "createGame": "Create game",
-    "noSeason": "No season"
+    "noSeason": "No season",
+    "liberoToggle": "Libero for this game",
+    "liberoHint": "Tap L to choose up to {{max}} liberos for this game. Liberos are not part of the starting lineup."
   },
   "liveLog": {
     "set": "Set {{number}}",
@@ -378,7 +380,8 @@
       "libero_cannot_serve": "The libero cannot replace the server",
       "libero_rally_between": "There must be a completed rally between two libero replacements",
       "libero_wrong_return": "The libero can only be replaced by the player they replaced (or the other libero)"
-    }
+    },
+    "liberosForGame": "Liberos for this game (max {{max}})"
   },
   "subtype": {
     "ace": "Ace",

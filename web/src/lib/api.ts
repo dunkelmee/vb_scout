@@ -501,7 +501,8 @@ export interface Match {
   scorer2?: { id: string; firstName: string; lastName: string; avatarUrl?: string | null } | null
   team?: { name: string; initials?: string | null } | null
   sets?: GameSet[]
-  matchPlayers?: { player: Player }[]
+  /** isLibero: designated libero for this game (null for games created before per-game liberos) */
+  matchPlayers?: { player: Player; isLibero?: boolean | null }[]
 }
 
 export interface GameSet {

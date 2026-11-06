@@ -221,6 +221,23 @@ export function liberoForcedExit(
   return null
 }
 
+/**
+ * Liberos are designated per game (rule 19.1). `designated` is the per-game
+ * choice; games created before that existed fall back to players whose only
+ * position is Libero (multi-position players are never liberos by default).
+ */
+export function isGameLibero(designated: boolean | null | undefined, positions: string[]): boolean {
+  if (designated !== null && designated !== undefined) return designated
+  return isLiberoOnly(positions)
+}
+
+/** Default suggestion when picking liberos for a new game. */
+export function isLiberoOnly(positions: string[]): boolean {
+  return positions.length === 1 && positions[0] === 'Libero'
+}
+
+export const MAX_LIBEROS = 2
+
 /** Validate a starting lineup: six different players and no libero (rule 19.3.1). */
 export function validateStartingLineup(raw: unknown, liberoIds: string[]): string | null {
   const lineup = zonesOnly(raw)

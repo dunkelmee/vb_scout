@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express'
 import prisma from '../lib/prisma'
 import { requireManager } from '../middleware/requireRole'
-import { getLiberoIds } from '../lib/setState'
-import { validateStartingLineup, zonesOnly } from '../lib/substitutionRules'
+import { MAX_LIBEROS, validateStartingLineup } from '../lib/substitutionRules'
 import { computeSetStats, computeRotationStats, computeErrorClustering, computePointQuality } from '../lib/statistics'
 
 const router = Router()
@@ -43,15 +42,22 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
   const {
     matchType, opponent, opponentInitials, homeTeam, guestTeam,
     date, location, firstServe, seasonId,
-    playerIds, startingLineup,
+    playerIds, liberoIds, startingLineup,
     ref1Id, ref2Id, scorer1Id, scorer2Id,
   } = req.body
 
   if (!date) return res.status(400).json({ error: 'date is required' })
 
+  // Liberos are designated per game, from the game's roster (max 2)
+  const liberos: string[] = Array.isArray(liberoIds) ? liberoIds : []
+  if (liberos.length > MAX_LIBEROS) return res.status(400).json({ error: `At most ${MAX_LIBEROS} liberos per game` })
+  if (liberos.some(id => !(playerIds ?? []).includes(id))) {
+    return res.status(400).json({ error: 'Liberos must be on the roster for this game' })
+  }
+
   try {
     if (matchType !== 'officiating' && startingLineup) {
-      const lineupError = validateStartingLineup(startingLineup, await getLiberoIds(Object.values(zonesOnly(startingLineup))))
+      const lineupError = validateStartingLineup(startingLineup, liberos)
       if (lineupError) return res.status(400).json({ error: lineupError })
     }
 
@@ -76,7 +82,7 @@ router.post('/', requireManager, async (req: Request, res: Response) => {
       // Add players to match
       if (playerIds && playerIds.length > 0) {
         await tx.matchPlayer.createMany({
-          data: playerIds.map((pid: string) => ({ matchId: m.id, playerId: pid })),
+          data: playerIds.map((pid: string) => ({ matchId: m.id, playerId: pid, isLibero: liberos.includes(pid) })),
           skipDuplicates: true,
         })
       }

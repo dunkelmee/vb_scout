@@ -7,11 +7,12 @@ import { useAuthStore } from '../../store/authStore'
 import { Button } from '../ui/Button'
 import { Input, Textarea } from '../ui/Input'
 import { Select } from '../ui/Select'
-import { Badge, PositionBadge } from '../ui/Badge'
+import { PositionBadge } from '../ui/Badge'
 import { CourtLineupSetup } from '../court/CourtLineupSetup'
 import { ArrowLeft, Check, ChevronRight } from 'lucide-react'
 import { cn } from '../ui/cn'
 import { Lineup, Zone, ALL_ZONES } from '../../lib/rotation'
+import { MAX_LIBEROS, isLiberoOnly } from '../../lib/substitutionRules'
 
 type MatchType = 'playing' | 'officiating'
 
@@ -34,9 +35,22 @@ interface WizardState {
   scorer2Id: string
   // Step 2 — Players
   selectedPlayerIds: string[]
+  /** Players designated as libero for this game (max 2) */
+  liberoIds: string[]
   // Step 3 — Lineup
   lineup: Partial<Lineup>
   setPositions: Record<Zone, string[]>
+}
+
+/** Remove a player from the lineup (e.g. when they're deselected or made libero). */
+function removeFromLineup(lineup: Partial<Lineup>, playerId: string): Partial<Lineup> {
+  return Object.fromEntries(Object.entries(lineup).filter(([, id]) => id !== playerId)) as Partial<Lineup>
+}
+
+/** Keep chosen liberos; otherwise suggest players whose only position is Libero. */
+function defaultLiberos(players: Player[], current: string[]): string[] {
+  const suggested = players.filter(p => isLiberoOnly(p.positions)).map(p => p.id)
+  return Array.from(new Set([...current, ...suggested])).slice(0, MAX_LIBEROS)
 }
 
 const TOTAL_STEPS_PLAYING = 3
@@ -57,6 +71,7 @@ export function CreateGameWizard() {
     homeTeam: '', guestTeam: '',
     ref1Id: '', ref2Id: '', scorer1Id: '', scorer2Id: '',
     selectedPlayerIds: [],
+    liberoIds: [],
     lineup: {}, setPositions: {} as Record<Zone, string[]>,
   })
 
@@ -112,6 +127,7 @@ export function CreateGameWizard() {
         firstServe: state.firstServe,
         seasonId: state.seasonId || undefined,
         playerIds: state.selectedPlayerIds,
+        liberoIds: state.liberoIds,
         startingLineup,
         ref1Id: state.ref1Id || undefined,
         ref2Id: state.ref2Id || undefined,
@@ -305,56 +321,100 @@ export function CreateGameWizard() {
               <p className="text-sm font-bold text-on-surface">{t('gameWizard.playersSelected', { count: state.selectedPlayerIds.length })}</p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => update({ selectedPlayerIds: players.map(p => p.id) })}
+                  onClick={() => update({
+                    selectedPlayerIds: players.map(p => p.id),
+                    liberoIds: defaultLiberos(players, state.liberoIds),
+                  })}
                   className="text-xs text-orange font-bold"
                 >
                   {t('gameWizard.selectAll')}
                 </button>
                 <button
-                  onClick={() => update({ selectedPlayerIds: [] })}
+                  onClick={() => update({ selectedPlayerIds: [], liberoIds: [] })}
                   className="text-xs text-on-surface-variant font-bold"
                 >
                   {t('gameWizard.clearAll')}
                 </button>
               </div>
             </div>
+            <p className="text-xs text-on-surface-variant mb-3">{t('gameWizard.liberoHint', { max: MAX_LIBEROS })}</p>
             <div className="space-y-2">
               {players.map(p => {
                 const isSelected = state.selectedPlayerIds.includes(p.id)
+                const isLibero = state.liberoIds.includes(p.id)
+                const canAddLibero = isLibero || state.liberoIds.length < MAX_LIBEROS
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        update({ selectedPlayerIds: state.selectedPlayerIds.filter(id => id !== p.id) })
-                      } else {
-                        update({ selectedPlayerIds: [...state.selectedPlayerIds, p.id] })
-                      }
-                    }}
                     className={cn(
-                      'w-full flex items-center gap-3 p-3 rounded-xl border transition-all',
+                      'w-full flex items-center gap-2 pr-2 rounded-xl border transition-all',
                       isSelected ? 'border-orange/40 bg-orange/5' : 'border-outline/10 bg-surface-high'
                     )}
                   >
-                    <div className={cn(
-                      'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0',
-                      isSelected ? 'border-orange bg-orange' : 'border-outline/40'
-                    )}>
-                      {isSelected && <Check size={12} className="text-white" />}
-                    </div>
-                    <span className="font-display font-bold text-sm text-orange w-7 shrink-0">
-                      #{p.jersey || '–'}
-                    </span>
-                    <span className="font-bold text-sm text-on-surface flex-1 text-left">
-                      {p.firstName} {p.lastName}
-                    </span>
-                    <div className="flex gap-1 shrink-0">
-                      {p.positions.slice(0, 2).map(pos => (
-                        <PositionBadge key={pos} position={pos} />
-                      ))}
-                      {p.isLibero && <Badge label="L" variant="orange" size="sm" />}
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => {
+                        if (isSelected) {
+                          update({
+                            selectedPlayerIds: state.selectedPlayerIds.filter(id => id !== p.id),
+                            liberoIds: state.liberoIds.filter(id => id !== p.id),
+                            lineup: removeFromLineup(state.lineup, p.id),
+                          })
+                        } else {
+                          update({
+                            selectedPlayerIds: [...state.selectedPlayerIds, p.id],
+                            // Pre-select players whose only position is Libero
+                            liberoIds: isLiberoOnly(p.positions) && state.liberoIds.length < MAX_LIBEROS
+                              ? [...state.liberoIds, p.id]
+                              : state.liberoIds,
+                          })
+                        }
+                      }}
+                      className="flex-1 min-w-0 flex items-center gap-3 p-3 text-left"
+                    >
+                      <div className={cn(
+                        'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0',
+                        isSelected ? 'border-orange bg-orange' : 'border-outline/40'
+                      )}>
+                        {isSelected && <Check size={12} className="text-white" />}
+                      </div>
+                      <span className="font-display font-bold text-sm text-orange w-7 shrink-0">
+                        #{p.jersey || '–'}
+                      </span>
+                      <span className="font-bold text-sm text-on-surface flex-1 truncate">
+                        {p.firstName} {p.lastName}
+                      </span>
+                      <div className="flex gap-1 shrink-0">
+                        {p.positions.slice(0, 2).map(pos => (
+                          <PositionBadge key={pos} position={pos} />
+                        ))}
+                      </div>
+                    </button>
+
+                    {/* Libero for this game (per-game designation, max 2) */}
+                    {isSelected && (
+                      <button
+                        onClick={() => update({
+                          liberoIds: isLibero
+                            ? state.liberoIds.filter(id => id !== p.id)
+                            : [...state.liberoIds, p.id],
+                          lineup: isLibero ? state.lineup : removeFromLineup(state.lineup, p.id),
+                        })}
+                        disabled={!canAddLibero}
+                        aria-pressed={isLibero}
+                        aria-label={t('gameWizard.liberoToggle')}
+                        title={t('gameWizard.liberoToggle')}
+                        className={cn(
+                          'w-9 h-9 shrink-0 rounded-full border text-xs font-bold transition-all',
+                          isLibero
+                            ? 'border-orange bg-orange text-white'
+                            : 'border-outline/30 text-on-surface-variant',
+                          !canAddLibero && 'opacity-30'
+                        )}
+                      >
+                        L
+                      </button>
+                    )}
+                  </div>
                 )
               })}
             </div>
@@ -365,6 +425,7 @@ export function CreateGameWizard() {
         {state.step === 2 && (
           <CourtLineupSetup
             players={players.filter(p => state.selectedPlayerIds.includes(p.id))}
+            liberoIds={state.liberoIds}
             lineup={state.lineup}
             setPositions={state.setPositions}
             onLineupChange={(lineup, setPositions) => update({ lineup, setPositions })}
@@ -400,7 +461,7 @@ export function CreateGameWizard() {
           <Button
             fullWidth
             onClick={next}
-            disabled={state.selectedPlayerIds.length < 6}
+            disabled={state.selectedPlayerIds.length - state.liberoIds.length < 6}
           >
             {`${t('common.next')}: ${t('gameWizard.stepLineup')}`} <ChevronRight size={16} />
           </Button>
